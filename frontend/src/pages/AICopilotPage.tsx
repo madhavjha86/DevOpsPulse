@@ -230,11 +230,11 @@ export const AICopilotPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Sparkles className="h-7 w-7 text-primary-400" />
+          <h1 className="text-2xl font-bold text-dark-100 flex items-center gap-2">
+            <Sparkles className="h-7 w-7 text-primary-600" />
             AI DevOps Copilot &amp; Root Cause Analysis
           </h1>
-          <p className="text-sm text-dark-400 mt-1">
+          <p className="text-sm font-medium text-dark-400 mt-1">
             Context-aware AI engineering assistant and automated post-mortem root cause diagnostic engine.
           </p>
         </div>
@@ -254,13 +254,13 @@ export const AICopilotPage: React.FC = () => {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-dark-700 space-x-6">
+      <div className="flex border-b border-[#E5E7EB] space-x-6">
         <button
           onClick={() => setActiveTab('copilot')}
-          className={`pb-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+          className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all duration-150 ${
             activeTab === 'copilot'
-              ? 'border-primary-500 text-primary-400'
-              : 'border-transparent text-dark-400 hover:text-dark-200'
+              ? 'border-primary-600 text-primary-600'
+              : 'border-transparent text-dark-400 hover:text-dark-100'
           }`}
         >
           <Bot className="h-4 w-4" />
@@ -268,10 +268,10 @@ export const AICopilotPage: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveTab('rca')}
-          className={`pb-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+          className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all duration-150 ${
             activeTab === 'rca'
-              ? 'border-primary-500 text-primary-400'
-              : 'border-transparent text-dark-400 hover:text-dark-200'
+              ? 'border-primary-600 text-primary-600'
+              : 'border-transparent text-dark-400 hover:text-dark-100'
           }`}
         >
           <Zap className="h-4 w-4" />
@@ -313,7 +313,7 @@ export const AICopilotPage: React.FC = () => {
                       }`}
                     >
                       <div className="truncate mr-2">
-                        <p className="text-xs font-semibold text-white truncate">{c.title}</p>
+                        <p className="text-xs font-bold text-dark-100 truncate">{c.title}</p>
                         <p className="text-[11px] text-dark-500 mt-1 font-mono">
                           {new Date(c.updated_at).toLocaleDateString()} • {c.message_count} messages
                         </p>
@@ -335,17 +335,17 @@ export const AICopilotPage: React.FC = () => {
           {/* Right Column: Active Chat Stream (8 cols) */}
           <div className="lg:col-span-8 flex flex-col glass-card h-[680px] overflow-hidden">
             {/* Thread Header */}
-            <div className="p-4 border-b border-dark-800/80 bg-dark-900/60 flex items-center justify-between">
+            <div className="p-4 border-b border-[#E5E7EB] bg-slate-50/70 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-lg bg-primary-500/20 border border-primary-500/30 flex items-center justify-center text-primary-400">
+                <div className="h-8 w-8 rounded-lg bg-primary-50 border border-primary-200 flex items-center justify-center text-primary-600">
                   <Bot className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">
+                  <h3 className="text-sm font-bold text-dark-100">
                     {conversationDetail?.title || 'DevOpsPulse Copilot'}
                   </h3>
-                  <span className="text-[11px] text-emerald-400 flex items-center gap-1 font-sans">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[11px] text-emerald-600 flex items-center gap-1 font-sans font-medium">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     Online • Context Linked (Workflows, Telemetry, Docker, K8s)
                   </span>
                 </div>
@@ -353,15 +353,15 @@ export const AICopilotPage: React.FC = () => {
             </div>
 
             {/* Message History */}
-            <div className="flex-1 p-5 overflow-y-auto space-y-4">
+            <div className="flex-1 p-5 overflow-y-auto space-y-4 bg-white">
               {loadingMessages ? (
                 <div className="p-12 text-center text-dark-400 text-sm">
-                  <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-primary-400" />
+                  <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-primary-600" />
                   Loading message stream...
                 </div>
               ) : !conversationDetail?.messages.length ? (
                 <div className="text-center py-16 text-dark-400 space-y-3">
-                  <Sparkles className="h-8 w-8 text-primary-400 mx-auto" />
+                  <Sparkles className="h-8 w-8 text-primary-600 mx-auto" />
                   <p className="text-sm">Ask anything about your DevOps pipelines, Docker containers, or Kubernetes clusters.</p>
                 </div>
               ) : (
@@ -373,19 +373,19 @@ export const AICopilotPage: React.FC = () => {
                       className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
                     >
                       {!isUser && (
-                        <div className="h-7 w-7 rounded-md bg-primary-500/20 border border-primary-500/30 flex items-center justify-center text-primary-400 shrink-0 mt-0.5">
+                        <div className="h-7 w-7 rounded-md bg-primary-50 border border-primary-200 flex items-center justify-center text-primary-600 shrink-0 mt-0.5">
                           <Bot className="h-3.5 w-3.5" />
                         </div>
                       )}
                       <div
-                        className={`max-w-[85%] rounded-xl p-4 text-xs leading-relaxed ${
+                        className={`max-w-[85%] rounded-2xl p-4 text-xs leading-relaxed ${
                           isUser
-                            ? 'bg-primary-600 text-white rounded-br-none shadow-lg'
-                            : 'bg-dark-900 border border-dark-700/80 text-dark-100 rounded-bl-none font-sans'
+                            ? 'bg-primary-600 text-white rounded-br-none shadow-sm'
+                            : 'bg-slate-50 border border-[#E5E7EB] text-dark-100 rounded-bl-none font-sans shadow-sm'
                         }`}
                       >
                         <div className="whitespace-pre-wrap font-sans">{m.content}</div>
-                        <span className="text-[10px] opacity-60 block mt-2 text-right">
+                        <span className={`text-[10px] block mt-2 text-right ${isUser ? 'text-purple-100' : 'text-dark-400'}`}>
                           {new Date(m.created_at).toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -400,13 +400,13 @@ export const AICopilotPage: React.FC = () => {
             </div>
 
             {/* Quick Prompt Suggestions */}
-            <div className="px-4 py-2 border-t border-dark-800/60 bg-dark-950/40 flex items-center gap-2 overflow-x-auto text-[11px]">
+            <div className="px-4 py-2 border-t border-[#E5E7EB] bg-slate-50/70 flex items-center gap-2 overflow-x-auto text-[11px]">
               <span className="text-dark-500 font-semibold shrink-0">Prompts:</span>
               <button
                 onClick={() =>
                   handleSendMessage(undefined, 'Generate a production GitHub Actions CI/CD workflow with caching.')
                 }
-                className="px-2.5 py-1 rounded-full bg-dark-800 border border-dark-700 text-dark-300 hover:text-white hover:border-primary-500 transition-colors shrink-0"
+                className="px-2.5 py-1 rounded-full bg-white border border-[#E5E7EB] text-dark-300 hover:text-primary-600 hover:border-primary-300 hover:shadow-subtle transition-all shrink-0"
               >
                 🚀 Generate CI/CD YAML
               </button>
@@ -414,7 +414,7 @@ export const AICopilotPage: React.FC = () => {
                 onClick={() =>
                   handleSendMessage(undefined, 'How do I resolve a CrashLoopBackOff error on Kubernetes pods?')
                 }
-                className="px-2.5 py-1 rounded-full bg-dark-800 border border-dark-700 text-dark-300 hover:text-white hover:border-primary-500 transition-colors shrink-0"
+                className="px-2.5 py-1 rounded-full bg-white border border-[#E5E7EB] text-dark-300 hover:text-primary-600 hover:border-primary-300 hover:shadow-subtle transition-all shrink-0"
               >
                 ☸️ Debug CrashLoopBackOff
               </button>
@@ -422,14 +422,14 @@ export const AICopilotPage: React.FC = () => {
                 onClick={() =>
                   handleSendMessage(undefined, 'How to troubleshoot Docker container OOMKilled and daemon issues?')
                 }
-                className="px-2.5 py-1 rounded-full bg-dark-800 border border-dark-700 text-dark-300 hover:text-white hover:border-primary-500 transition-colors shrink-0"
+                className="px-2.5 py-1 rounded-full bg-white border border-[#E5E7EB] text-dark-300 hover:text-primary-600 hover:border-primary-300 hover:shadow-subtle transition-all shrink-0"
               >
                 🐳 Docker OOM &amp; Socket Guide
               </button>
             </div>
 
             {/* Input Bar */}
-            <form onSubmit={handleSendMessage} className="p-3 bg-dark-900/80 border-t border-dark-800 flex gap-2">
+            <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-[#E5E7EB] flex gap-2">
               <Input
                 placeholder="Ask DevOps Copilot (e.g., 'Analyze build failure #42', 'Write Dockerfile')..."
                 value={messageInput}
@@ -458,10 +458,10 @@ export const AICopilotPage: React.FC = () => {
               <span>{rcas.length} Reports</span>
             </div>
 
-            <div className="glass-card divide-y divide-dark-800/80 max-h-[660px] overflow-y-auto">
+            <div className="glass-card divide-y divide-[#E5E7EB] max-h-[660px] overflow-y-auto">
               {loadingRca ? (
                 <div className="p-8 text-center text-dark-400 text-xs">
-                  <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-primary-400" />
+                  <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-primary-600" />
                   Loading RCA reports...
                 </div>
               ) : rcas.length === 0 ? (
@@ -477,17 +477,17 @@ export const AICopilotPage: React.FC = () => {
                       onClick={() => setSelectedRca(r)}
                       className={`p-4 cursor-pointer transition-colors space-y-2 ${
                         isSelected
-                          ? 'bg-primary-500/10 border-l-4 border-l-primary-500'
-                          : 'hover:bg-dark-800/50'
+                          ? 'bg-primary-50/70 border-l-4 border-l-primary-600'
+                          : 'hover:bg-slate-50'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-bold text-white truncate">{r.summary}</span>
+                        <span className="text-xs font-bold text-dark-100 truncate">{r.summary}</span>
                         {getSeverityBadge(r.severity)}
                       </div>
 
                       <div className="flex items-center justify-between text-[11px] text-dark-400 font-mono">
-                        <span className="text-primary-300 font-semibold">{r.failure_category}</span>
+                        <span className="text-primary-600 font-semibold">{r.failure_category}</span>
                         <span>{new Date(r.created_at).toLocaleDateString()}</span>
                       </div>
 
@@ -496,9 +496,9 @@ export const AICopilotPage: React.FC = () => {
                         <span
                           className={`font-semibold capitalize ${
                             r.status === 'resolved'
-                              ? 'text-emerald-400'
+                              ? 'text-emerald-600'
                               : r.status === 'acknowledged'
-                              ? 'text-warning-300'
+                              ? 'text-warning-600'
                               : 'text-dark-300'
                           }`}
                         >
@@ -521,16 +521,16 @@ export const AICopilotPage: React.FC = () => {
             ) : (
               <div className="glass-card p-6 space-y-6">
                 {/* Header Card */}
-                <div className="border-b border-dark-700/80 pb-4">
+                <div className="border-b border-[#E5E7EB] pb-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2.5">
                         {getSeverityBadge(selectedRca.severity)}
-                        <span className="text-xs font-mono font-semibold text-primary-300">
+                        <span className="text-xs font-mono font-semibold text-primary-600">
                           {selectedRca.failure_category}
                         </span>
                       </div>
-                      <h2 className="text-lg font-bold text-white mt-1.5">{selectedRca.summary}</h2>
+                      <h2 className="text-lg font-bold text-dark-100 mt-1.5">{selectedRca.summary}</h2>
                     </div>
 
                     {/* Status Triage Controls */}
@@ -555,7 +555,7 @@ export const AICopilotPage: React.FC = () => {
                           Mark Resolved
                         </Button>
                       ) : (
-                        <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
+                        <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
                           <CheckCircle className="h-4 w-4" />
                           Resolved
                         </span>
@@ -567,10 +567,10 @@ export const AICopilotPage: React.FC = () => {
                 {/* Root Cause Narrative */}
                 <div className="space-y-2">
                   <h4 className="text-xs uppercase font-bold text-dark-400 tracking-wider flex items-center gap-1.5">
-                    <AlertTriangle className="h-4 w-4 text-warning-400" />
+                    <AlertTriangle className="h-4 w-4 text-warning-500" />
                     Root Cause Diagnosis
                   </h4>
-                  <div className="p-4 bg-dark-900/80 rounded-lg border border-dark-800 text-xs text-dark-200 leading-relaxed font-sans">
+                  <div className="p-4 bg-slate-50 rounded-xl border border-[#E5E7EB] text-xs text-dark-100 leading-relaxed font-sans">
                     {selectedRca.root_cause}
                   </div>
                 </div>
@@ -578,16 +578,16 @@ export const AICopilotPage: React.FC = () => {
                 {/* Numbered Remediation Action Steps */}
                 <div className="space-y-2">
                   <h4 className="text-xs uppercase font-bold text-dark-400 tracking-wider flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-primary-400" />
+                    <Zap className="h-4 w-4 text-primary-600" />
                     Actionable Remediation Steps
                   </h4>
                   <div className="space-y-2">
                     {selectedRca.remediation_steps.map((step, idx) => (
                       <div
                         key={idx}
-                        className="p-3 bg-dark-900/60 rounded-lg border border-dark-800 text-xs text-dark-200 flex items-start gap-3"
+                        className="p-3 bg-slate-50 rounded-xl border border-[#E5E7EB] text-xs text-dark-200 flex items-start gap-3"
                       >
-                        <span className="h-5 w-5 rounded-full bg-primary-500/20 text-primary-400 font-bold flex items-center justify-center shrink-0 text-[11px]">
+                        <span className="h-5 w-5 rounded-full bg-primary-100 text-primary-700 font-bold flex items-center justify-center shrink-0 text-[11px]">
                           {idx + 1}
                         </span>
                         <span>{step}</span>
@@ -600,10 +600,10 @@ export const AICopilotPage: React.FC = () => {
                 {selectedRca.suggested_fix_diff && (
                   <div className="space-y-2">
                     <h4 className="text-xs uppercase font-bold text-dark-400 tracking-wider flex items-center gap-1.5">
-                      <FileCode className="h-4 w-4 text-emerald-400" />
+                      <FileCode className="h-4 w-4 text-emerald-600" />
                       Suggested Patch / Fix Diff
                     </h4>
-                    <div className="p-4 bg-dark-950 rounded-lg border border-dark-800 font-mono text-[11px] overflow-x-auto whitespace-pre leading-relaxed">
+                    <div className="p-4 bg-slate-900 rounded-xl border border-slate-800 font-mono text-[11px] overflow-x-auto whitespace-pre leading-relaxed text-slate-100">
                       {selectedRca.suggested_fix_diff.split('\n').map((line, i) => {
                         const isAdd = line.startsWith('+');
                         const isSub = line.startsWith('-');
@@ -614,8 +614,8 @@ export const AICopilotPage: React.FC = () => {
                               isAdd
                                 ? 'text-emerald-400 bg-emerald-500/10 px-1'
                                 : isSub
-                                ? 'text-danger-400 bg-danger-500/10 px-1'
-                                : 'text-dark-400'
+                                ? 'text-rose-400 bg-rose-500/10 px-1'
+                                : 'text-slate-400'
                             }
                           >
                             {line}
@@ -658,7 +658,7 @@ export const AICopilotPage: React.FC = () => {
               value={manualLogExcerpt}
               onChange={(e) => setManualLogExcerpt(e.target.value)}
               required
-              className="w-full bg-dark-900 border border-dark-700 rounded-lg p-3 text-xs text-white font-mono focus:ring-primary-500 focus:border-primary-500"
+              className="w-full bg-white border border-[#E5E7EB] rounded-xl p-3 text-xs text-dark-100 font-mono focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
 

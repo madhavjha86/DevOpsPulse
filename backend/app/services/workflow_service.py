@@ -309,6 +309,81 @@ class WorkflowService:
             await db.commit()
             return {"status": "processed", "event": event_type, "run_id": wr.get("id")}
 
+        elif event_type == "push":
+            repo_info = payload.get("repository", {})
+            repo_github_id = repo_info.get("id")
+            if not repo_github_id:
+                return {"status": "ignored", "reason": "Missing repository"}
+
+            repo_db = RepositoryRepo(db)
+            repo = await repo_db.get_by_github_id(repo_github_id)
+            if not repo:
+                return {"status": "ignored", "reason": "Repository not tracked"}
+
+            raw_commits = payload.get("commits", [])
+            commit_records = []
+            for c in raw_commits:
+                date_str = c.get("timestamp")
+                parsed_date = datetime.fromisoformat(date_str.replace("Z", "+00:00")) if date_str else datetime.now(timezone.utc)
+                author_info = c.get("author", {})
+                commit_records.append({
+                    "repository_id": repo.id,
+                    "sha": c.get("id") or c.get("sha"),
+                    "message": (c.get("message") or "")[:2000],
+                    "author_name": (author_info.get("name") or "Unknown")[:255],
+                    "author_email": author_info.get("email")[:255] if author_info.get("email") else None,
+                    "author_date": parsed_date,
+                    "url": c.get("url"),
+                    "additions": len(c.get("added", [])),
+                    "deletions": len(c.get("removed", [])),
+                })
+            if commit_records:
+                await repo_db.bulk_upsert_commits(commit_records)
+                await db.commit()
+            return {"status": "processed", "event": event_type, "commits_count": len(commit_records)}
+
+        elif event_type == "pull_request":
+            pr_data = payload.get("pull_request", {})
+            repo_info = payload.get("repository", {})
+            repo_github_id = repo_info.get("id")
+            if not repo_github_id or not pr_data.get("id"):
+                return {"status": "ignored", "reason": "Missing pull request info"}
+
+            repo_db = RepositoryRepo(db)
+            repo = await repo_db.get_by_github_id(repo_github_id)
+            if not repo:
+                return {"status": "ignored", "reason": "Repository not tracked"}
+
+            created_at_gh = None
+            if pr_data.get("created_at"):
+                created_at_gh = datetime.fromisoformat(pr_data["created_at"].replace("Z", "+00:00"))
+            closed_at = None
+            if pr_data.get("closed_at"):
+                closed_at = datetime.fromisoformat(pr_data["closed_at"].replace("Z", "+00:00"))
+            merged_at = None
+            if pr_data.get("merged_at"):
+                merged_at = datetime.fromisoformat(pr_data["merged_at"].replace("Z", "+00:00"))
+
+            author_user = pr_data.get("user", {})
+            author = author_user.get("login") if author_user else None
+
+            await repo_db.bulk_upsert_pull_requests([{
+                "repository_id": repo.id,
+                "github_id": pr_data["id"],
+                "number": pr_data["number"],
+                "title": pr_data.get("title", "")[:500],
+                "state": pr_data.get("state", "open"),
+                "author": author[:255] if author else None,
+                "url": pr_data.get("html_url"),
+                "created_at_gh": created_at_gh,
+                "closed_at": closed_at,
+                "merged_at": merged_at,
+                "additions": pr_data.get("additions", 0),
+                "deletions": pr_data.get("deletions", 0),
+            }])
+            await db.commit()
+            return {"status": "processed", "event": event_type, "pr_number": pr_data.get("number")}
+
         return {"status": "received", "event": event_type}
 
     @staticmethod

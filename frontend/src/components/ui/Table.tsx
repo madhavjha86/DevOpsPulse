@@ -27,23 +27,23 @@ function Table<T>({
 }: TableProps<T>) {
   if (data.length === 0) {
     return (
-      <div className="glass-card p-12 text-center">
-        <p className="text-dark-400">{emptyMessage}</p>
+      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-12 text-center shadow-subtle">
+        <p className="text-sm font-medium text-dark-400">{emptyMessage}</p>
       </div>
     );
   }
 
   return (
-    <div className={clsx('glass-card overflow-hidden', className)}>
+    <div className={clsx('bg-white border border-[#E5E7EB] rounded-2xl shadow-subtle overflow-hidden', className)}>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-dark-700/50">
+            <tr className="border-b border-[#E5E7EB] bg-slate-50/70">
               {columns.map((col) => (
                 <th
                   key={col.key}
                   className={clsx(
-                    'px-6 py-3.5 text-left text-xs font-semibold text-dark-400 uppercase tracking-wider',
+                    'px-3.5 sm:px-6 py-3 sm:py-3.5 text-left text-xs font-semibold text-dark-400 uppercase tracking-wider',
                     col.className
                   )}
                 >
@@ -52,12 +52,12 @@ function Table<T>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-dark-800/50">
+          <tbody className="divide-y divide-[#F1F5F9]">
             {data.map((item) => (
               <tr
                 key={keyExtractor(item)}
                 className={clsx(
-                  'hover:bg-dark-800/50 transition-colors',
+                  'hover:bg-slate-50/70 transition-colors',
                   onRowClick && 'cursor-pointer'
                 )}
                 onClick={() => onRowClick?.(item)}
@@ -66,7 +66,7 @@ function Table<T>({
                   <td
                     key={col.key}
                     className={clsx(
-                      'px-6 py-4 text-sm text-dark-200 whitespace-nowrap',
+                      'px-3.5 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-dark-200 whitespace-nowrap',
                       col.className
                     )}
                   >

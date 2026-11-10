@@ -200,7 +200,7 @@ export const TelemetryPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-dark-100 flex items-center gap-2">
             <Activity className="h-7 w-7 text-primary-500" />
             Logs &amp; Distributed Tracing
           </h1>
@@ -232,7 +232,7 @@ export const TelemetryPage: React.FC = () => {
             <span className="text-xs uppercase font-semibold">24h Log Volume</span>
             <Terminal className="h-5 w-5 text-primary-400" />
           </div>
-          <div className="text-2xl font-bold text-white">
+          <div className="text-2xl font-bold text-dark-100">
             {stats?.total_logs_24h != null ? stats.total_logs_24h.toLocaleString() : '0'}
           </div>
           <p className="text-xs text-dark-400 mt-1">Collected across active services</p>
@@ -254,7 +254,7 @@ export const TelemetryPage: React.FC = () => {
             <span className="text-xs uppercase font-semibold">Distributed Traces</span>
             <Layers className="h-5 w-5 text-secondary-400" />
           </div>
-          <div className="text-2xl font-bold text-white">
+          <div className="text-2xl font-bold text-dark-100">
             {stats?.total_traces_24h != null ? stats.total_traces_24h.toLocaleString() : '0'}
           </div>
           <p className="text-xs text-dark-400 mt-1">Spans processed</p>
@@ -317,7 +317,7 @@ export const TelemetryPage: React.FC = () => {
                 aria-label="Filter by Microservice"
                 value={selectedService}
                 onChange={(e) => setSelectedService(e.target.value)}
-                className="bg-dark-900 text-white text-xs rounded-lg border border-dark-700 px-3 py-2"
+                className="bg-white text-dark-100 text-xs rounded-xl border border-[#E5E7EB] px-3 py-2 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 shadow-sm"
               >
                 <option value="all">All Services ({services.length})</option>
                 {services.map((svc) => (
@@ -331,7 +331,7 @@ export const TelemetryPage: React.FC = () => {
                 aria-label="Filter by Log Level"
                 value={selectedLevel}
                 onChange={(e) => setSelectedLevel(e.target.value)}
-                className="bg-dark-900 text-white text-xs rounded-lg border border-dark-700 px-3 py-2"
+                className="bg-white text-dark-100 text-xs rounded-xl border border-[#E5E7EB] px-3 py-2 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 shadow-sm"
               >
                 <option value="all">All Levels</option>
                 <option value="INFO">INFO</option>

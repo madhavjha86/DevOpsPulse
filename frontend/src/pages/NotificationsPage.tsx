@@ -7,20 +7,18 @@ import {
   AlertTriangle,
   Info,
   Clock,
-  Filter,
 } from 'lucide-react';
 import { notificationService } from '@/services/notifications';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
+import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { Pagination } from '@/components/ui/Pagination';
 import type { Notification } from '@/types';
 
 export const NotificationsPage: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [total, setTotal] = useState<number>(0);
   const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [total, setTotal] = useState<number>(0);
   const [page, setPage] = useState<number>(1);
   const [unreadOnly, setUnreadOnly] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -32,8 +30,11 @@ export const NotificationsPage: React.FC = () => {
       const { data } = await notificationService.getAll(pageNum, onlyUnread);
       setNotifications(data.notifications || []);
       setTotal(data.total || 0);
-      setUnreadCount(data.unread_count || 0);
       setPage(pageNum);
+
+      // Fetch unread count
+      const { data: countData } = await notificationService.getUnreadCount();
+      setUnreadCount(countData.unread_count || 0);
     } catch (err) {
       console.error('Failed to load notifications', err);
     } finally {
@@ -51,7 +52,7 @@ export const NotificationsPage: React.FC = () => {
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
       );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
+      setUnreadCount((c) => Math.max(0, c - 1));
     } catch (err) {
       console.error('Failed to mark read', err);
     }
@@ -64,23 +65,23 @@ export const NotificationsPage: React.FC = () => {
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
       setUnreadCount(0);
     } catch (err) {
-      console.error('Failed to mark all read', err);
+      console.error('Failed to mark all as read', err);
     } finally {
       setIsMarkingAll(false);
     }
   };
 
   const getNotificationIcon = (type: string) => {
-    if (type === 'build_failure') {
-      return <XCircle className="h-5 w-5 text-danger-400" />;
+    if (type === 'success') {
+      return <CheckCircle2 className="h-5 w-5 text-emerald-600" />;
     }
-    if (type === 'build_success') {
-      return <CheckCircle2 className="h-5 w-5 text-success-400" />;
+    if (type === 'error' || type === 'failure') {
+      return <XCircle className="h-5 w-5 text-rose-600" />;
     }
     if (type === 'warning') {
-      return <AlertTriangle className="h-5 w-5 text-warning-400" />;
+      return <AlertTriangle className="h-5 w-5 text-amber-500" />;
     }
-    return <Info className="h-5 w-5 text-primary-400" />;
+    return <Info className="h-5 w-5 text-primary-600" />;
   };
 
   return (
@@ -88,10 +89,10 @@ export const NotificationsPage: React.FC = () => {
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-dark-100">
             Notifications Center
           </h1>
-          <p className="text-xs text-dark-400">
+          <p className="text-xs font-medium text-dark-400 mt-0.5">
             Pipeline events, alerts, and workflow completion updates ({unreadCount} unread)
           </p>
         </div>
@@ -102,7 +103,7 @@ export const NotificationsPage: React.FC = () => {
             size="sm"
             onClick={handleMarkAllRead}
             isLoading={isMarkingAll}
-            leftIcon={<CheckCheck className="h-4 w-4 text-primary-400" />}
+            leftIcon={<CheckCheck className="h-4 w-4 text-primary-600" />}
           >
             Mark all as read
           </Button>
@@ -113,20 +114,20 @@ export const NotificationsPage: React.FC = () => {
       <div className="flex items-center gap-2">
         <button
           onClick={() => setUnreadOnly(false)}
-          className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition-colors ${
+          className={`rounded-xl px-4 py-1.5 text-xs font-semibold transition-all duration-150 ${
             !unreadOnly
-              ? 'bg-primary-600 text-white shadow-sm'
-              : 'bg-dark-900 border border-dark-800 text-dark-400 hover:text-white hover:bg-dark-800'
+              ? 'bg-primary-600 text-white shadow-sm shadow-primary-500/25'
+              : 'bg-white border border-[#E5E7EB] text-dark-400 hover:text-dark-100 hover:bg-slate-50'
           }`}
         >
           All Notifications ({total})
         </button>
         <button
           onClick={() => setUnreadOnly(true)}
-          className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition-colors ${
+          className={`rounded-xl px-4 py-1.5 text-xs font-semibold transition-all duration-150 ${
             unreadOnly
-              ? 'bg-primary-600 text-white shadow-sm'
-              : 'bg-dark-900 border border-dark-800 text-dark-400 hover:text-white hover:bg-dark-800'
+              ? 'bg-primary-600 text-white shadow-sm shadow-primary-500/25'
+              : 'bg-white border border-[#E5E7EB] text-dark-400 hover:text-dark-100 hover:bg-slate-50'
           }`}
         >
           Unread ({unreadCount})
@@ -154,13 +155,13 @@ export const NotificationsPage: React.FC = () => {
             <div
               key={notif.id}
               onClick={() => !notif.is_read && handleMarkAsRead(notif.id)}
-              className={`flex items-start gap-4 rounded-xl border p-4 transition-all duration-200 cursor-pointer ${
+              className={`flex items-start gap-4 rounded-2xl border p-4 transition-all duration-200 cursor-pointer ${
                 notif.is_read
-                  ? 'border-dark-800/80 bg-dark-900/60 opacity-80'
-                  : 'border-primary-500/30 bg-dark-900 shadow-md ring-1 ring-primary-500/10'
+                  ? 'border-[#E5E7EB] bg-slate-50/60 opacity-80 hover:bg-slate-100/70'
+                  : 'border-primary-200 bg-white shadow-subtle ring-1 ring-primary-500/15 hover:shadow-card-hover'
               }`}
             >
-              <div className="mt-0.5 rounded-lg bg-dark-800 p-2 shrink-0 border border-dark-700/60">
+              <div className="mt-0.5 rounded-xl bg-white p-2 shrink-0 border border-[#E5E7EB] shadow-2xs">
                 {getNotificationIcon(notif.type)}
               </div>
 
@@ -168,23 +169,23 @@ export const NotificationsPage: React.FC = () => {
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <h3
-                      className={`text-sm font-semibold truncate ${
-                        notif.is_read ? 'text-dark-200' : 'text-white'
+                      className={`text-sm font-bold truncate ${
+                        notif.is_read ? 'text-dark-200' : 'text-dark-100'
                       }`}
                     >
                       {notif.title}
                     </h3>
                     {!notif.is_read && (
-                      <span className="h-2 w-2 rounded-full bg-primary-500 shrink-0" />
+                      <span className="h-2 w-2 rounded-full bg-primary-600 shrink-0" />
                     )}
                   </div>
-                  <span className="flex items-center gap-1 text-[10px] text-dark-400 shrink-0">
+                  <span className="flex items-center gap-1 text-[10px] text-dark-400 shrink-0 font-medium">
                     <Clock className="h-3 w-3" />
                     {new Date(notif.created_at).toLocaleDateString()}
                   </span>
                 </div>
 
-                <p className="mt-1 text-xs text-dark-300 leading-relaxed">{notif.message}</p>
+                <p className="mt-1 text-xs text-dark-300 leading-relaxed font-medium">{notif.message}</p>
               </div>
             </div>
           ))}
@@ -202,3 +203,5 @@ export const NotificationsPage: React.FC = () => {
     </div>
   );
 };
+
+export default NotificationsPage;

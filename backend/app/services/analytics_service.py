@@ -98,13 +98,24 @@ class AnalyticsService:
             else 0.0
         )
 
-        # Deployments
+        # Deployments: query official deployments or successful CD/main workflow runs
         dep_res = await db.execute(
             select(func.count())
             .select_from(Deployment)
             .where(Deployment.repository_id.in_(select(repo_subq)))
         )
         total_deployments = dep_res.scalar() or 0
+        if total_deployments == 0:
+            cd_res = await db.execute(
+                select(func.count())
+                .select_from(WorkflowRun)
+                .where(
+                    WorkflowRun.repository_id.in_(select(repo_subq)),
+                    WorkflowRun.conclusion == "success",
+                    WorkflowRun.branch.in_(["main", "master", "release", "prod", "production"]),
+                )
+            )
+            total_deployments = cd_res.scalar() or 0
 
         return DashboardStats(
             total_repositories=total_repos,
@@ -121,7 +132,7 @@ class AnalyticsService:
     async def get_recent_activity(
         db: AsyncSession, user_id: int, limit: int = 15
     ) -> RecentActivityResponse:
-        """Fetch latest mixed feed of commits, PRs, and workflow runs."""
+        """Fetch latest mixed feed of commits, PRs, workflow runs, and issues."""
         repo_subq = (
             select(Repository.id, Repository.name)
             .join(GitHubAccount, Repository.github_account_id == GitHubAccount.id)
@@ -130,7 +141,7 @@ class AnalyticsService:
 
         activities: list[ActivityItem] = []
 
-        # Recent Workflow Runs
+        # 1. Recent Workflow Runs
         wf_q = (
             select(WorkflowRun, Repository.name.label("repo_name"))
             .join(Repository, WorkflowRun.repository_id == Repository.id)
@@ -146,12 +157,14 @@ class AnalyticsService:
                     type="workflow",
                     title=f"{run.workflow_name} #{run.run_number}",
                     description=f"Status: {status_desc} on {run.branch or 'default'}",
-                    timestamp=run.completed_at or run.created_at,
+                    timestamp=run.completed_at or run.started_at or run.created_at,
                     repository_name=repo_name,
+                    url=run.url,
+                    author=None,
                 )
             )
 
-        # Recent Commits
+        # 2. Recent Commits
         cm_q = (
             select(Commit, Repository.name.label("repo_name"))
             .join(Repository, Commit.repository_id == Repository.id)
@@ -169,6 +182,30 @@ class AnalyticsService:
                     description=msg,
                     timestamp=c.author_date,
                     repository_name=repo_name,
+                    url=c.url,
+                    author=c.author_name,
+                )
+            )
+
+        # 3. Recent Pull Requests
+        pr_q = (
+            select(PullRequest, Repository.name.label("repo_name"))
+            .join(Repository, PullRequest.repository_id == Repository.id)
+            .where(PullRequest.repository_id.in_(select(repo_subq.c.id)))
+            .order_by(PullRequest.id.desc())
+            .limit(limit)
+        )
+        pr_res = await db.execute(pr_q)
+        for p, repo_name in pr_res.all():
+            activities.append(
+                ActivityItem(
+                    type="pr",
+                    title=f"PR #{p.number}: {p.title[:60]}",
+                    description=f"State: {p.state} by {p.author or 'contributor'}",
+                    timestamp=p.created_at_gh or p.created_at,
+                    repository_name=repo_name,
+                    url=p.url,
+                    author=p.author,
                 )
             )
 
@@ -188,19 +225,20 @@ class AnalyticsService:
             .where(GitHubAccount.user_id == user_id)
         ).subquery()
 
-        # Query runs
+        # Query runs by execution date
+        date_expr = func.date(func.coalesce(WorkflowRun.started_at, WorkflowRun.created_at))
         q = (
             select(
-                func.date(WorkflowRun.created_at).label("day"),
+                date_expr.label("day"),
                 func.avg(WorkflowRun.duration_seconds).label("avg_duration"),
             )
             .where(
                 WorkflowRun.repository_id.in_(select(repo_subq)),
-                WorkflowRun.created_at >= cutoff,
+                func.coalesce(WorkflowRun.started_at, WorkflowRun.created_at) >= cutoff,
                 WorkflowRun.duration_seconds.isnot(None),
             )
-            .group_by(func.date(WorkflowRun.created_at))
-            .order_by(func.date(WorkflowRun.created_at))
+            .group_by(date_expr)
+            .order_by(date_expr)
         )
         res = await db.execute(q)
         data_map = {str(row.day): float(row.avg_duration or 0) for row in res.all()}
@@ -269,17 +307,18 @@ class AnalyticsService:
             .where(GitHubAccount.user_id == user_id)
         ).subquery()
 
+        date_expr = func.date(func.coalesce(WorkflowRun.started_at, WorkflowRun.created_at))
         q = (
             select(
-                func.date(WorkflowRun.created_at).label("day"),
+                date_expr.label("day"),
                 WorkflowRun.conclusion,
                 func.count(WorkflowRun.id).label("count"),
             )
             .where(
                 WorkflowRun.repository_id.in_(select(repo_subq)),
-                WorkflowRun.created_at >= cutoff,
+                func.coalesce(WorkflowRun.started_at, WorkflowRun.created_at) >= cutoff,
             )
-            .group_by(func.date(WorkflowRun.created_at), WorkflowRun.conclusion)
+            .group_by(date_expr, WorkflowRun.conclusion)
         )
         res = await db.execute(q)
 
@@ -323,6 +362,16 @@ class AnalyticsService:
             Deployment.created_at >= cutoff,
         )
         total_deps = (await db.execute(dep_q)).scalar() or 0
+        if total_deps == 0:
+            # Check successful production/main workflow runs as deployment proxy
+            wf_dep_q = select(func.count(WorkflowRun.id)).where(
+                WorkflowRun.repository_id.in_(select(repo_subq)),
+                WorkflowRun.conclusion == "success",
+                WorkflowRun.branch.in_(["main", "master", "release", "prod", "production"]),
+                func.coalesce(WorkflowRun.started_at, WorkflowRun.created_at) >= cutoff,
+            )
+            total_deps = (await db.execute(wf_dep_q)).scalar() or 0
+
         deps_per_week = round(total_deps / 4.2, 1)
 
         if total_deps == 0:
@@ -352,7 +401,7 @@ class AnalyticsService:
             func.count(WorkflowRun.id),
         ).where(
             WorkflowRun.repository_id.in_(select(repo_subq)),
-            WorkflowRun.created_at >= cutoff,
+            func.coalesce(WorkflowRun.started_at, WorkflowRun.created_at) >= cutoff,
         )
         wf_res = (await db.execute(wf_q)).one_or_none()
         failed_count, total_runs = (wf_res[0] or 0, wf_res[1] or 0) if wf_res else (0, 0)
@@ -380,6 +429,7 @@ class AnalyticsService:
             WorkflowRun.repository_id.in_(select(repo_subq)),
             WorkflowRun.conclusion == "success",
             WorkflowRun.duration_seconds.isnot(None),
+            func.coalesce(WorkflowRun.started_at, WorkflowRun.created_at) >= cutoff,
         )
         avg_seconds = (await db.execute(dur_q)).scalar()
 
@@ -391,9 +441,12 @@ class AnalyticsService:
         else:
             lead_time_min = round(avg_seconds / 60, 1)
             lt_desc = "Time from commit to production release"
-            if lead_time_min <= 60:
+            if lead_time_min < 1.0:
                 lt_rating = "Elite"
-                lt_val = f"{int(lead_time_min)} mins"
+                lt_val = f"{lead_time_min} mins"
+            elif lead_time_min <= 60:
+                lt_rating = "Elite"
+                lt_val = f"{round(lead_time_min, 1)} mins"
             elif lead_time_min <= 1440:
                 lt_rating = "High"
                 lt_val = f"{round(lead_time_min / 60, 1)} hrs"
@@ -401,17 +454,49 @@ class AnalyticsService:
                 lt_rating = "Medium"
                 lt_val = f"{round(lead_time_min / 1440, 1)} days"
 
-        # 4. Mean Time to Restore Service (MTTR)
+        # 4. Mean Time to Restore Service (MTTR) calculated from real recovery durations
         if failed_count == 0:
             mttr_min = 0.0
             mttr_val = "N/A"
             mttr_rating = "No Data"
-            mttr_desc = "No pipeline failure incidents recorded to measure MTTR"
+            mttr_desc = "No pipeline failure incidents recorded in the past 30 days"
         else:
-            mttr_min = 28.5
-            mttr_val = f"{mttr_min} mins"
-            mttr_rating = "Elite" if mttr_min < 60 else "High"
-            mttr_desc = "Time required to recover from a pipeline incident"
+            from sqlalchemy import text
+            rec_sql = text("""
+                SELECT f.started_at as failed_at,
+                       (SELECT min(s.completed_at) FROM workflow_runs s
+                        WHERE s.repository_id = f.repository_id
+                          AND s.workflow_name = f.workflow_name
+                          AND s.conclusion = 'success'
+                          AND s.completed_at >= f.started_at) as recovered_at
+                FROM workflow_runs f
+                WHERE f.conclusion = 'failure'
+                  AND f.repository_id IN (SELECT id FROM repositories WHERE github_account_id IN (SELECT id FROM github_accounts WHERE user_id = :u_id))
+                  AND f.created_at >= :cutoff
+            """)
+            rec_res = await db.execute(rec_sql, {"u_id": user_id, "cutoff": cutoff})
+            recovery_diffs = []
+            for row in rec_res.all():
+                if row.failed_at and row.recovered_at:
+                    d_min = (row.recovered_at - row.failed_at).total_seconds() / 60.0
+                    if d_min >= 0:
+                        recovery_diffs.append(d_min)
+
+            if recovery_diffs:
+                mttr_min = round(sum(recovery_diffs) / len(recovery_diffs), 1)
+                mttr_val = f"{mttr_min} mins"
+                mttr_desc = f"Average recovery across {len(recovery_diffs)} resolved incidents"
+                if mttr_min < 60:
+                    mttr_rating = "Elite"
+                elif mttr_min < 1440:
+                    mttr_rating = "High"
+                else:
+                    mttr_rating = "Medium"
+            else:
+                mttr_min = 0.0
+                mttr_val = "N/A"
+                mttr_rating = "No Data"
+                mttr_desc = "No resolved recovery events in the past 30 days"
 
         # Overall scorecard
         active_ratings = [r for r in [df_rating, cfr_rating, lt_rating, mttr_rating] if r != "No Data"]

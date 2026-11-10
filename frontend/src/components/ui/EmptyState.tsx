@@ -24,14 +24,14 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   return (
     <div
       className={clsx(
-        'flex flex-col items-center justify-center py-16 px-6 text-center',
+        'flex flex-col items-center justify-center py-16 px-6 text-center bg-white border border-[#E5E7EB] rounded-2xl shadow-subtle',
         className
       )}
     >
-      <div className="p-4 rounded-2xl bg-dark-800/50 mb-4">
-        <Icon className="w-10 h-10 text-dark-500" />
+      <div className="p-4 rounded-2xl bg-primary-50 border border-primary-100 mb-4 shadow-sm">
+        <Icon className="w-8 h-8 text-primary-600" />
       </div>
-      <h3 className="text-lg font-semibold text-dark-200 mb-1">{title}</h3>
+      <h3 className="text-base font-bold text-dark-100 mb-1">{title}</h3>
       <p className="text-sm text-dark-400 max-w-sm mb-6">{description}</p>
       {action && (
         <Button variant="primary" onClick={action.onClick}>

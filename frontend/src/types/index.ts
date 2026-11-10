@@ -131,6 +131,8 @@ export interface ActivityItem {
   description: string;
   timestamp: string;
   repository_name: string | null;
+  url?: string | null;
+  author?: string | null;
 }
 
 export interface ChartDataPoint {
@@ -149,4 +151,14 @@ export interface PaginatedResponse<T> {
   total: number;
   page: number;
   per_page: number;
+}
+
+export interface GitHubAccount {
+  id: number;
+  github_id?: number;
+  github_username?: string;
+  github_user_id?: number;
+  username?: string;
+  avatar_url?: string;
+  is_active?: boolean;
 }

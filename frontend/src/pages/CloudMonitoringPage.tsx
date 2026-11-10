@@ -203,7 +203,7 @@ export default function CloudMonitoringPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-dark-100 flex items-center gap-2">
             <Cloud className="h-7 w-7 text-primary-500" />
             Cloud Infrastructure Monitoring
           </h1>
@@ -244,7 +244,7 @@ export default function CloudMonitoringPage() {
               aria-label="Select Cloud Account"
               value={selectedAccountId || ''}
               onChange={(e) => setSelectedAccountId(Number(e.target.value))}
-              className="bg-dark-900 text-white text-sm rounded-lg border border-dark-700 px-3 py-1.5 focus:ring-primary-500 focus:border-primary-500"
+              className="bg-white text-dark-100 text-sm rounded-xl border border-[#E5E7EB] px-3 py-1.5 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 shadow-sm"
             >
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -330,7 +330,7 @@ export default function CloudMonitoringPage() {
         <div className="glass-card p-4 flex items-center justify-between">
           <div>
             <p className="text-xs text-dark-400 font-medium">Virtual Machines</p>
-            <p className="text-2xl font-bold text-white mt-1">
+            <p className="text-2xl font-bold text-dark-100 mt-1">
               {overview?.running_vms || 0} <span className="text-sm font-normal text-dark-400">/ {overview?.total_vms || 0}</span>
             </p>
           </div>
@@ -366,7 +366,7 @@ export default function CloudMonitoringPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="glass-card p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <h3 className="text-sm font-bold text-dark-100 flex items-center gap-2">
                 <Cpu className="h-4 w-4 text-primary-400" />
                 Aggregated CPU Utilization (24h)
               </h3>
@@ -396,7 +396,7 @@ export default function CloudMonitoringPage() {
 
           <div className="glass-card p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <h3 className="text-sm font-bold text-dark-100 flex items-center gap-2">
                 <Activity className="h-4 w-4 text-emerald-400" />
                 Network I/O Throughput (MB)
               </h3>
@@ -436,19 +436,19 @@ export default function CloudMonitoringPage() {
               placeholder="Search resource name or spec..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-dark-900 border border-dark-700 rounded-lg text-sm text-white placeholder-dark-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              className="w-full pl-9 pr-3 py-1.5 bg-white border border-[#E5E7EB] rounded-xl text-sm text-dark-100 placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 shadow-sm"
             />
           </div>
 
-          <div className="flex items-center bg-dark-900 p-1 rounded-lg border border-dark-800 self-stretch sm:self-auto">
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-[#E5E7EB] self-stretch sm:self-auto">
             {(['all', 'instance', 'database', 'lambda'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setResourceTypeFilter(tab)}
-                className={`px-3 py-1 text-xs rounded-md font-medium capitalize transition-colors ${
+                className={`px-3 py-1 text-xs rounded-lg font-semibold capitalize transition-all duration-150 ${
                   resourceTypeFilter === tab
-                    ? 'bg-primary-600 text-white'
-                    : 'text-dark-400 hover:text-dark-200'
+                    ? 'bg-primary-600 text-white shadow-sm'
+                    : 'text-dark-400 hover:text-dark-100'
                 }`}
               >
                 {tab === 'instance' ? 'Compute / VMs' : tab === 'lambda' ? 'Serverless' : tab}
@@ -464,8 +464,8 @@ export default function CloudMonitoringPage() {
         ) : filteredResources.length === 0 ? (
           <div className="glass-card text-center py-12">
             <Layers className="h-12 w-12 text-dark-500 mx-auto mb-3" />
-            <h3 className="text-base font-semibold text-white">No cloud resources found</h3>
-            <p className="text-sm text-dark-400 mt-1">
+            <h3 className="text-base font-bold text-dark-100">No cloud resources found</h3>
+            <p className="text-sm text-dark-400 mt-1 font-medium">
               {overview?.resources.length === 0
                 ? 'No active cloud resources discovered on this account.'
                 : 'No resources match your search or filter criteria.'}
@@ -481,7 +481,7 @@ export default function CloudMonitoringPage() {
                 <div>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <h4 className="text-sm font-semibold text-white truncate" title={res.name}>
+                      <h4 className="text-sm font-bold text-dark-100 truncate" title={res.name}>
                         {res.name}
                       </h4>
                       <p className="text-xs text-dark-400 font-mono mt-0.5 truncate" title={res.id}>

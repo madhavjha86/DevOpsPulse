@@ -1,11 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   GitBranch,
-  CheckCircle2,
-  XCircle,
-  Clock,
   ExternalLink,
-  Filter,
   RefreshCw,
   Play,
 } from 'lucide-react';
@@ -117,8 +113,8 @@ export const WorkflowsPage: React.FC = () => {
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">CI/CD Workflows</h1>
-          <p className="text-xs text-dark-400">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-dark-100">CI/CD Workflows</h1>
+          <p className="text-xs font-medium text-dark-400 mt-0.5">
             Real-time GitHub Actions workflow run monitoring ({total} total runs)
           </p>
         </div>
@@ -143,9 +139,9 @@ export const WorkflowsPage: React.FC = () => {
       </div>
 
       {dispatchSuccess && (
-        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300 flex items-center justify-between">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 font-medium flex items-center justify-between shadow-2xs">
           <span>{dispatchSuccess}</span>
-          <button onClick={() => setDispatchSuccess(null)} className="text-dark-400 hover:text-white">
+          <button onClick={() => setDispatchSuccess(null)} className="text-emerald-600 hover:text-emerald-900 font-bold ml-2">
             ×
           </button>
         </div>
@@ -163,10 +159,10 @@ export const WorkflowsPage: React.FC = () => {
             onClick={() => {
               setFilterConclusion(tab.key);
             }}
-            className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition-colors ${
+            className={`rounded-xl px-4 py-1.5 text-xs font-semibold transition-all duration-150 ${
               filterConclusion === tab.key
-                ? 'bg-primary-600 text-white shadow-sm'
-                : 'bg-dark-900 border border-dark-800 text-dark-400 hover:text-white hover:bg-dark-800'
+                ? 'bg-primary-600 text-white shadow-sm shadow-primary-500/25'
+                : 'bg-white border border-[#E5E7EB] text-dark-400 hover:text-dark-100 hover:bg-slate-50'
             }`}
           >
             {tab.label}
@@ -180,7 +176,7 @@ export const WorkflowsPage: React.FC = () => {
           <LoadingSpinner size="lg" message="Loading workflow runs..." />
         </div>
       ) : (
-        <div className="rounded-2xl border border-dark-800 bg-dark-900/90 shadow-xl overflow-hidden">
+        <div className="rounded-2xl border border-[#E5E7EB] bg-white shadow-subtle overflow-hidden">
           <Table<WorkflowRun>
             columns={[
               {
@@ -189,10 +185,10 @@ export const WorkflowsPage: React.FC = () => {
                 render: (r) => (
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-white">{r.workflow_name}</span>
+                      <span className="font-bold text-dark-100">{r.workflow_name}</span>
                       <span className="font-mono text-xs text-dark-400">#{r.run_number}</span>
                     </div>
-                    <span className="text-[10px] text-dark-400 uppercase tracking-wider font-mono">
+                    <span className="text-[10px] text-dark-400 uppercase tracking-wider font-mono font-medium">
                       Event: {r.event || 'push'}
                     </span>
                   </div>
@@ -207,14 +203,14 @@ export const WorkflowsPage: React.FC = () => {
                 header: 'Branch',
                 key: 'branch',
                 render: (r) => (
-                  <span className="font-mono text-xs text-dark-300">{r.branch || 'main'}</span>
+                  <span className="font-mono text-xs font-medium text-dark-300">{r.branch || 'main'}</span>
                 ),
               },
               {
                 header: 'Duration',
                 key: 'duration_seconds',
                 render: (r) => (
-                  <span className="text-xs text-dark-300">
+                  <span className="text-xs font-medium text-dark-300">
                     {r.duration_seconds !== null && r.duration_seconds !== undefined
                       ? `${r.duration_seconds}s`
                       : '—'}
@@ -225,7 +221,7 @@ export const WorkflowsPage: React.FC = () => {
                 header: 'Triggered',
                 key: 'created_at',
                 render: (r) => (
-                  <span className="text-xs text-dark-400">
+                  <span className="text-xs text-dark-400 font-medium">
                     {new Date(r.created_at).toLocaleString()}
                   </span>
                 ),
@@ -239,13 +235,13 @@ export const WorkflowsPage: React.FC = () => {
                       href={r.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-700"
                     >
                       <span>View</span>
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   ) : (
-                    <span className="text-dark-500 text-xs">—</span>
+                    <span className="text-dark-400 text-xs">—</span>
                   ),
               },
             ]}
@@ -268,12 +264,12 @@ export const WorkflowsPage: React.FC = () => {
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Dispatch CI/CD Pipeline">
         <form onSubmit={handleDispatch} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-dark-300 mb-1.5">Target Repository</label>
+            <label className="block text-xs font-semibold text-dark-300 mb-1.5 uppercase tracking-wide">Target Repository</label>
             <select
               value={selectedRepoId}
               onChange={(e) => setSelectedRepoId(Number(e.target.value))}
               required
-              className="w-full rounded-lg border border-dark-700 bg-dark-900/80 px-3 py-2 text-xs text-white focus:border-primary-500 focus:outline-none"
+              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-xs text-dark-100 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 shadow-sm"
             >
               {repos.length === 0 ? (
                 <option value="">No repositories available</option>
@@ -321,3 +317,5 @@ export const WorkflowsPage: React.FC = () => {
     </div>
   );
 };
+
+export default WorkflowsPage;

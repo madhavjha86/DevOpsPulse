@@ -41,7 +41,8 @@ const Pagination: React.FC<PaginationProps> = ({
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage <= 1}
-        className="p-2 rounded-lg text-dark-400 hover:text-dark-100 hover:bg-dark-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        className="p-2 rounded-xl text-dark-400 hover:text-dark-100 hover:bg-slate-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        aria-label="Previous page"
       >
         <ChevronLeft className="w-4 h-4" />
       </button>
@@ -49,15 +50,15 @@ const Pagination: React.FC<PaginationProps> = ({
       {getVisiblePages().map((page, index) => (
         <React.Fragment key={index}>
           {page === '...' ? (
-            <span className="px-3 py-2 text-sm text-dark-500">...</span>
+            <span className="px-3 py-1.5 text-sm text-dark-400">...</span>
           ) : (
             <button
               onClick={() => onPageChange(page as number)}
               className={clsx(
-                'px-3 py-1.5 text-sm rounded-lg transition-colors font-medium',
+                'px-3.5 py-1.5 text-xs rounded-xl transition-all duration-150 font-semibold',
                 page === currentPage
-                  ? 'bg-primary-600 text-white'
-                  : 'text-dark-400 hover:text-dark-100 hover:bg-dark-800'
+                  ? 'bg-primary-600 text-white shadow-sm shadow-primary-500/20'
+                  : 'text-dark-400 hover:text-dark-100 hover:bg-slate-100'
               )}
             >
               {page}
@@ -69,7 +70,8 @@ const Pagination: React.FC<PaginationProps> = ({
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage >= totalPages}
-        className="p-2 rounded-lg text-dark-400 hover:text-dark-100 hover:bg-dark-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        className="p-2 rounded-xl text-dark-400 hover:text-dark-100 hover:bg-slate-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        aria-label="Next page"
       >
         <ChevronRight className="w-4 h-4" />
       </button>

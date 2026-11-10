@@ -63,7 +63,6 @@ export const RepositoriesPage: React.FC = () => {
     setIsImporting(true);
 
     let cleanName = repoFullName.trim();
-    // Auto-strip full GitHub URL if pasted
     cleanName = cleanName
       .replace(/^(?:https?:\/\/)?(?:www\.)?github\.com\//i, '')
       .replace(/\.git$/i, '')
@@ -132,8 +131,8 @@ export const RepositoriesPage: React.FC = () => {
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Repositories</h1>
-          <p className="text-xs text-dark-400">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-dark-100">Repositories</h1>
+          <p className="text-xs font-medium text-dark-400 mt-0.5">
             Connected GitHub repositories being monitored ({total} total)
           </p>
         </div>
@@ -158,7 +157,7 @@ export const RepositoriesPage: React.FC = () => {
             placeholder="Filter by repository name or language..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-dark-800 bg-dark-900 py-2 pl-9 pr-4 text-xs text-white placeholder-dark-400 focus:border-primary-500 focus:outline-none"
+            className="w-full rounded-xl border border-[#E5E7EB] bg-white py-2 pl-9 pr-4 text-xs text-dark-100 placeholder-dark-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all shadow-sm"
           />
         </div>
       </div>
@@ -188,46 +187,46 @@ export const RepositoriesPage: React.FC = () => {
             <div
               key={repo.id}
               onClick={() => navigate(`/repositories/${repo.id}`)}
-              className="cursor-pointer rounded-2xl border border-dark-800 bg-dark-900/90 p-5 shadow-lg hover:border-dark-700 hover:shadow-xl transition-all duration-200 flex flex-col justify-between"
+              className="cursor-pointer rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-subtle hover:border-[#D1D5DB] hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between"
             >
               <div>
                 {/* Title & Privacy Badge */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 overflow-hidden">
                     {repo.is_private ? (
-                      <Lock className="h-4 w-4 text-warning-400 shrink-0" />
+                      <Lock className="h-4 w-4 text-amber-500 shrink-0" />
                     ) : (
                       <Globe className="h-4 w-4 text-dark-400 shrink-0" />
                     )}
-                    <h3 className="font-semibold text-sm text-white truncate hover:text-primary-400 transition-colors">
+                    <h3 className="font-bold text-sm text-dark-100 truncate hover:text-primary-600 transition-colors">
                       {repo.name}
                     </h3>
                   </div>
-                  <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-dark-800 text-dark-400 border border-dark-700/50">
+                  <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-slate-100 text-dark-400 border border-[#E5E7EB] font-semibold">
                     {repo.default_branch}
                   </span>
                 </div>
 
-                <p className="mt-1 text-xs text-dark-400 line-clamp-2 min-h-[32px]">
+                <p className="mt-1 text-xs text-dark-400 line-clamp-2 min-h-[32px] font-medium">
                   {repo.description || 'No description provided.'}
                 </p>
               </div>
 
               {/* Stats & Actions Footer */}
-              <div className="mt-4 pt-4 border-t border-dark-800 flex items-center justify-between text-xs text-dark-400">
+              <div className="mt-4 pt-4 border-t border-[#F1F5F9] flex items-center justify-between text-xs text-dark-400">
                 <div className="flex items-center gap-3">
                   {repo.language && (
-                    <span className="flex items-center gap-1 text-dark-300">
-                      <Circle className="h-2 w-2 fill-primary-400 text-primary-400" />
+                    <span className="flex items-center gap-1 text-dark-300 font-medium">
+                      <Circle className="h-2 w-2 fill-primary-600 text-primary-600" />
                       {repo.language}
                     </span>
                   )}
-                  <span className="flex items-center gap-1">
-                    <Star className="h-3.5 w-3.5 text-warning-400" />
+                  <span className="flex items-center gap-1 font-medium">
+                    <Star className="h-3.5 w-3.5 text-amber-500" />
                     {repo.stars_count}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <GitFork className="h-3.5 w-3.5" />
+                  <span className="flex items-center gap-1 font-medium">
+                    <GitFork className="h-3.5 w-3.5 text-dark-400" />
                     {repo.forks_count}
                   </span>
                 </div>
@@ -236,11 +235,12 @@ export const RepositoriesPage: React.FC = () => {
                   <button
                     onClick={(e) => handleSync(e, repo.id)}
                     title="Sync now"
+                    aria-label="Sync repository"
                     disabled={syncingId === repo.id}
-                    className="p-1.5 rounded-md text-dark-400 hover:text-white hover:bg-dark-800 transition-colors"
+                    className="p-1.5 rounded-lg text-dark-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
                   >
                     <RefreshCw
-                      className={`h-3.5 w-3.5 ${syncingId === repo.id ? 'animate-spin text-primary-400' : ''}`}
+                      className={`h-3.5 w-3.5 ${syncingId === repo.id ? 'animate-spin text-primary-600' : ''}`}
                     />
                   </button>
                   <a
@@ -249,14 +249,16 @@ export const RepositoriesPage: React.FC = () => {
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
                     title="Open on GitHub"
-                    className="p-1.5 rounded-md text-dark-400 hover:text-white hover:bg-dark-800 transition-colors"
+                    aria-label="Open on GitHub"
+                    className="p-1.5 rounded-lg text-dark-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                   <button
                     onClick={(e) => handleDelete(e, repo.id)}
                     title="Remove repository"
-                    className="p-1.5 rounded-md text-dark-400 hover:text-danger-400 hover:bg-dark-800 transition-colors"
+                    aria-label="Remove repository"
+                    className="p-1.5 rounded-lg text-dark-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -286,12 +288,12 @@ export const RepositoriesPage: React.FC = () => {
       >
         <form onSubmit={handleImport} className="space-y-4">
           <p className="text-xs text-dark-400">
-            Enter the repository full name in the format <code className="text-primary-300">owner/repo</code> (e.g.{' '}
-            <code className="text-primary-300">facebook/react</code>).
+            Enter the repository full name in the format <code className="text-primary-600 font-semibold">owner/repo</code> (e.g.{' '}
+            <code className="text-primary-600 font-semibold">facebook/react</code>).
           </p>
 
           {importError && (
-            <div className="rounded-lg border border-danger-500/30 bg-danger-500/10 p-3 text-xs text-danger-300">
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 font-medium">
               {importError}
             </div>
           )}
@@ -323,3 +325,5 @@ export const RepositoriesPage: React.FC = () => {
     </div>
   );
 };
+
+export default RepositoriesPage;

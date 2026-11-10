@@ -26,6 +26,8 @@ class ActivityItem(BaseModel):
     description: str
     timestamp: datetime
     repository_name: str | None = None
+    url: str | None = None
+    author: str | None = None
 
 
 class RecentActivityResponse(BaseModel):

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Rocket, RefreshCw, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Rocket, RefreshCw, ExternalLink } from 'lucide-react';
 import { workflowService } from '@/services/workflows';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -37,10 +37,10 @@ export const DeploymentsPage: React.FC = () => {
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-dark-100">
             Deployment History
           </h1>
-          <p className="text-xs text-dark-400">
+          <p className="text-xs font-medium text-dark-400 mt-0.5">
             Audit log of environments, deployed commits, and release statuses
           </p>
         </div>
@@ -60,7 +60,7 @@ export const DeploymentsPage: React.FC = () => {
           <LoadingSpinner size="lg" message="Loading deployments..." />
         </div>
       ) : (
-        <div className="rounded-2xl border border-dark-800 bg-dark-900/90 shadow-xl overflow-hidden">
+        <div className="rounded-2xl border border-[#E5E7EB] bg-white shadow-subtle overflow-hidden">
           <Table<Deployment>
             columns={[
               {
@@ -68,8 +68,8 @@ export const DeploymentsPage: React.FC = () => {
                 key: 'environment',
                 render: (d) => (
                   <div className="flex items-center gap-2">
-                    <Rocket className="h-4 w-4 text-primary-400" />
-                    <span className="font-semibold text-white capitalize">{d.environment}</span>
+                    <Rocket className="h-4 w-4 text-primary-600" />
+                    <span className="font-bold text-dark-100 capitalize">{d.environment}</span>
                   </div>
                 ),
               },
@@ -89,7 +89,7 @@ export const DeploymentsPage: React.FC = () => {
                 header: 'Commit SHA',
                 key: 'sha',
                 render: (d) => (
-                  <span className="font-mono text-xs text-dark-300">
+                  <span className="font-mono text-xs font-medium text-dark-300">
                     {d.sha ? d.sha.substring(0, 7) : d.ref || '—'}
                   </span>
                 ),
@@ -97,22 +97,27 @@ export const DeploymentsPage: React.FC = () => {
               {
                 header: 'Deployed By',
                 key: 'creator',
-                render: (d) => <span className="text-xs text-dark-300">{d.creator || 'CI/CD'}</span>,
+                render: (d) => <span className="text-xs font-medium text-dark-300">{d.creator || 'CI/CD'}</span>,
               },
               {
                 header: 'Timestamp',
-                key: 'deployed_at',
+                key: 'created_at',
                 render: (d) => (
-                  <span className="text-xs text-dark-400">
-                    {d.deployed_at
-                      ? new Date(d.deployed_at).toLocaleString()
-                      : new Date(d.created_at).toLocaleString()}
+                  <span className="text-xs text-dark-400 font-medium">
+                    {new Date(d.created_at).toLocaleString()}
                   </span>
+                ),
+              },
+              {
+                header: 'Release',
+                key: 'id',
+                render: (d) => (
+                  <span className="font-mono text-xs text-dark-400 font-medium">#{d.id}</span>
                 ),
               },
             ]}
             data={deployments}
-            emptyMessage="No deployments recorded yet. Configure GitHub Deployments or webhooks to track releases."
+            emptyMessage="No deployments recorded yet."
           />
         </div>
       )}
@@ -128,3 +133,5 @@ export const DeploymentsPage: React.FC = () => {
     </div>
   );
 };
+
+export default DeploymentsPage;

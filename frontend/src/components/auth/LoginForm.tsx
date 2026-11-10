@@ -46,8 +46,8 @@ export const LoginForm: React.FC = () => {
   return (
     <div className="w-full space-y-6">
       {error && (
-        <div className="flex items-center gap-2.5 rounded-lg border border-danger-500/30 bg-danger-500/10 p-3 text-xs text-danger-300">
-          <AlertCircle className="h-4 w-4 shrink-0" />
+        <div className="flex items-center gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 text-danger-300 font-medium">
+          <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
           <span>{error}</span>
         </div>
       )}
@@ -59,56 +59,79 @@ export const LoginForm: React.FC = () => {
           placeholder="developer@company.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          required
           leftIcon={<Mail className="h-4 w-4" />}
+          required
         />
 
         <Input
           label="Password"
           type="password"
-          placeholder="••••••••"
+          placeholder="••••••••••••"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          required
           leftIcon={<Lock className="h-4 w-4" />}
+          required
         />
+
+        <div className="flex items-center justify-between text-xs">
+          <label className="flex items-center gap-2 cursor-pointer text-dark-300 font-medium">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-[#E5E7EB] text-primary-600 focus:ring-primary-500/20"
+            />
+            Remember me
+          </label>
+          <a
+            href="#"
+            className="text-primary-600 hover:text-primary-700 font-semibold transition-colors"
+          >
+            Forgot password?
+          </a>
+        </div>
 
         <Button
           type="submit"
           variant="primary"
-          className="w-full mt-2"
+          className="w-full justify-center"
           isLoading={isLoading}
           rightIcon={<ArrowRight className="h-4 w-4" />}
         >
-          Sign In
+          Sign in
         </Button>
       </form>
 
-      <div className="relative my-4">
+      <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-dark-700/60" />
+          <div className="w-full border-t border-[#E5E7EB]" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-dark-900 px-2 text-dark-400">or continue with</span>
+          <span className="bg-white px-3 font-semibold text-dark-400">
+            Or continue with
+          </span>
         </div>
       </div>
 
       <Button
         type="button"
         variant="secondary"
-        className="w-full"
         onClick={handleGitHubOAuth}
+        className="w-full justify-center"
         leftIcon={<Github className="h-4 w-4" />}
       >
         Sign in with GitHub
       </Button>
 
-      <p className="text-center text-xs text-dark-400">
+      <p className="text-center text-xs text-dark-400 font-medium">
         Don&apos;t have an account?{' '}
-        <Link to="/register" className="font-semibold text-primary-400 hover:text-primary-300">
-          Create an account
+        <Link
+          to="/register"
+          className="text-primary-600 hover:text-primary-700 font-semibold transition-colors"
+        >
+          Create one now
         </Link>
       </p>
     </div>
   );
 };
+
+export default LoginForm;

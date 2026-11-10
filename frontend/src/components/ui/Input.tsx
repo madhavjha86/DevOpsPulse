@@ -22,14 +22,14 @@ const Input: React.FC<InputProps> = ({
       {label && (
         <label
           htmlFor={inputId}
-          className="block text-sm font-medium text-dark-300"
+          className="block text-xs font-semibold text-dark-300 tracking-wide"
         >
           {label}
         </label>
       )}
       <div className="relative">
         {leftIcon && (
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-dark-400">
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-dark-400">
             {leftIcon}
           </div>
         )}
@@ -38,14 +38,14 @@ const Input: React.FC<InputProps> = ({
           className={clsx(
             'input-dark',
             leftIcon && 'pl-10',
-            error && 'border-danger-500/50 focus:ring-danger-500/50 focus:border-danger-500/50',
+            error && 'border-danger-400 focus:ring-danger-400/20 focus:border-danger-500',
             className
           )}
           {...props}
         />
       </div>
       {error && (
-        <p className="text-sm text-danger-400">{error}</p>
+        <p className="text-xs text-danger-500 font-medium">{error}</p>
       )}
     </div>
   );

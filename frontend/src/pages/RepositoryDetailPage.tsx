@@ -10,9 +10,6 @@ import {
   GitBranch,
   Star,
   GitFork,
-  CheckCircle2,
-  XCircle,
-  Clock,
 } from 'lucide-react';
 import { repositoryService } from '@/services/repositories';
 import { workflowService } from '@/services/workflows';
@@ -95,7 +92,7 @@ export const RepositoryDetailPage: React.FC = () => {
   if (!repo) {
     return (
       <div className="text-center py-24 space-y-4">
-        <p className="text-dark-300">Repository not found.</p>
+        <p className="text-dark-300 font-medium">Repository not found.</p>
         <Button variant="secondary" onClick={() => navigate('/repositories')}>
           Back to Repositories
         </Button>
@@ -109,7 +106,7 @@ export const RepositoryDetailPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate('/repositories')}
-          className="flex items-center gap-2 text-xs font-semibold text-dark-400 hover:text-white transition-colors"
+          className="flex items-center gap-2 text-xs font-semibold text-dark-400 hover:text-dark-100 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Back to Repositories</span>
@@ -129,32 +126,32 @@ export const RepositoryDetailPage: React.FC = () => {
             href={repo.html_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-lg border border-dark-700/80 bg-dark-800 px-3 py-1.5 text-xs font-medium text-dark-200 hover:bg-dark-700 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 rounded-xl border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-semibold text-dark-300 hover:bg-slate-50 hover:text-dark-100 transition-colors shadow-2xs"
           >
-            <ExternalLink className="h-3.5 w-3.5" />
+            <ExternalLink className="h-3.5 w-3.5 text-dark-400" />
             <span>GitHub</span>
           </a>
         </div>
       </div>
 
       {/* Repo Header Card */}
-      <div className="rounded-2xl border border-dark-800 bg-dark-900/90 p-6 shadow-xl space-y-4">
+      <div className="rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-subtle space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">{repo.full_name}</h1>
-            <p className="mt-1 text-xs text-dark-400">{repo.description || 'No description'}</p>
+            <h1 className="text-2xl font-extrabold text-dark-100 tracking-tight">{repo.full_name}</h1>
+            <p className="mt-1 text-xs font-medium text-dark-400">{repo.description || 'No description'}</p>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1 text-xs rounded-full bg-dark-800 px-3 py-1 text-dark-300 border border-dark-700/60 font-mono">
-              <GitBranch className="h-3.5 w-3.5 text-primary-400" />
+          <div className="flex items-center gap-2.5">
+            <span className="flex items-center gap-1.5 text-xs rounded-full bg-slate-100 px-3 py-1 text-dark-300 border border-[#E5E7EB] font-mono font-semibold">
+              <GitBranch className="h-3.5 w-3.5 text-primary-600" />
               {repo.default_branch}
             </span>
-            <span className="flex items-center gap-1 text-xs rounded-full bg-dark-800 px-3 py-1 text-dark-300 border border-dark-700/60">
-              <Star className="h-3.5 w-3.5 text-warning-400" />
+            <span className="flex items-center gap-1.5 text-xs rounded-full bg-slate-100 px-3 py-1 text-dark-300 border border-[#E5E7EB] font-semibold">
+              <Star className="h-3.5 w-3.5 text-amber-500" />
               {repo.stars_count}
             </span>
-            <span className="flex items-center gap-1 text-xs rounded-full bg-dark-800 px-3 py-1 text-dark-300 border border-dark-700/60">
-              <GitFork className="h-3.5 w-3.5 text-primary-400" />
+            <span className="flex items-center gap-1.5 text-xs rounded-full bg-slate-100 px-3 py-1 text-dark-300 border border-[#E5E7EB] font-semibold">
+              <GitFork className="h-3.5 w-3.5 text-primary-600" />
               {repo.forks_count}
             </span>
           </div>
@@ -162,7 +159,7 @@ export const RepositoryDetailPage: React.FC = () => {
       </div>
 
       {/* Tab Navigation */}
-      <div className="border-b border-dark-800">
+      <div className="border-b border-[#E5E7EB]">
         <nav className="flex space-x-6">
           {[
             { key: 'workflows', label: 'Workflows', count: workflows.length },
@@ -173,14 +170,16 @@ export const RepositoryDetailPage: React.FC = () => {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as TabType)}
-              className={`flex items-center gap-2 border-b-2 py-3 text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-2 border-b-2 py-3 text-xs font-semibold transition-all duration-150 ${
                 activeTab === tab.key
-                  ? 'border-primary-500 text-primary-400'
-                  : 'border-transparent text-dark-400 hover:border-dark-700 hover:text-dark-200'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'border-transparent text-dark-400 hover:border-slate-300 hover:text-dark-100'
               }`}
             >
               <span>{tab.label}</span>
-              <span className="rounded-full bg-dark-800 px-2 py-0.5 text-[10px] text-dark-300">
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                activeTab === tab.key ? 'bg-primary-50 text-primary-700' : 'bg-slate-100 text-dark-400'
+              }`}>
                 {tab.count}
               </span>
             </button>
@@ -190,7 +189,7 @@ export const RepositoryDetailPage: React.FC = () => {
 
       {/* Tab Contents */}
       {activeTab === 'workflows' && (
-        <div className="rounded-2xl border border-dark-800 bg-dark-900/90 shadow-xl overflow-hidden">
+        <div className="rounded-2xl border border-[#E5E7EB] bg-white shadow-subtle overflow-hidden">
           <Table<WorkflowRun>
             columns={[
               {
@@ -198,7 +197,7 @@ export const RepositoryDetailPage: React.FC = () => {
                 key: 'workflow_name',
                 render: (r) => (
                   <div>
-                    <span className="font-semibold text-white">{r.workflow_name}</span>
+                    <span className="font-bold text-dark-100">{r.workflow_name}</span>
                     <span className="ml-2 font-mono text-xs text-dark-400">#{r.run_number}</span>
                   </div>
                 ),
@@ -221,14 +220,14 @@ export const RepositoryDetailPage: React.FC = () => {
                 header: 'Branch',
                 key: 'branch',
                 render: (r) => (
-                  <span className="font-mono text-xs text-dark-300">{r.branch || 'main'}</span>
+                  <span className="font-mono text-xs font-medium text-dark-300">{r.branch || 'main'}</span>
                 ),
               },
               {
                 header: 'Duration',
                 key: 'duration_seconds',
                 render: (r) => (
-                  <span className="text-xs text-dark-400">
+                  <span className="text-xs font-medium text-dark-400">
                     {r.duration_seconds ? `${r.duration_seconds}s` : '—'}
                   </span>
                 ),
@@ -237,7 +236,7 @@ export const RepositoryDetailPage: React.FC = () => {
                 header: 'Completed',
                 key: 'completed_at',
                 render: (r) => (
-                  <span className="text-xs text-dark-400">
+                  <span className="text-xs font-medium text-dark-400">
                     {r.completed_at ? new Date(r.completed_at).toLocaleDateString() : '—'}
                   </span>
                 ),
@@ -250,21 +249,21 @@ export const RepositoryDetailPage: React.FC = () => {
       )}
 
       {activeTab === 'commits' && (
-        <div className="rounded-2xl border border-dark-800 bg-dark-900/90 shadow-xl overflow-hidden">
+        <div className="rounded-2xl border border-[#E5E7EB] bg-white shadow-subtle overflow-hidden">
           <Table<Commit>
             columns={[
               {
                 header: 'SHA',
                 key: 'sha',
                 render: (c) => (
-                  <span className="font-mono text-xs text-primary-400">{c.sha.substring(0, 7)}</span>
+                  <span className="font-mono text-xs font-semibold text-primary-600">{c.sha.substring(0, 7)}</span>
                 ),
               },
               {
                 header: 'Message',
                 key: 'message',
                 render: (c) => (
-                  <span className="font-medium text-dark-200 line-clamp-1">
+                  <span className="font-medium text-dark-100 line-clamp-1">
                     {c.message.split('\n')[0]}
                   </span>
                 ),
@@ -272,7 +271,7 @@ export const RepositoryDetailPage: React.FC = () => {
               {
                 header: 'Author',
                 key: 'author_name',
-                render: (c) => <span className="text-xs text-dark-300">{c.author_name}</span>,
+                render: (c) => <span className="text-xs font-medium text-dark-300">{c.author_name}</span>,
               },
               {
                 header: 'Date',
@@ -291,7 +290,7 @@ export const RepositoryDetailPage: React.FC = () => {
       )}
 
       {activeTab === 'pull-requests' && (
-        <div className="rounded-2xl border border-dark-800 bg-dark-900/90 shadow-xl overflow-hidden">
+        <div className="rounded-2xl border border-[#E5E7EB] bg-white shadow-subtle overflow-hidden">
           <Table<PullRequest>
             columns={[
               {
@@ -302,7 +301,7 @@ export const RepositoryDetailPage: React.FC = () => {
               {
                 header: 'Title',
                 key: 'title',
-                render: (p) => <span className="font-medium text-white">{p.title}</span>,
+                render: (p) => <span className="font-bold text-dark-100">{p.title}</span>,
               },
               {
                 header: 'State',
@@ -320,7 +319,7 @@ export const RepositoryDetailPage: React.FC = () => {
               {
                 header: 'Author',
                 key: 'author',
-                render: (p) => <span className="text-xs text-dark-300">{p.author || '—'}</span>,
+                render: (p) => <span className="text-xs font-medium text-dark-300">{p.author || '—'}</span>,
               },
             ]}
             data={prs}
@@ -330,7 +329,7 @@ export const RepositoryDetailPage: React.FC = () => {
       )}
 
       {activeTab === 'issues' && (
-        <div className="rounded-2xl border border-dark-800 bg-dark-900/90 shadow-xl overflow-hidden">
+        <div className="rounded-2xl border border-[#E5E7EB] bg-white shadow-subtle overflow-hidden">
           <Table<Issue>
             columns={[
               {
@@ -341,7 +340,7 @@ export const RepositoryDetailPage: React.FC = () => {
               {
                 header: 'Title',
                 key: 'title',
-                render: (i) => <span className="font-medium text-white">{i.title}</span>,
+                render: (i) => <span className="font-bold text-dark-100">{i.title}</span>,
               },
               {
                 header: 'State',
@@ -354,7 +353,7 @@ export const RepositoryDetailPage: React.FC = () => {
               {
                 header: 'Author',
                 key: 'author',
-                render: (i) => <span className="text-xs text-dark-300">{i.author || '—'}</span>,
+                render: (i) => <span className="text-xs font-medium text-dark-300">{i.author || '—'}</span>,
               },
             ]}
             data={issues}
@@ -365,3 +364,5 @@ export const RepositoryDetailPage: React.FC = () => {
     </div>
   );
 };
+
+export default RepositoryDetailPage;

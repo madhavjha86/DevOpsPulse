@@ -208,6 +208,20 @@ class RepositoryService:
         except Exception as exc:
             logger.error("Failed to sync issues", error=str(exc))
 
+        # 5. Sync Workflow Runs
+        try:
+            from app.services.workflow_service import WorkflowService
+            await WorkflowService.sync_workflow_runs(db, repo.id, user_id)
+        except Exception as exc:
+            logger.warning("Failed to sync workflow runs", error=str(exc))
+
+        # 6. Sync Deployments
+        try:
+            from app.services.workflow_service import WorkflowService
+            await WorkflowService.sync_deployments(db, repo.id, user_id)
+        except Exception as exc:
+            logger.warning("Failed to sync deployments", error=str(exc))
+
         await db.commit()
         refreshed = await repo_db.get(repo.id)
         return RepositoryResponse.model_validate(refreshed or repo)

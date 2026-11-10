@@ -27,17 +27,17 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   const spinner = (
     <div className={clsx('flex flex-col items-center justify-center gap-3', className)}>
       <Loader2
-        className={clsx('animate-spin text-primary-500', sizeClasses[size])}
+        className={clsx('animate-spin text-primary-600', sizeClasses[size])}
       />
       {displayMsg && (
-        <p className="text-sm text-dark-400 animate-pulse">{displayMsg}</p>
+        <p className="text-sm font-medium text-dark-400 animate-pulse">{displayMsg}</p>
       )}
     </div>
   );
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-dark-950/80 backdrop-blur-sm z-50">
+      <div className="fixed inset-0 flex items-center justify-center bg-white/85 backdrop-blur-sm z-50">
         {spinner}
       </div>
     );

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import {
   Activity,
-  Plus,
-  RefreshCw,
   CheckCircle2,
   XCircle,
+  Plus,
+  RefreshCw,
   Clock,
   Globe,
   Trash2,
@@ -23,17 +23,19 @@ export const UptimePage: React.FC = () => {
   const [probingId, setProbingId] = useState<number | null>(null);
   const [probeMessage, setProbeMessage] = useState<string | null>(null);
 
-  // Form State
+  // New Monitor form
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [method, setMethod] = useState('GET');
-  const [interval, setInterval] = useState(60);
+  const [expectedStatus, setExpectedStatus] = useState(200);
+  const [intervalSeconds, setIntervalSeconds] = useState(60);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchMonitors = async () => {
     setIsLoading(true);
     try {
-      const { data } = await monitorService.list();
-      setMonitors(data);
+      const res = await monitorService.list();
+      setMonitors(res.data);
     } catch (err) {
       console.error('Failed to load monitors', err);
     } finally {
@@ -47,19 +49,22 @@ export const UptimePage: React.FC = () => {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       await monitorService.create({
         name,
         url,
         method,
-        interval_seconds: Number(interval),
+        interval_seconds: Number(intervalSeconds),
       });
       setIsModalOpen(false);
       setName('');
       setUrl('');
-      fetchMonitors();
-    } catch (err) {
-      console.error('Failed to create monitor', err);
+      await fetchMonitors();
+    } catch {
+      alert('Failed to register monitor.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -67,23 +72,25 @@ export const UptimePage: React.FC = () => {
     setProbingId(id);
     setProbeMessage(null);
     try {
-      const { data } = await monitorService.probe(id);
-      setProbeMessage(`Ping successful: HTTP ${data.status_code} (${data.latency_ms}ms)`);
-      fetchMonitors();
+      const res = await monitorService.probe(id);
+      setProbeMessage(
+        `Probe result: HTTP ${res.data.status_code} (${res.data.latency_ms}ms) — ${res.data.message || (res.data.is_up ? 'Operational' : 'Down')}`
+      );
+      await fetchMonitors();
     } catch {
-      setProbeMessage('Probe failed to reach target endpoint.');
+      setProbeMessage('Probe request failed.');
     } finally {
       setProbingId(null);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Delete this monitor?')) return;
+    if (!window.confirm('Delete this service monitor?')) return;
     try {
       await monitorService.delete(id);
-      fetchMonitors();
-    } catch (err) {
-      console.error('Failed to delete monitor', err);
+      await fetchMonitors();
+    } catch {
+      alert('Delete failed.');
     }
   };
 
@@ -103,28 +110,28 @@ export const UptimePage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-dark-100">
               Service Uptime & Health Monitor
             </h1>
             <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
                 allOperational
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                  : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : 'bg-rose-50 text-rose-800 border-rose-200'
               }`}
             >
               {allOperational ? (
                 <>
-                  <CheckCircle2 className="h-3.5 w-3.5" /> All Systems Operational
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> All Systems Operational
                 </>
               ) : (
                 <>
-                  <XCircle className="h-3.5 w-3.5" /> Issues Detected
+                  <XCircle className="h-3.5 w-3.5 text-rose-600" /> Issues Detected
                 </>
               )}
             </span>
           </div>
-          <p className="text-xs text-dark-400 mt-1">
+          <p className="text-xs font-medium text-dark-400 mt-1">
             Real-time synthetic HTTP probes and latency tracking for APIs, databases, and microservices
           </p>
         </div>
@@ -140,9 +147,9 @@ export const UptimePage: React.FC = () => {
       </div>
 
       {probeMessage && (
-        <div className="rounded-lg border border-primary-500/30 bg-primary-500/10 p-3 text-xs text-primary-300 flex items-center justify-between">
+        <div className="rounded-xl border border-primary-200 bg-primary-50 p-3.5 text-xs text-primary-800 font-medium flex items-center justify-between shadow-2xs">
           <span>{probeMessage}</span>
-          <button onClick={() => setProbeMessage(null)} className="text-dark-400 hover:text-white">
+          <button onClick={() => setProbeMessage(null)} className="text-primary-600 hover:text-primary-900 font-bold ml-2">
             ×
           </button>
         </div>
@@ -153,22 +160,22 @@ export const UptimePage: React.FC = () => {
         {monitors.map((m) => (
           <div
             key={m.id}
-            className="glass-card p-5 border border-dark-700/60 hover:border-dark-600 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
+            className="bg-white rounded-2xl border border-[#E5E7EB] p-5 shadow-subtle hover:border-[#D1D5DB] hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4"
           >
             <div className="space-y-1.5 flex-1">
               <div className="flex items-center gap-2.5">
                 <span
                   className={`h-2.5 w-2.5 rounded-full ${
-                    m.status === 'operational' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
+                    m.status === 'operational' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
                   }`}
                 />
-                <h3 className="text-sm font-semibold text-white">{m.name}</h3>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-dark-800 text-dark-300 border border-dark-700">
+                <h3 className="text-sm font-bold text-dark-100">{m.name}</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-100 text-dark-400 border border-[#E5E7EB]">
                   {m.method}
                 </span>
               </div>
-              <p className="text-xs font-mono text-dark-400 flex items-center gap-1.5">
-                <Globe className="h-3.5 w-3.5" />
+              <p className="text-xs font-mono text-dark-400 flex items-center gap-1.5 font-medium">
+                <Globe className="h-3.5 w-3.5 text-dark-400" />
                 {m.url}
               </p>
             </div>
@@ -176,54 +183,48 @@ export const UptimePage: React.FC = () => {
             {/* Probe Status Bar */}
             <div className="flex items-center gap-6">
               <div>
-                <div className="text-[11px] text-dark-400">30d Uptime</div>
-                <div className="text-sm font-bold text-emerald-400">{m.uptime_percentage}%</div>
+                <div className="text-[11px] font-semibold text-dark-400 uppercase tracking-wider">30d Uptime</div>
+                <div className="text-sm font-extrabold text-emerald-700">{m.uptime_percentage}%</div>
               </div>
 
               <div>
-                <div className="text-[11px] text-dark-400">Avg Latency</div>
-                <div className="text-sm font-bold text-white flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-primary-400" />
+                <div className="text-[11px] font-semibold text-dark-400 uppercase tracking-wider">Avg Latency</div>
+                <div className="text-sm font-extrabold text-dark-100 flex items-center gap-1">
+                  <Clock className="h-3 w-3 text-primary-600" />
                   {m.avg_latency_ms}ms
                 </div>
               </div>
 
               {/* Status history dots */}
               <div className="hidden lg:flex items-center gap-1">
-                {m.recent_probes.map((code, idx) => (
+                {m.recent_probes.map((code: number, idx: number) => (
                   <span
                     key={idx}
                     title={`Probe ${idx + 1}: HTTP ${code}`}
-                    className={`h-6 w-1.5 rounded-sm ${code < 400 ? 'bg-emerald-500/80' : 'bg-rose-500'}`}
+                    className={`h-6 w-1.5 rounded-sm ${code < 400 ? 'bg-emerald-500' : 'bg-rose-500'}`}
                   />
                 ))}
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={() => handleProbe(m.id)}
-                  disabled={probingId === m.id}
-                  leftIcon={
-                    probingId === m.id ? (
-                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Play className="h-3.5 w-3.5" />
-                    )
-                  }
+                  isLoading={probingId === m.id}
+                  leftIcon={<Play className="h-3 w-3" />}
                 >
-                  Ping
+                  Probe
                 </Button>
-                {m.id > 3 && (
-                  <button
-                    onClick={() => handleDelete(m.id)}
-                    className="p-2 rounded-lg text-dark-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                )}
+                <button
+                  onClick={() => handleDelete(m.id)}
+                  className="p-2 rounded-xl text-dark-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                  title="Delete monitor"
+                  aria-label="Delete monitor"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
             </div>
           </div>
@@ -231,59 +232,54 @@ export const UptimePage: React.FC = () => {
       </div>
 
       {/* Add Monitor Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Register Service Health Monitor">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Register HTTP Service Probe">
         <form onSubmit={handleCreate} className="space-y-4">
           <Input
-            label="Service Name"
-            placeholder="e.g. Production Payment API"
+            label="Service Identifier"
+            placeholder="e.g. Production Auth Gateway"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            autoFocus
           />
-
           <Input
-            label="Endpoint URL"
-            placeholder="https://api.example.com/health"
+            label="Probe Endpoint URL"
+            placeholder="https://api.devopspulse.com/healthz"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             required
           />
-
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">HTTP Method</label>
+              <label className="block text-xs font-semibold text-dark-300 mb-1.5 uppercase tracking-wide">Method</label>
               <select
                 value={method}
                 onChange={(e) => setMethod(e.target.value)}
-                className="w-full rounded-lg border border-dark-700 bg-dark-900/80 px-3 py-2 text-xs text-white focus:border-primary-500 focus:outline-none"
+                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-xs text-dark-100 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 shadow-sm"
               >
                 <option value="GET">GET</option>
                 <option value="POST">POST</option>
                 <option value="HEAD">HEAD</option>
               </select>
             </div>
-
             <div>
-              <label className="block text-xs font-medium text-dark-300 mb-1.5">Check Interval</label>
+              <label className="block text-xs font-semibold text-dark-300 mb-1.5 uppercase tracking-wide">Expected HTTP Status</label>
               <select
-                value={interval}
-                onChange={(e) => setInterval(Number(e.target.value))}
-                className="w-full rounded-lg border border-dark-700 bg-dark-900/80 px-3 py-2 text-xs text-white focus:border-primary-500 focus:outline-none"
+                value={expectedStatus}
+                onChange={(e) => setExpectedStatus(Number(e.target.value))}
+                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-3 py-2 text-xs text-dark-100 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 shadow-sm"
               >
-                <option value={30}>Every 30 seconds</option>
-                <option value={60}>Every 1 minute</option>
-                <option value={300}>Every 5 minutes</option>
+                <option value={200}>200 OK</option>
+                <option value={204}>204 No Content</option>
+                <option value={301}>301 Redirect</option>
               </select>
             </div>
           </div>
-
           <div className="flex justify-end gap-3 pt-3">
             <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary">
-              Create Monitor
+            <Button type="submit" variant="primary" isLoading={isSubmitting}>
+              Register Monitor
             </Button>
           </div>
         </form>
@@ -291,3 +287,5 @@ export const UptimePage: React.FC = () => {
     </div>
   );
 };
+
+export default UptimePage;

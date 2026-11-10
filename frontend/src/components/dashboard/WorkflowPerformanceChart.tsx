@@ -21,9 +21,9 @@ export const WorkflowPerformanceChart: React.FC<WorkflowPerformanceChartProps> =
 }) => {
   if (isLoading || !data || !Array.isArray(data) || data.length === 0) {
     return (
-      <div className="rounded-2xl border border-dark-800 bg-dark-900/90 p-6 shadow-xl flex flex-col justify-center items-center h-72">
-        <h3 className="text-base font-semibold text-white mb-1">Workflow Execution Time</h3>
-        <p className="text-xs text-dark-400">No workflow performance history yet.</p>
+      <div className="rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-subtle flex flex-col justify-center items-center h-72">
+        <h3 className="text-base font-bold text-dark-100 mb-1">Workflow Execution Time</h3>
+        <p className="text-xs font-medium text-dark-400">No workflow performance history yet.</p>
       </div>
     );
   }
@@ -34,32 +34,49 @@ export const WorkflowPerformanceChart: React.FC<WorkflowPerformanceChartProps> =
   }));
 
   return (
-    <div className="rounded-2xl border border-dark-800 bg-dark-900/90 p-6 shadow-xl">
+    <div className="rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-subtle transition-all duration-200">
       <div className="mb-4">
-        <h3 className="text-base font-semibold text-white">Workflow Execution Time</h3>
-        <p className="text-xs text-dark-400">Average run duration in seconds (Last 14 days)</p>
+        <h3 className="text-base font-bold text-dark-100">Workflow Execution Time</h3>
+        <p className="text-xs font-medium text-dark-400">Average run duration in seconds (Last 14 days)</p>
       </div>
 
       <div className="h-56 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={formattedData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-            <XAxis dataKey="date" stroke="#64748b" tick={{ fill: '#64748b', fontSize: 11 }} />
-            <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 11 }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+            <XAxis
+              dataKey="date"
+              stroke="#94A3B8"
+              tick={{ fill: '#64748B', fontSize: 10 }}
+              minTickGap={12}
+              interval="preserveStartEnd"
+            />
+            <YAxis stroke="#94A3B8" tick={{ fill: '#64748B', fontSize: 11 }} />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#0f172a',
-                borderColor: '#334155',
-                borderRadius: '8px',
+                backgroundColor: '#FFFFFF',
+                borderColor: '#E5E7EB',
+                borderRadius: '12px',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04)',
                 fontSize: '12px',
-                color: '#f8fafc',
+                color: '#111827',
+                fontWeight: 500,
               }}
               formatter={(value) => [`${value}s`, 'Avg Duration']}
             />
-            <Bar dataKey="duration" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+            <Bar
+              dataKey="duration"
+              fill="#7c3aed"
+              radius={[6, 6, 0, 0]}
+              isAnimationActive={true}
+              animationDuration={800}
+              animationEasing="ease-out"
+            />
           </BarChart>
         </ResponsiveContainer>
       </div>
     </div>
   );
 };
+
+export default WorkflowPerformanceChart;

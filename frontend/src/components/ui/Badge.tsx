@@ -9,19 +9,19 @@ interface BadgeProps {
 }
 
 const variantClasses = {
-  success: 'bg-success-500/15 text-success-400 border-success-500/20',
-  danger: 'bg-danger-500/15 text-danger-400 border-danger-500/20',
-  warning: 'bg-warning-500/15 text-warning-400 border-warning-500/20',
-  info: 'bg-primary-500/15 text-primary-400 border-primary-500/20',
-  neutral: 'bg-dark-600/50 text-dark-300 border-dark-500/20',
+  success: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  danger: 'bg-rose-50 text-rose-600 border-rose-200',
+  warning: 'bg-amber-50 text-amber-700 border-amber-200',
+  info: 'bg-primary-50 text-primary-700 border-primary-200',
+  neutral: 'bg-slate-100 text-slate-600 border-slate-200',
 };
 
 const dotColors = {
-  success: 'bg-success-400',
-  danger: 'bg-danger-400',
-  warning: 'bg-warning-400',
-  info: 'bg-primary-400',
-  neutral: 'bg-dark-400',
+  success: 'bg-emerald-500',
+  danger: 'bg-rose-500',
+  warning: 'bg-amber-500',
+  info: 'bg-primary-500',
+  neutral: 'bg-slate-400',
 };
 
 const Badge: React.FC<BadgeProps> = ({
@@ -33,7 +33,7 @@ const Badge: React.FC<BadgeProps> = ({
   return (
     <span
       className={clsx(
-        'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border',
+        'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border',
         variantClasses[variant],
         className
       )}

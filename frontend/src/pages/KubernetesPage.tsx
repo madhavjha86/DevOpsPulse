@@ -241,7 +241,7 @@ export default function KubernetesPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-dark-100 flex items-center gap-2">
             <Boxes className="h-7 w-7 text-primary-500" />
             Kubernetes Cluster Monitoring
           </h1>
@@ -282,7 +282,7 @@ export default function KubernetesPage() {
               aria-label="Select Kubernetes Cluster"
               value={selectedClusterId || ''}
               onChange={(e) => setSelectedClusterId(Number(e.target.value))}
-              className="bg-dark-900 text-white text-sm rounded-lg border border-dark-700 px-3 py-1.5 focus:ring-primary-500 focus:border-primary-500"
+              className="bg-white text-dark-100 text-sm rounded-xl border border-[#E5E7EB] px-3 py-1.5 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 shadow-sm"
             >
               {clusters.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -358,7 +358,7 @@ export default function KubernetesPage() {
         <div className="glass-card p-4 flex items-center justify-between">
           <div>
             <p className="text-xs text-dark-400 font-medium">Nodes (Ready / Total)</p>
-            <p className="text-2xl font-bold text-white mt-1">
+            <p className="text-2xl font-bold text-dark-100 mt-1">
               {overview?.nodes_ready || 0} / {overview?.nodes_total || 0}
             </p>
           </div>
@@ -429,7 +429,7 @@ export default function KubernetesPage() {
                 aria-label="Filter by Namespace"
                 value={selectedNamespace}
                 onChange={(e) => setSelectedNamespace(e.target.value)}
-                className="bg-dark-900 text-xs text-white rounded-lg border border-dark-700 px-2.5 py-1.5 focus:ring-primary-500"
+                className="bg-white text-xs text-dark-100 rounded-xl border border-[#E5E7EB] px-2.5 py-1.5 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 shadow-sm"
               >
                 <option value="all">All Namespaces</option>
                 {overview?.namespaces.map((ns) => (
@@ -446,7 +446,7 @@ export default function KubernetesPage() {
                   placeholder="Search pod name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1 bg-dark-900 border border-dark-700 rounded-lg text-xs text-white placeholder-dark-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  className="w-full pl-8 pr-3 py-1 bg-white border border-[#E5E7EB] rounded-xl text-xs text-dark-100 placeholder-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 shadow-sm"
                 />
               </div>
             </div>
@@ -476,7 +476,7 @@ export default function KubernetesPage() {
           ) : filteredPods.length === 0 ? (
             <div className="glass-card text-center py-12">
               <Boxes className="h-12 w-12 text-dark-500 mx-auto mb-3" />
-              <h3 className="text-base font-semibold text-white">No pods found</h3>
+              <h3 className="text-base font-bold text-dark-100">No pods found</h3>
               <p className="text-sm text-dark-400 mt-1">
                 {pods.length === 0
                   ? 'No active pods discovered on this cluster or namespace.'
@@ -500,7 +500,7 @@ export default function KubernetesPage() {
                       {/* Pod Header */}
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <h4 className="text-sm font-semibold text-white truncate" title={pod.name}>
+                          <h4 className="text-sm font-bold text-dark-100 truncate" title={pod.name}>
                             {pod.name}
                           </h4>
                           <span className="text-[11px] bg-dark-900 text-primary-300 px-2 py-0.5 rounded font-mono border border-dark-700 mt-1 inline-block">
@@ -585,7 +585,7 @@ export default function KubernetesPage() {
           {nodes.length === 0 ? (
             <div className="glass-card text-center py-12">
               <Server className="h-12 w-12 text-dark-500 mx-auto mb-3" />
-              <h3 className="text-base font-semibold text-white">No nodes discovered</h3>
+              <h3 className="text-base font-bold text-dark-100">No nodes discovered</h3>
               <p className="text-sm text-dark-400 mt-1">
                 Unable to query cluster nodes. Ensure API server is reachable with appropriate RBAC permissions.
               </p>
@@ -599,7 +599,7 @@ export default function KubernetesPage() {
                   <div key={node.name} className="glass-card p-5 space-y-3">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h4 className="text-sm font-semibold text-white truncate" title={node.name}>
+                        <h4 className="text-sm font-bold text-dark-100 truncate" title={node.name}>
                           {node.name}
                         </h4>
                         <div className="flex flex-wrap gap-1 mt-1">

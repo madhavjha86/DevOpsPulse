@@ -78,8 +78,8 @@ export const RegisterForm: React.FC = () => {
   return (
     <div className="w-full space-y-6">
       {error && (
-        <div className="flex items-center gap-2.5 rounded-lg border border-danger-500/30 bg-danger-500/10 p-3 text-xs text-danger-300">
-          <AlertCircle className="h-4 w-4 shrink-0" />
+        <div className="flex items-center gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 text-danger-300 font-medium">
+          <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
           <span>{error}</span>
         </div>
       )}
@@ -138,7 +138,7 @@ export const RegisterForm: React.FC = () => {
         <Button
           type="submit"
           variant="primary"
-          className="w-full mt-2"
+          className="w-full justify-center mt-2"
           isLoading={isLoading}
           rightIcon={<ArrowRight className="h-4 w-4" />}
         >
@@ -148,29 +148,31 @@ export const RegisterForm: React.FC = () => {
 
       <div className="relative my-4">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-dark-700/60" />
+          <div className="w-full border-t border-[#E5E7EB]" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-dark-900 px-2 text-dark-400">or register with</span>
+          <span className="bg-white px-3 font-semibold text-dark-400">or register with</span>
         </div>
       </div>
 
       <Button
         type="button"
         variant="secondary"
-        className="w-full"
+        className="w-full justify-center"
         onClick={handleGitHubOAuth}
         leftIcon={<Github className="h-4 w-4" />}
       >
         Sign up with GitHub
       </Button>
 
-      <p className="text-center text-xs text-dark-400">
+      <p className="text-center text-xs text-dark-400 font-medium">
         Already have an account?{' '}
-        <Link to="/login" className="font-semibold text-primary-400 hover:text-primary-300">
+        <Link to="/login" className="font-semibold text-primary-600 hover:text-primary-700 transition-colors">
           Sign in
         </Link>
       </p>
     </div>
   );
 };
+
+export default RegisterForm;

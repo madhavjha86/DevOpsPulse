@@ -176,8 +176,8 @@ export const AICodeIntelligencePage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Code2 className="h-7 w-7 text-primary-400" />
+          <h1 className="text-2xl font-bold text-dark-100 flex items-center gap-2">
+            <Code2 className="h-7 w-7 text-primary-600" />
             AI Code Reviewer &amp; Failure Predictor
           </h1>
           <p className="text-sm text-dark-400 mt-1">
@@ -200,13 +200,13 @@ export const AICodeIntelligencePage: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-dark-700 space-x-6">
+      <div className="flex border-b border-[#E5E7EB] space-x-6">
         <button
           onClick={() => setActiveTab('reviewer')}
           className={`pb-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
             activeTab === 'reviewer'
-              ? 'border-primary-500 text-primary-400'
-              : 'border-transparent text-dark-400 hover:text-dark-200'
+              ? 'border-primary-600 text-primary-600 font-bold'
+              : 'border-transparent text-dark-400 hover:text-dark-100'
           }`}
         >
           <GitPullRequest className="h-4 w-4" />
@@ -216,8 +216,8 @@ export const AICodeIntelligencePage: React.FC = () => {
           onClick={() => setActiveTab('predictions')}
           className={`pb-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
             activeTab === 'predictions'
-              ? 'border-primary-500 text-primary-400'
-              : 'border-transparent text-dark-400 hover:text-dark-200'
+              ? 'border-primary-600 text-primary-600 font-bold'
+              : 'border-transparent text-dark-400 hover:text-dark-100'
           }`}
         >
           <Gauge className="h-4 w-4" />
@@ -237,10 +237,10 @@ export const AICodeIntelligencePage: React.FC = () => {
               <span>{reviews.length} Audited</span>
             </div>
 
-            <div className="glass-card divide-y divide-dark-800/80 max-h-[660px] overflow-y-auto">
+            <div className="glass-card divide-y divide-[#E5E7EB] max-h-[660px] overflow-y-auto">
               {loadingReviews ? (
                 <div className="p-8 text-center text-dark-400 text-xs">
-                  <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-primary-400" />
+                  <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-primary-600" />
                   Loading PR reviews...
                 </div>
               ) : reviews.length === 0 ? (
@@ -256,12 +256,12 @@ export const AICodeIntelligencePage: React.FC = () => {
                       onClick={() => setSelectedReview(r)}
                       className={`p-4 cursor-pointer transition-colors space-y-2 ${
                         isSelected
-                          ? 'bg-primary-500/10 border-l-4 border-l-primary-500'
-                          : 'hover:bg-dark-800/50'
+                          ? 'bg-primary-50/70 border-l-4 border-l-primary-600'
+                          : 'hover:bg-slate-50'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-bold text-white truncate">
+                        <span className="text-xs font-bold text-dark-100 truncate">
                           #{r.pr_number} {r.pr_title}
                         </span>
                         {getVerdictBadge(r.review_verdict)}
@@ -271,7 +271,7 @@ export const AICodeIntelligencePage: React.FC = () => {
                         <span className="flex items-center gap-1">
                           <Shield
                             className={`h-3 w-3 ${
-                              r.security_score >= 80 ? 'text-emerald-400' : 'text-danger-400'
+                              r.security_score >= 80 ? 'text-emerald-600' : 'text-danger-600'
                             }`}
                           />
                           Health Score: {r.security_score}/100
@@ -296,7 +296,7 @@ export const AICodeIntelligencePage: React.FC = () => {
             ) : (
               <div className="glass-card p-6 space-y-6">
                 {/* Review Header Banner */}
-                <div className="border-b border-dark-700/80 pb-4">
+                <div className="border-b border-[#E5E7EB] pb-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2">
@@ -305,14 +305,14 @@ export const AICodeIntelligencePage: React.FC = () => {
                           PR #{selectedReview.pr_number}
                         </span>
                       </div>
-                      <h2 className="text-lg font-bold text-white mt-1.5">{selectedReview.pr_title}</h2>
+                      <h2 className="text-lg font-bold text-dark-100 mt-1.5">{selectedReview.pr_title}</h2>
                     </div>
 
-                    <div className="flex items-center gap-3 bg-dark-900/80 px-3.5 py-2 rounded-lg border border-dark-800">
+                    <div className="flex items-center gap-3 bg-slate-50 px-3.5 py-2 rounded-xl border border-[#E5E7EB]">
                       {selectedReview.security_score >= 80 ? (
-                        <ShieldCheck className="h-7 w-7 text-emerald-400" />
+                        <ShieldCheck className="h-7 w-7 text-emerald-600" />
                       ) : (
-                        <ShieldAlert className="h-7 w-7 text-danger-400" />
+                        <ShieldAlert className="h-7 w-7 text-danger-600" />
                       )}
                       <div>
                         <span className="text-[10px] text-dark-400 uppercase font-semibold block">
@@ -321,8 +321,8 @@ export const AICodeIntelligencePage: React.FC = () => {
                         <span
                           className={`text-lg font-bold font-mono ${
                             selectedReview.security_score >= 80
-                              ? 'text-emerald-400'
-                              : 'text-danger-400'
+                              ? 'text-emerald-600'
+                              : 'text-danger-600'
                           }`}
                         >
                           {selectedReview.security_score}/100
@@ -331,7 +331,7 @@ export const AICodeIntelligencePage: React.FC = () => {
                     </div>
                   </div>
 
-                  <p className="text-xs text-dark-300 mt-3 leading-relaxed font-sans bg-dark-900/60 p-3 rounded border border-dark-800">
+                  <p className="text-xs text-dark-200 mt-3 leading-relaxed font-sans bg-slate-50 p-3 rounded-xl border border-[#E5E7EB]">
                     {selectedReview.summary}
                   </p>
                 </div>
@@ -344,7 +344,7 @@ export const AICodeIntelligencePage: React.FC = () => {
                   </div>
 
                   {selectedReview.findings.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-emerald-400 bg-emerald-500/10 rounded-lg border border-emerald-500/20 flex items-center justify-center gap-2">
+                    <div className="p-6 text-center text-xs text-emerald-700 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-center gap-2">
                       <CheckCircle2 className="h-4 w-4" />
                       Clean Bill of Health! Zero vulnerabilities, secret leaks, or anti-patterns detected.
                     </div>
@@ -354,24 +354,24 @@ export const AICodeIntelligencePage: React.FC = () => {
                       return (
                         <div
                           key={idx}
-                          className={`p-4 rounded-lg border space-y-2.5 ${
+                          className={`p-4 rounded-xl border space-y-2.5 ${
                             isCritical
-                              ? 'bg-danger-500/10 border-danger-500/30'
-                              : 'bg-dark-900/80 border-dark-700/80'
+                              ? 'bg-rose-50 border-rose-200'
+                              : 'bg-slate-50/80 border-[#E5E7EB]'
                           }`}
                         >
                           <div className="flex items-center justify-between text-xs">
                             <div className="flex items-center gap-2">
                               {isCritical ? (
-                                <AlertCircle className="h-4 w-4 text-danger-400 shrink-0" />
+                                <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
                               ) : (
-                                <AlertTriangle className="h-4 w-4 text-warning-400 shrink-0" />
+                                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
                               )}
-                              <span className="font-mono text-white font-semibold">
+                              <span className="font-mono text-dark-100 font-semibold">
                                 {f.file} {f.line ? `:${f.line}` : ''}
                               </span>
                             </div>
-                            <span className="px-2 py-0.5 rounded bg-dark-800 border border-dark-700 text-primary-300 text-[10px] font-sans">
+                            <span className="px-2 py-0.5 rounded-md bg-white border border-[#E5E7EB] text-primary-700 text-[10px] font-sans font-medium">
                               {f.category}
                             </span>
                           </div>
@@ -379,7 +379,7 @@ export const AICodeIntelligencePage: React.FC = () => {
                           <p className="text-xs text-dark-200 leading-relaxed font-sans">{f.message}</p>
 
                           {f.suggestion_diff && (
-                            <div className="mt-2 p-3 bg-dark-950 rounded border border-dark-800 font-mono text-[11px] overflow-x-auto whitespace-pre leading-relaxed">
+                            <div className="mt-2 p-3 bg-slate-900 rounded-xl border border-slate-800 font-mono text-[11px] overflow-x-auto whitespace-pre leading-relaxed text-slate-100">
                               {f.suggestion_diff.split('\n').map((line, lIdx) => (
                                 <div
                                   key={lIdx}
@@ -387,8 +387,8 @@ export const AICodeIntelligencePage: React.FC = () => {
                                     line.startsWith('+')
                                       ? 'text-emerald-400 bg-emerald-500/10 px-1'
                                       : line.startsWith('-')
-                                      ? 'text-danger-400 bg-danger-500/10 px-1'
-                                      : 'text-dark-400'
+                                      ? 'text-rose-400 bg-rose-500/10 px-1'
+                                      : 'text-slate-400'
                                   }
                                 >
                                   {line}
@@ -417,18 +417,18 @@ export const AICodeIntelligencePage: React.FC = () => {
             <div className="glass-card p-5">
               <div className="flex items-center justify-between text-dark-400 mb-2">
                 <span className="text-xs uppercase font-semibold">Pre-Flight Predictions</span>
-                <Gauge className="h-5 w-5 text-primary-400" />
+                <Gauge className="h-5 w-5 text-primary-600" />
               </div>
-              <div className="text-2xl font-bold text-white">{predictions.length}</div>
+              <div className="text-2xl font-bold text-dark-100">{predictions.length}</div>
               <p className="text-xs text-dark-400 mt-1">Commits evaluated</p>
             </div>
 
             <div className="glass-card p-5">
               <div className="flex items-center justify-between text-dark-400 mb-2">
                 <span className="text-xs uppercase font-semibold">High/Critical Flags</span>
-                <AlertTriangle className="h-5 w-5 text-danger-400" />
+                <AlertTriangle className="h-5 w-5 text-rose-600" />
               </div>
-              <div className="text-2xl font-bold text-danger-400">
+              <div className="text-2xl font-bold text-rose-600">
                 {predictions.filter((p) => p.risk_level === 'HIGH' || p.risk_level === 'CRITICAL').length}
               </div>
               <p className="text-xs text-dark-400 mt-1">Elevated failure risk</p>
@@ -437,9 +437,9 @@ export const AICodeIntelligencePage: React.FC = () => {
             <div className="glass-card p-5">
               <div className="flex items-center justify-between text-dark-400 mb-2">
                 <span className="text-xs uppercase font-semibold">Average Risk Score</span>
-                <Sparkles className="h-5 w-5 text-warning-400" />
+                <Sparkles className="h-5 w-5 text-amber-500" />
               </div>
-              <div className="text-2xl font-bold text-warning-300">
+              <div className="text-2xl font-bold text-amber-600">
                 {predictions.length > 0
                   ? (
                       (predictions.reduce((acc, p) => acc + p.risk_score, 0) / predictions.length) *
@@ -453,9 +453,9 @@ export const AICodeIntelligencePage: React.FC = () => {
             <div className="glass-card p-5">
               <div className="flex items-center justify-between text-dark-400 mb-2">
                 <span className="text-xs uppercase font-semibold">Prevention Rate</span>
-                <ShieldCheck className="h-5 w-5 text-emerald-400" />
+                <ShieldCheck className="h-5 w-5 text-emerald-600" />
               </div>
-              <div className="text-2xl font-bold text-emerald-400">92.4%</div>
+              <div className="text-2xl font-bold text-emerald-600">92.4%</div>
               <p className="text-xs text-dark-400 mt-1">Pre-flight issues caught early</p>
             </div>
           </div>
@@ -463,8 +463,8 @@ export const AICodeIntelligencePage: React.FC = () => {
           {/* Predictions Grid */}
           <div className="glass-card p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <GitCommit className="h-4 w-4 text-primary-400" />
+              <h3 className="text-sm font-bold text-dark-100 flex items-center gap-2">
+                <GitCommit className="h-4 w-4 text-primary-600" />
                 Commit Pre-Flight Failure Assessments
               </h3>
               <Button
@@ -484,12 +484,12 @@ export const AICodeIntelligencePage: React.FC = () => {
                 return (
                   <div
                     key={p.id}
-                    className="p-4 rounded-xl bg-dark-900/90 border border-dark-700/80 space-y-3"
+                    className="p-4 rounded-xl bg-white border border-[#E5E7EB] shadow-subtle space-y-3"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 font-mono text-xs">
-                        <GitCommit className="h-4 w-4 text-primary-400" />
-                        <span className="font-bold text-white">{p.commit_sha}</span>
+                        <GitCommit className="h-4 w-4 text-primary-600" />
+                        <span className="font-bold text-dark-100">{p.commit_sha}</span>
                         <span className="text-dark-400 text-[11px]">on {p.branch}</span>
                       </div>
                       {getRiskBadge(p.risk_level)}
@@ -499,15 +499,15 @@ export const AICodeIntelligencePage: React.FC = () => {
                     <div>
                       <div className="flex justify-between text-xs text-dark-400 mb-1 font-mono">
                         <span>Failure Probability:</span>
-                        <span className="font-bold text-white">{pct}%</span>
+                        <span className="font-bold text-dark-100">{pct}%</span>
                       </div>
-                      <div className="h-2 bg-dark-800 rounded-full overflow-hidden">
+                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all ${
                             p.risk_score >= 0.7
-                              ? 'bg-danger-500'
+                              ? 'bg-rose-500'
                               : p.risk_score >= 0.4
-                              ? 'bg-warning-500'
+                              ? 'bg-amber-500'
                               : 'bg-emerald-500'
                           }`}
                           style={{ width: `${pct}%` }}
@@ -522,8 +522,8 @@ export const AICodeIntelligencePage: React.FC = () => {
                           Risk Factors
                         </span>
                         {p.risk_factors.map((rf, idx) => (
-                          <div key={idx} className="flex items-start gap-1.5 text-dark-300">
-                            <span className="text-warning-400 font-bold">•</span>
+                          <div key={idx} className="flex items-start gap-1.5 text-dark-200">
+                            <span className="text-amber-500 font-bold">•</span>
                             <span>{rf}</span>
                           </div>
                         ))}
@@ -532,13 +532,13 @@ export const AICodeIntelligencePage: React.FC = () => {
 
                     {/* Pre-flight Recommendations */}
                     {p.recommendations.length > 0 && (
-                      <div className="pt-2 border-t border-dark-800 text-xs">
-                        <span className="text-primary-300 uppercase font-semibold text-[10px] tracking-wider block mb-1">
+                      <div className="pt-2 border-t border-[#E5E7EB] text-xs">
+                        <span className="text-primary-700 uppercase font-semibold text-[10px] tracking-wider block mb-1">
                           Pre-Flight Checklist
                         </span>
                         {p.recommendations.map((rec, idx) => (
-                          <div key={idx} className="flex items-start gap-1.5 text-emerald-300 text-[11px]">
-                            <CheckCircle className="h-3 w-3 text-emerald-400 shrink-0 mt-0.5" />
+                          <div key={idx} className="flex items-start gap-1.5 text-emerald-800 text-[11px]">
+                            <CheckCircle className="h-3 w-3 text-emerald-600 shrink-0 mt-0.5" />
                             <span>{rec}</span>
                           </div>
                         ))}
@@ -583,7 +583,7 @@ export const AICodeIntelligencePage: React.FC = () => {
               value={newPrDiff}
               onChange={(e) => setNewPrDiff(e.target.value)}
               required
-              className="w-full bg-dark-900 border border-dark-700 rounded-lg p-3 text-xs text-white font-mono focus:ring-primary-500 focus:border-primary-500"
+              className="w-full bg-white border border-[#E5E7EB] rounded-xl p-3 text-xs text-dark-100 font-mono focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
 
@@ -653,7 +653,7 @@ export const AICodeIntelligencePage: React.FC = () => {
               value={predFiles}
               onChange={(e) => setPredFiles(e.target.value)}
               required
-              className="w-full bg-dark-900 border border-dark-700 rounded-lg p-3 text-xs text-white font-mono focus:ring-primary-500 focus:border-primary-500"
+              className="w-full bg-white border border-[#E5E7EB] rounded-xl p-3 text-xs text-dark-100 font-mono focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
 
