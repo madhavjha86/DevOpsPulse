@@ -20,7 +20,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U testuser -d test_devopspulse"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -43,6 +43,7 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
 
       - name: Install dependencies
         working-directory: ./backend
@@ -53,6 +54,9 @@ jobs:
       - name: Run Pytest suite
         working-directory: ./backend
         env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: test_devopspulse
           DATABASE_URL: postgresql+asyncpg://testuser:testpassword@localhost:5432/test_devopspulse
           DATABASE_URL_SYNC: postgresql://testuser:testpassword@localhost:5432/test_devopspulse
           SECRET_KEY: test-ci-secret-key-32-characters-minimum

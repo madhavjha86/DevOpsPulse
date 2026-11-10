@@ -1,6 +1,6 @@
 # 🚀 DevOpsPulse
 
-**Open-Source Developer Productivity & CI/CD Monitoring Platform**
+**Enterprise-Ready Developer Productivity & CI/CD Observability Platform**
 
 [![CI/CD Pipeline](https://github.com/madhavjha86/DevOpsPulse/actions/workflows/ci.yml/badge.svg)](https://github.com/madhavjha86/DevOpsPulse/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -8,164 +8,214 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green.svg)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://typescriptlang.org)
+[![PostgreSQL 18](https://img.shields.io/badge/PostgreSQL-18%20%7C%2016-336791.svg)](https://postgresql.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://docker.com)
 
 ---
 
-DevOpsPulse is an enterprise-ready, open-source Developer Productivity and CI/CD Monitoring Platform. Connect your GitHub repositories, track real-time development activities, monitor GitHub Actions workflows, analyze build failure rates, and receive instant alerts when pipelines break.
+DevOpsPulse is an open-source Developer Productivity, CI/CD Observability, and Pipeline Monitoring Platform. Connect your GitHub repositories, track real-time commit velocity and pull requests, monitor GitHub Actions workflows, analyze build failure rates, calculate DORA metrics, diagnose pipeline failures using an AI-powered Copilot, and monitor Docker, Kubernetes, and Cloud infrastructure from a unified dashboard.
 
 ---
 
-## 🌟 Key Features
+## 📸 Screenshots Gallery
 
-### 🔐 Enterprise Authentication & Access Control
-- JWT-based authentication (secure access & refresh tokens)
-- Passlib bcrypt password hashing
-- GitHub OAuth 2.0 single sign-on
-- Role-based authorization (`admin`, `user`, `viewer`)
+### 📊 Real-Time Developer & CI/CD Dashboard
+Unified visibility across repositories, commit velocities, workflow durations, and active pull requests.
+![DevOpsPulse Dashboard](docs/screenshots/dashboard.png)
 
-### 🐙 GitHub API Integration
-- Connect personal or organization GitHub accounts
-- One-click public & private repository import
-- Real-time commit history, pull request lifecycle, and issue tracking
-- Automated GitHub Actions workflow runs synchronization
-- Live webhook ingestion with HMAC-SHA256 signature verification
+### 🤖 AI Copilot & Root Cause Analysis
+Intelligent root-cause diagnosis for broken builds and automated suggestions for resolving build and lint failures.
+![DevOpsPulse AI Copilot](docs/screenshots/ai_copilot.png)
 
-### 📊 Comprehensive Analytics Dashboard
-- Top-level engineering KPIs: Total Repos, Commits, PRs, Open Issues, Builds, and Success Rate
-- Recharts Area Chart: 30-day build success vs. failure trend
-- Recharts Bar Chart: Daily workflow execution duration tracking
-- Recharts Line Chart: Daily repository commit velocity
-- Live interactive activity feed across all monitored repositories
+### 📈 DORA 4 Core Metrics
+Track Deployment Frequency, Lead Time for Changes, Change Failure Rate, and Mean Time to Recovery (MTTR) with automated performance scoring.
+![DevOpsPulse DORA Metrics](docs/screenshots/dora_metrics.png)
 
-### 🔔 Smart Notification Center
-- Instant pipeline failure alerts
-- Workflow run completion updates
-- Unread badge counter with optimistic read state updates
-- Configurable notification preferences
+### 🐳 Infrastructure & Container Monitoring
+Live observability across Docker hosts, Kubernetes clusters, and multi-cloud accounts (AWS, Azure, GCP).
+![DevOpsPulse Infrastructure Monitoring](docs/screenshots/infrastructure.png)
+
+---
+
+## 🌟 Feature Breakdown
+
+### ✅ Implemented Features (v1.0 Production Release)
+- **🔐 Enterprise Authentication & Access Control**: Stateless JWT access (30m) & refresh (7d) tokens, bcrypt password hashing, GitHub OAuth 2.0 single sign-on, and RBAC (`admin`, `user`, `viewer`).
+- **🐙 GitHub Integration & Webhooks**: Connect GitHub accounts, import public/private repositories, sync commits, PRs, and workflow runs, with HMAC-SHA256 signature verification on inbound webhooks.
+- **📊 Real-Time Analytics Dashboard**: Real-time KPI summary (Repositories, Commits, PRs, Issues, Builds, Success Rate), Recharts 30-day build success/failure area charts, workflow duration histograms, and commit velocity charts.
+- **📈 DORA Metrics Engine**: Automatic calculation of Deployment Frequency, Lead Time for Changes, Change Failure Rate, and MTTR with realistic "Awaiting Deployments" empty states.
+- **🤖 AI DevOps Copilot & Automated RCA**: Interactive troubleshooting assistant with persistent conversations and automated root cause analysis for pipeline errors.
+- **🔍 AI Pull Request Reviewer & Security Scanner**: Automated PR diff analysis detecting secret leaks, performance bottlenecks, and code smell violations.
+- **🐳 Infrastructure Monitoring**: Docker host container listing, Kubernetes cluster resource and pod tracking, and multi-cloud (AWS, Azure, GCP) health monitoring with graceful offline tolerance.
+- **📡 OpenTelemetry Telemetry Ingestion**: Ingest and query distributed spans, service waterfalls, and structured logs.
+- **🔔 Smart In-App Notifications**: Real-time pipeline failure alerts, completion notifications, and unread counters.
+
+### 🗺️ Planned Roadmap Features (v1.1+)
+- [ ] Multi-tenant Organization Workspaces with granular permissions.
+- [ ] Slack & PagerDuty webhook alert dispatchers.
+- [ ] GitLab, Bitbucket, and Azure DevOps repository connectors.
+- [ ] Automated PR remediation auto-commit bots.
+- [ ] Prometheus & Grafana native metric scrapers.
 
 ---
 
 ## 🏗️ Architecture & Technology Stack
 
-```
-                                  +---------------------------------------+
-                                  |     React 18 + TypeScript + Vite      |
-                                  |     Tailwind CSS + Recharts Dark UI   |
-                                  +---------------------------------------+
-                                                     |
-                                            REST API Requests (/api/v1)
-                                                     v
-+------------------+              +---------------------------------------+
-|  GitHub Webhooks | ------------>|         FastAPI (Python 3.12+)        |
-|  & OAuth Flow    | <----------- |    Clean Layered Architecture (v1)    |
-+------------------+              +---------------------------------------+
-                                            /        |        \
-                                           /         |         \
-                                          v          v          v
-                                    +----------+ +-------+ +---------+
-                                    |PostgreSQL| | Redis | | Celery  |
-                                    | 18 / 16  | |   7   | | Workers |
-                                    +----------+ +-------+ +---------+
+```mermaid
+graph TD
+    Client["React 18 + TypeScript + Vite SPA<br/>(Tailwind CSS Dark Theme & Recharts)"]
+    API["FastAPI Backend (Python 3.12+)<br/>Clean Layered Architecture (v1)"]
+    DB[("PostgreSQL 18 / 16<br/>20 Relational ORM Models")]
+    Cache[("Redis 7 Cache<br/>Rate Limiting & Celery Broker")]
+    Workers["Celery 5.4 Background Workers<br/>Async Pipeline Sync Tasks"]
+    GH["GitHub REST & Webhooks API<br/>(HMAC SHA-256 Authentication)"]
+
+    Client -->|Axios REST /api/v1| API
+    API -->|AsyncPG / SQLAlchemy 2.0| DB
+    API -->|aioredis / slowapi| Cache
+    API -->|Task Dispatch| Workers
+    Workers -->|Sync Data| DB
+    GH -->|Inbound Webhooks| API
+    API -->|Outbound Sync| GH
 ```
 
-| Component | Technology | Purpose |
+| Layer | Technologies | Purpose |
 |---|---|---|
-| **Backend** | Python 3.12+, FastAPI, SQLAlchemy 2.0 (async), Pydantic v2 | High-performance async REST API |
-| **Database** | PostgreSQL 18 / 16 + Alembic (7 migrations) | ACID relational persistence across 20 application models |
-| **Queue / Cache**| Redis 7 + Celery 5.4 | Background sync and asynchronous alert delivery |
-| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons | Premium dark SaaS developer experience |
-| **Data Viz** | Recharts | Responsive, interactive metrics visualization |
-| **E2E Testing** | Playwright (Chromium) | Automated user journey and browser verification |
-| **DevOps** | Docker, Docker Compose, GitHub Actions | Containerized single-command local and cloud deploy |
+| **Backend** | Python 3.12+, FastAPI, SQLAlchemy 2.0 (async), Pydantic v2 | High-concurrency async REST API |
+| **Database** | PostgreSQL 18 / 16 + Alembic (7 migrations) | ACID relational persistence across 20 models |
+| **Queue & Cache** | Redis 7 + Celery 5.4 | Background synchronization and task queues |
+| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons | Responsive dark-mode dashboard |
+| **Data Viz** | Recharts | Interactive time-series and area charts |
+| **E2E Testing** | Playwright (Chromium) | Headless end-to-end browser journey verification |
+| **DevOps** | Docker, Docker Compose, GitHub Actions | Containerized orchestration and CI testing |
 
 ---
 
-## 📁 Repository Structure
+## 📁 Project Directory Structure
 
 ```
 DevOpsPulse/
-├── .github/workflows/ci.yml       # GitHub Actions CI/CD pipeline
-├── backend/                       # Python FastAPI backend
-│   ├── alembic/                   # Database schema migrations
-│   │   └── versions/              # Migration revision scripts
+├── .github/
+│   └── workflows/
+│       └── ci.yml                         # GitHub Actions automated CI pipeline
+├── backend/
+│   ├── alembic/                           # Database schema migrations (001 - 007)
 │   ├── app/
-│   │   ├── api/v1/routes/         # REST API endpoints (auth, repos, workflows, telemetry, etc.)
-│   │   ├── core/                  # Security, config, exceptions, logging
-│   │   ├── db/                    # SQLAlchemy async session & declarative base
-│   │   ├── models/                # 20 application ORM models (core, infra, AI, telemetry)
-│   │   ├── schemas/               # Pydantic v2 request/response schemas
-│   │   ├── services/              # Domain business logic & GitHub client
-│   │   ├── repositories/          # Database query data access layer
-│   │   ├── workers/               # Celery async tasks & app setup
-│   │   ├── middleware/            # Rate limiting & request logging
-│   │   └── main.py                # FastAPI application entrypoint
-│   ├── tests/                     # Comprehensive Pytest suite
-│   ├── Dockerfile                 # Backend container image
-│   └── requirements.txt           # Python dependencies
-├── frontend/                      # React TypeScript frontend
+│   │   ├── api/v1/routes/                 # REST API endpoints (auth, repos, telemetry, etc.)
+│   │   ├── core/                          # Security, config, exceptions, logging
+│   │   ├── db/                            # SQLAlchemy async session & declarative base
+│   │   ├── middleware/                    # Rate limiting & request logging
+│   │   ├── models/                        # 20 ORM database models
+│   │   ├── repositories/                  # Data access layer
+│   │   ├── schemas/                       # Pydantic v2 request/response schemas
+│   │   ├── services/                      # Domain business services
+│   │   └── workers/                       # Celery async tasks
+│   ├── scripts/                           # Release verification and utility scripts
+│   ├── tests/                             # 58 pytest unit & integration test cases
+│   ├── .env.example                       # Sanitized environment template (DEBUG=false)
+│   ├── Dockerfile                         # Container image definition
+│   ├── pytest.ini                         # Pytest runner configuration
+│   └── requirements.txt                   # Pinned Python dependencies
+├── frontend/
+│   ├── e2e/                               # 11 Playwright end-to-end browser test suites
+│   ├── public/                            # Static web assets
 │   ├── src/
-│   │   ├── components/            # UI, layout, auth, and dashboard components
-│   │   ├── context/               # AuthContext for state & token management
-│   │   ├── pages/                 # Full responsive application views
-│   │   ├── services/              # Axios HTTP client API integrations
-│   │   └── types/                 # TypeScript interfaces
-│   ├── Dockerfile                 # Frontend container image
-│   └── package.json               # Frontend dependencies
-├── docs/                          # Architecture & API specifications
-├── docker-compose.yml             # Complete stack orchestration
+│   │   ├── components/                    # UI, layout, auth, and dashboard components
+│   │   ├── context/                       # AuthContext state management
+│   │   ├── pages/                         # Application views (Dashboard, DORA, etc.)
+│   │   ├── services/                      # Axios API clients
+│   │   └── types/                         # TypeScript definitions
+│   ├── Dockerfile                         # Frontend container image definition
+│   ├── eslint.config.js                   # ESLint configuration
+│   ├── package.json                       # Dependencies and scripts
+│   ├── playwright.config.ts               # Playwright configuration
+│   └── run_e2e.py                         # Automated E2E test stack orchestrator
+├── docs/
+│   ├── api/                               # REST API specifications
+│   ├── architecture/                      # Architecture reference documents
+│   └── screenshots/                       # High-resolution application screenshots
+├── .env.example                           # Root sanitized environment template
+├── .gitignore                             # Hardened ignore rules (databases, secrets, caches)
+├── docker-compose.yml                     # Multi-service container orchestration
+├── CONTRIBUTING.md                        # Contribution guidelines
+├── SECURITY.md                            # Vulnerability disclosure policy
+├── LICENSE                                # MIT License
 └── README.md
 ```
 
 ---
 
-## ⚡ Quick Start (Docker Compose)
+## ⚡ Quick Start
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/madhavjha86/DevOpsPulse.git
-cd DevOpsPulse
-```
-
-### 2. Configure Environment Variables
-```bash
-cp .env.example .env
-```
-*(Optional)* Add your GitHub OAuth app credentials in `.env` if you want to enable GitHub SSO.
-
-### 3. Start the entire platform
-```bash
-docker compose up --build
-```
-
-The database migrations will run automatically on startup.
-
-- **Frontend Dashboard:** [http://localhost:3000](http://localhost:3000)
-- **Backend API:** [http://localhost:8000](http://localhost:8000)
-- **Interactive OpenAPI Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+### Prerequisites
+- **Git** (v2.30+)
+- **Node.js** (v20+ or v18+) and **npm**
+- **Python** (v3.12+ or v3.13+)
+- **PostgreSQL** (v16+ or v18+) or **Docker Desktop**
 
 ---
 
-## 💻 Local Development Setup (Without Docker)
+### Option A: Docker Compose Setup
 
-### Backend Setup
+> [!NOTE]
+> Docker Compose orchestration is verified via static configuration audit. Ensure the Docker daemon or Docker Desktop is active on your machine before starting.
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/madhavjha86/DevOpsPulse.git
+   cd DevOpsPulse
+   ```
+
+2. **Configure environment**:
+   ```bash
+   cp .env.example .env
+   ```
+
+3. **Start services**:
+   ```bash
+   docker compose up --build
+   ```
+
+- **Frontend Dashboard:** [http://localhost:3000](http://localhost:3000)
+- **Backend API:** [http://localhost:8000](http://localhost:8000)
+- **Interactive Swagger Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+
+---
+
+### Option B: Local Manual Setup (Without Docker)
+
+#### 1. Backend Setup
 ```bash
 cd backend
+
+# Create and activate Python virtual environment
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 
-# Run migrations
+# Copy environment configuration
+cp .env.example .env
+
+# Run database migrations
 alembic upgrade head
 
-# Start backend server
+# (Optional) Seed demo users and repositories
+python seed_data.py
+
+# Start FastAPI backend
 uvicorn app.main:app --reload --port 8000
 ```
 
-### Frontend Setup
+#### 2. Frontend Setup
 ```bash
 cd frontend
+
+# Install Node.js dependencies
 npm install
+
+# Start Vite development server
 npm run dev
 ```
 
@@ -173,13 +223,13 @@ npm run dev
 
 ## 🔌 Integration Modes & Credential Dependencies
 
-DevOpsPulse is engineered to be fully usable in both self-contained local environments and connected enterprise clouds. Integrations operate with progressive enhancement:
+DevOpsPulse operates with progressive enhancement across local and production setups:
 
-| Feature / Service | Out-of-the-Box Local Behavior | Connected Production Requirement |
+| Integration | Out-of-the-Box Local Behavior | Connected Production Requirement |
 |---|---|---|
 | **User Authentication** | Fully functional (Bcrypt + JWT tokens) | Set strong `SECRET_KEY` (32+ random characters) |
-| **GitHub OAuth 2.0** | Local username/password auth active | Register GitHub OAuth App; set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` |
-| **GitHub Repository Sync** | Local seed repositories (`react`, `flask`) | Provide GitHub Personal Access Token or OAuth token for live sync |
+| **GitHub OAuth 2.0** | Username/password authentication active | Register GitHub OAuth App; set `GITHUB_CLIENT_ID` & `GITHUB_CLIENT_SECRET` |
+| **GitHub Repository Sync** | Seeded sample repositories (`react`, `flask`) | Provide GitHub Personal Access Token or OAuth token for live sync |
 | **Cloud Monitoring** | Demo/mock accounts with realistic metrics | Supply AWS IAM keys, Azure Service Principal, or GCP Service Account JSON |
 | **Docker & Kubernetes** | Graceful offline tolerance; demo hosts/clusters | Mount `/var/run/docker.sock` or supply `KUBECONFIG` path |
 | **AI Copilot & PR Review** | Rule-based static analyzer & heuristic prediction | Optional LLM API integration |
@@ -196,10 +246,17 @@ DevOpsPulse incorporates comprehensive test suites across both backend and front
 
 ### Backend Pytest Suite
 ```bash
-# From the backend directory:
+cd backend
 pytest -v
 ```
-Validates JWT auth, password hashing, HMAC webhooks, rate limiting, and all REST endpoints (58 tests).
+Validates JWT auth, password hashing, HMAC webhooks, rate limiting, and all REST endpoints (**58/58 tests passing**).
+
+### Frontend Code Quality & Type Check
+```bash
+cd frontend
+npm run lint    # ESLint (0 errors, 0 warnings)
+npm run build   # TypeScript tsc + Vite production build
+```
 
 ### Frontend Playwright End-to-End Suite
 ```bash
@@ -210,7 +267,7 @@ python frontend/run_e2e.py
 cd frontend
 npx playwright test
 ```
-Validates authentication flows, protected route navigation, dashboard KPI cards, and repository detail views in headless Chromium (11 tests).
+Validates authentication flows, protected route navigation, dashboard KPI cards, and repository detail views in headless Chromium (**11/11 tests passing**).
 
 ---
 
@@ -226,7 +283,10 @@ Validates authentication flows, protected route navigation, dashboard KPI cards,
 | `POST` | `/api/v1/repositories/{id}/sync` | Trigger on-demand sync from GitHub | Yes |
 | `GET` | `/api/v1/workflows` | List GitHub Actions workflow runs | Yes |
 | `GET` | `/api/v1/analytics/dashboard` | Aggregate dashboard summary metrics | Yes |
+| `GET` | `/api/v1/analytics/dora` | Compute DORA metrics (Deployment Frequency, Lead Time, CFR, MTTR) | Yes |
 | `GET` | `/api/v1/analytics/build-trends` | 30-day build success vs. failure time-series | Yes |
+| `POST` | `/api/v1/ai/copilot/chat` | Send prompt to AI Copilot assistant | Yes |
+| `POST` | `/api/v1/ai/intelligence/reviews/generate` | Run automated PR code review & security scan | Yes |
 | `POST` | `/api/v1/webhooks/github` | Receive GitHub events with HMAC verification | Signature Header |
 
 Interactive Swagger documentation is available at `/docs`.
