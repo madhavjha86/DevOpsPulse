@@ -2,7 +2,7 @@
 
 **Open-Source Developer Productivity & CI/CD Monitoring Platform**
 
-[![CI/CD Pipeline](https://github.com/yourusername/DevOpsPulse/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/DevOpsPulse/actions)
+[![CI/CD Pipeline](https://github.com/madhavjha86/DevOpsPulse/actions/workflows/ci.yml/badge.svg)](https://github.com/madhavjha86/DevOpsPulse/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green.svg)](https://fastapi.tiangolo.com)
@@ -123,7 +123,7 @@ DevOpsPulse/
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/DevOpsPulse.git
+git clone https://github.com/madhavjha86/DevOpsPulse.git
 cd DevOpsPulse
 ```
 
