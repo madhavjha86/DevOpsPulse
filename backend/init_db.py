@@ -6,7 +6,8 @@ import app.models  # Register all models with Base.metadata
 
 
 async def main():
-    print(f"Connecting to database: {async_engine.url}...")
+    safe_url = async_engine.url.render_as_string(hide_password=True)
+    print(f"Connecting to database: {safe_url}...")
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     print("All 10 database tables initialized successfully!")

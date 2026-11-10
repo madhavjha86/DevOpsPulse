@@ -32,8 +32,11 @@ SECRET_PATTERNS = [
     (r"github_pat_[0-9a-zA-Z_]{82}", "GitHub Fine-Grained PAT"),
     (r"sk_live_[0-9a-zA-Z]{24}", "Stripe Live API Key"),
     (r"AKIA[0-9A-Z]{16}", "AWS Access Key ID"),
-    (r"-----BEGIN (?:RSA |EC )?PRIVATE KEY-----", "Private Key"),
+    (r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----", "Private Key"),
     (r"postgres:[^@\s]+@localhost", "PostgreSQL URL with Password"),
+    (r"https://hooks\.slack\.com/services/T[a-zA-Z0-9_]+/B[a-zA-Z0-9_]+/[a-zA-Z0-9_]+", "Slack Webhook URL"),
+    (r"https://discord(?:app)?\.com/api/webhooks/\d+/[a-zA-Z0-9_-]+", "Discord Webhook URL"),
+    (r"eyJ[a-zA-Z0-9_-]{15,}\.eyJ[a-zA-Z0-9_-]{15,}\.[a-zA-Z0-9_-]{15,}", "Hardcoded JWT Token"),
 ]
 
 def scan():

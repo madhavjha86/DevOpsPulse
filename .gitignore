@@ -28,31 +28,49 @@ yarn-error.log*
 frontend/dist/
 frontend/build/
 
-# Environment
+# Environment & Secrets
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 *.env
 backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+*.pem
+*.key
+*.crt
+*.pfx
+*.cer
+*credentials.json
+service-account*.json
 
-# IDE
+# IDE & OS
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
+Thumbs.db
+desktop.ini
 
 # Docker
 docker-compose.override.yml
 
-# Database
+# Database & Backups
 *.db
 *.db-wal
 *.db-shm
+*.sqlite
 *.sqlite3
+*.db3
+*.sql
 *.sql.dump
 *.dump
+*.bak
 backups/
 backend/backups/
 *.pg_auth_cache

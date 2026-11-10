@@ -72,10 +72,11 @@ DevOpsPulse is an enterprise-ready, open-source Developer Productivity and CI/CD
 | Component | Technology | Purpose |
 |---|---|---|
 | **Backend** | Python 3.12+, FastAPI, SQLAlchemy 2.0 (async), Pydantic v2 | High-performance async REST API |
-| **Database** | PostgreSQL 18 / 16 + Alembic (7 migrations) | ACID relational persistence across 20 application tables |
+| **Database** | PostgreSQL 18 / 16 + Alembic (7 migrations) | ACID relational persistence across 20 application models |
 | **Queue / Cache**| Redis 7 + Celery 5.4 | Background sync and asynchronous alert delivery |
 | **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons | Premium dark SaaS developer experience |
 | **Data Viz** | Recharts | Responsive, interactive metrics visualization |
+| **E2E Testing** | Playwright (Chromium) | Automated user journey and browser verification |
 | **DevOps** | Docker, Docker Compose, GitHub Actions | Containerized single-command local and cloud deploy |
 
 ---
@@ -89,10 +90,10 @@ DevOpsPulse/
 │   ├── alembic/                   # Database schema migrations
 │   │   └── versions/              # Migration revision scripts
 │   ├── app/
-│   │   ├── api/v1/routes/         # REST API endpoints (auth, repos, workflows, etc.)
+│   │   ├── api/v1/routes/         # REST API endpoints (auth, repos, workflows, telemetry, etc.)
 │   │   ├── core/                  # Security, config, exceptions, logging
 │   │   ├── db/                    # SQLAlchemy async session & declarative base
-│   │   ├── models/                # 10 core ORM models
+│   │   ├── models/                # 20 application ORM models (core, infra, AI, telemetry)
 │   │   ├── schemas/               # Pydantic v2 request/response schemas
 │   │   ├── services/              # Domain business logic & GitHub client
 │   │   ├── repositories/          # Database query data access layer
@@ -170,14 +171,46 @@ npm run dev
 
 ---
 
+## 🔌 Integration Modes & Credential Dependencies
+
+DevOpsPulse is engineered to be fully usable in both self-contained local environments and connected enterprise clouds. Integrations operate with progressive enhancement:
+
+| Feature / Service | Out-of-the-Box Local Behavior | Connected Production Requirement |
+|---|---|---|
+| **User Authentication** | Fully functional (Bcrypt + JWT tokens) | Set strong `SECRET_KEY` (32+ random characters) |
+| **GitHub OAuth 2.0** | Local username/password auth active | Register GitHub OAuth App; set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` |
+| **GitHub Repository Sync** | Local seed repositories (`react`, `flask`) | Provide GitHub Personal Access Token or OAuth token for live sync |
+| **Cloud Monitoring** | Demo/mock accounts with realistic metrics | Supply AWS IAM keys, Azure Service Principal, or GCP Service Account JSON |
+| **Docker & Kubernetes** | Graceful offline tolerance; demo hosts/clusters | Mount `/var/run/docker.sock` or supply `KUBECONFIG` path |
+| **AI Copilot & PR Review** | Rule-based static analyzer & heuristic prediction | Optional LLM API integration |
+| **Asynchronous Worker** | Synchronous fallback; memory rate-limiter | Running Redis instance (`REDIS_URL=redis://localhost:6379/0`) |
+
+> [!WARNING]
+> Default demo credentials (`admin@devopspulse.com` / `Password123!`) are strictly intended for local development and integration testing. Change administrator credentials immediately upon deploying to any public or staging environment.
+
+---
+
 ## 🧪 Automated Testing
 
-DevOpsPulse includes a comprehensive test suite covering authentication, database models, GitHub client rate limits, and webhook signature verification:
+DevOpsPulse incorporates comprehensive test suites across both backend and frontend layers:
 
+### Backend Pytest Suite
 ```bash
-# Inside the backend directory:
-pytest -v --cov=app --cov-report=term
+# From the backend directory:
+pytest -v
 ```
+Validates JWT auth, password hashing, HMAC webhooks, rate limiting, and all REST endpoints (58 tests).
+
+### Frontend Playwright End-to-End Suite
+```bash
+# Automated stack runner (starts Uvicorn + Vite and executes Playwright tests):
+python frontend/run_e2e.py
+
+# Or directly using the Playwright CLI:
+cd frontend
+npx playwright test
+```
+Validates authentication flows, protected route navigation, dashboard KPI cards, and repository detail views in headless Chromium (11 tests).
 
 ---
 
