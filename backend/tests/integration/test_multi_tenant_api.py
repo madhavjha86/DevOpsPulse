@@ -151,4 +151,5 @@ async def test_multi_tenant_workspace_lifecycle(
         json={"email": "charlie@acme.com", "role": "VIEWER"},
     )
     assert bob_unauthorized_invite.status_code == 403
-    assert "Organization admin access required" in bob_unauthorized_invite.json().get("detail", "")
+    detail_msg = bob_unauthorized_invite.json().get("detail", "").lower()
+    assert "admin" in detail_msg

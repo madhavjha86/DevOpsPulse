@@ -146,7 +146,9 @@ async def get_services(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[str]:
     """Return distinct microservice names currently emitting logs or traces."""
-    return await TelemetryService.get_services(db=db, user_id=tenant.user.id)
+    return await TelemetryService.get_services(
+        db=db, user_id=tenant.user.id, organization_id=tenant.organization_id
+    )
 
 
 @router.get(
@@ -160,5 +162,5 @@ async def get_stats(
 ) -> TelemetryStatsResponse:
     """Return 24h log volume, error counts, p95 trace duration, and active microservices count."""
     return await TelemetryService.get_stats(
-        db=db, user_id=tenant.user.id
+        db=db, user_id=tenant.user.id, organization_id=tenant.organization_id
     )

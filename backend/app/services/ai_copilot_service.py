@@ -113,7 +113,7 @@ class AICopilotService:
         cls, db: AsyncSession, user_id: int, organization_id: int | None = None
     ) -> list[AIConversationResponse]:
         """Fetch all Copilot conversations for workspace with message counts."""
-        await cls._ensure_demo_copilot_seeded(db, user_id)
+        await cls._ensure_demo_copilot_seeded(db, user_id, organization_id)
 
         stmt = (
             select(
@@ -679,16 +679,20 @@ class AICopilotService:
     # --------------------------------------------------------------------------
 
     @classmethod
-    async def _ensure_demo_copilot_seeded(cls, db: AsyncSession, user_id: int) -> None:
+    async def _ensure_demo_copilot_seeded(
+        cls, db: AsyncSession, user_id: int, organization_id: int | None = None
+    ) -> None:
         """Seed initial welcome conversation if user has none."""
-        count_res = await db.execute(
-            select(func.count()).select_from(AIConversation).where(AIConversation.user_id == user_id)
-        )
+        stmt = select(func.count()).select_from(AIConversation).where(AIConversation.user_id == user_id)
+        if organization_id is not None:
+            stmt = stmt.where(AIConversation.organization_id == organization_id)
+        count_res = await db.execute(stmt)
         if (count_res.scalar() or 0) > 0:
             return
 
         conv = AIConversation(
             user_id=user_id,
+            organization_id=organization_id,
             title="CI/CD Performance & Docker Optimization",
         )
         db.add(conv)

@@ -282,7 +282,7 @@ class CloudMonitoringService:
 
     @classmethod
     async def get_overview(
-        cls, db: AsyncSession, account: CloudAccount
+        cls, account: CloudAccount, db: AsyncSession | None = None
     ) -> CloudOverviewResponse:
         """Fetch resource inventory overview for the cloud account."""
         if account.last_status in ("unconfigured", "auth_error"):
@@ -421,3 +421,5 @@ class CloudMonitoringService:
             network_io_mb=net_series,
             estimated_monthly_cost_usd=184.50,
         )
+
+    get_metrics = get_metrics_timeseries

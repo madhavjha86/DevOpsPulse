@@ -102,12 +102,40 @@ async def rbac_test_setup(db_session):
         role=OrganizationRole.ORGANIZATION_ADMIN.value,
     )
     db_session.add(acme_mem)
+    await db_session.flush()
+
+    # 6. Create a test GitHubAccount and Repository for company org
+    from app.models.github_account import GitHubAccount
+    from app.models.repository import Repository
+    gh_acc = GitHubAccount(
+        user_id=users["orgadmin@devopspulse.local"].id,
+        github_id=999999,
+        github_username="orgadmin",
+        access_token="ghp_test_token_12345",
+    )
+    db_session.add(gh_acc)
+    await db_session.flush()
+
+    repo = Repository(
+        id=1,
+        github_account_id=gh_acc.id,
+        github_id=123456,
+        name="web-app",
+        full_name="devopspulse/web-app",
+        url="https://api.github.com/repos/devopspulse/web-app",
+        html_url="https://github.com/devopspulse/web-app",
+        organization_id=company_org.id,
+        default_branch="main",
+        is_private=True,
+    )
+    db_session.add(repo)
     await db_session.commit()
 
     return {
         "users": users,
         "company_org": company_org,
         "acme_org": acme_org,
+        "repository": repo,
     }
 
 
@@ -144,7 +172,11 @@ async def test_all_six_roles_login(client: AsyncClient, rbac_test_setup):
         data = login_res.json()
         assert "access_token" in data
         assert data["token_type"].lower() == "bearer"
-        assert data["user"]["email"] == email
+        
+        # Verify authenticated identity via /api/v1/users/me
+        me_res = await client.get("/api/v1/users/me", headers={"Authorization": f"Bearer {data['access_token']}"})
+        assert me_res.status_code == 200
+        assert me_res.json()["email"] == email
 
 
 @pytest.mark.asyncio
@@ -201,11 +233,11 @@ async def test_organization_admin_permissions(client: AsyncClient, rbac_test_set
         "/api/v1/infrastructure/cloud/accounts",
         headers=headers,
         json={
-            "provider": "AWS",
-            "account_name": "Prod AWS",
-            "account_id": "111222333444",
+            "provider": "aws",
+            "name": "Prod AWS",
             "region": "us-east-1",
-            "credentials": {"access_key_id": "AKIAIOSFODNN7EXAMPLE", "secret_access_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"},
+            "aws_access_key_id": "AKIAIOSFODNN7EXAMPLE",
+            "aws_secret_access_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
         },
     )
     assert cloud_res.status_code == 201
@@ -275,7 +307,7 @@ async def test_devops_engineer_permissions(client: AsyncClient, rbac_test_setup)
     cloud_res = await client.post(
         "/api/v1/infrastructure/cloud/accounts",
         headers=headers,
-        json={"provider": "AWS", "account_name": "DevOps AWS", "account_id": "999888777", "region": "us-east-1"},
+        json={"provider": "aws", "name": "DevOps AWS", "region": "us-east-1", "aws_access_key_id": "TEST", "aws_secret_access_key": "TEST"},
     )
     assert cloud_res.status_code == 403
 

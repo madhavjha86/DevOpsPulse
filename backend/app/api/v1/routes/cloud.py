@@ -167,7 +167,7 @@ async def get_cloud_account_overview(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Cloud account with ID {account_id} not found",
         )
-    return await CloudMonitoringService.get_overview(account)
+    return await CloudMonitoringService.get_overview(account, db=db)
 
 
 @router.get(
@@ -189,4 +189,4 @@ async def get_cloud_account_metrics(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Cloud account with ID {account_id} not found",
         )
-    return await CloudMonitoringService.get_metrics(account)
+    return await CloudMonitoringService.get_metrics_timeseries(account)

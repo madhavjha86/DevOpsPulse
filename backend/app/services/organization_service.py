@@ -126,6 +126,7 @@ class OrganizationService:
                         avatar_url=org.avatar_url,
                         is_active=org.is_active,
                         current_user_role=r_val,
+                        role=r_val,
                         member_count=m_count,
                         created_at=org.created_at,
                     )
@@ -159,6 +160,7 @@ class OrganizationService:
                     avatar_url=org.avatar_url,
                     is_active=org.is_active,
                     current_user_role=role,
+                    role=role,
                     member_count=m_count,
                     created_at=org.created_at,
                 )
@@ -452,7 +454,10 @@ class OrganizationService:
         if not inv:
             raise NotFoundException(detail="Invalid or expired invitation token.")
 
-        if inv.expires_at < datetime.now(timezone.utc):
+        exp_at = inv.expires_at
+        if exp_at.tzinfo is None:
+            exp_at = exp_at.replace(tzinfo=timezone.utc)
+        if exp_at < datetime.now(timezone.utc):
             inv.status = "EXPIRED"
             await db.commit()
             raise BadRequestException(detail="This invitation token has expired.")

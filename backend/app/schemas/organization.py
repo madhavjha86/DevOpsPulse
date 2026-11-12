@@ -37,6 +37,7 @@ class OrganizationResponse(BaseModel):
     avatar_url: str | None = None
     is_active: bool
     current_user_role: str = "VIEWER"
+    role: str = "VIEWER"
     member_count: int = 1
     created_at: datetime
 

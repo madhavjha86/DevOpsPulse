@@ -283,11 +283,16 @@ class TelemetryService:
         )
 
     @classmethod
-    async def get_services(cls, db: AsyncSession, user_id: int) -> list[str]:
+    async def get_services(
+        cls, db: AsyncSession, user_id: int, organization_id: int | None = None
+    ) -> list[str]:
         """Fetch all unique service names publishing logs or spans."""
         log_services_stmt = select(distinct(TelemetryLog.service_name)).where(TelemetryLog.user_id == user_id)
         span_services_stmt = select(distinct(TelemetrySpan.service_name)).where(TelemetrySpan.user_id == user_id)
-        
+        if organization_id is not None:
+            log_services_stmt = log_services_stmt.where(TelemetryLog.organization_id == organization_id)
+            span_services_stmt = span_services_stmt.where(TelemetrySpan.organization_id == organization_id)
+
         l_res = await db.execute(log_services_stmt)
         s_res = await db.execute(span_services_stmt)
 
@@ -295,42 +300,45 @@ class TelemetryService:
         return services or ["api-gateway", "auth-service", "worker-celery"]
 
     @classmethod
-    async def get_stats(cls, db: AsyncSession, user_id: int) -> TelemetryStatsResponse:
+    async def get_stats(cls, db: AsyncSession, user_id: int, organization_id: int | None = None) -> TelemetryStatsResponse:
         """Compute top-level telemetry metrics."""
-        await cls._ensure_telemetry_seeded(db, user_id)
+        await cls._ensure_telemetry_seeded(db, user_id, organization_id)
         now = datetime.now(timezone.utc)
         since_24h = now - timedelta(hours=24)
 
         # Total logs in 24h
-        total_logs_res = await db.execute(
-            select(func.count()).select_from(TelemetryLog).where(
-                TelemetryLog.user_id == user_id,
-                TelemetryLog.timestamp >= since_24h,
-            )
+        stmt_logs = select(func.count()).select_from(TelemetryLog).where(
+            TelemetryLog.user_id == user_id,
+            TelemetryLog.timestamp >= since_24h,
         )
+        if organization_id is not None:
+            stmt_logs = stmt_logs.where(TelemetryLog.organization_id == organization_id)
+        total_logs_res = await db.execute(stmt_logs)
         total_logs = total_logs_res.scalar() or 0
 
         # Error logs in 24h
-        error_logs_res = await db.execute(
-            select(func.count()).select_from(TelemetryLog).where(
-                TelemetryLog.user_id == user_id,
-                TelemetryLog.timestamp >= since_24h,
-                TelemetryLog.level.in_(["ERROR", "FATAL"]),
-            )
+        stmt_err = select(func.count()).select_from(TelemetryLog).where(
+            TelemetryLog.user_id == user_id,
+            TelemetryLog.timestamp >= since_24h,
+            TelemetryLog.level.in_(["ERROR", "FATAL"]),
         )
+        if organization_id is not None:
+            stmt_err = stmt_err.where(TelemetryLog.organization_id == organization_id)
+        error_logs_res = await db.execute(stmt_err)
         error_logs = error_logs_res.scalar() or 0
 
         # Total traces in 24h
-        total_traces_res = await db.execute(
-            select(func.count(distinct(TelemetrySpan.trace_id))).where(
-                TelemetrySpan.user_id == user_id,
-                TelemetrySpan.start_time >= since_24h,
-            )
+        stmt_traces = select(func.count(distinct(TelemetrySpan.trace_id))).where(
+            TelemetrySpan.user_id == user_id,
+            TelemetrySpan.start_time >= since_24h,
         )
+        if organization_id is not None:
+            stmt_traces = stmt_traces.where(TelemetrySpan.organization_id == organization_id)
+        total_traces_res = await db.execute(stmt_traces)
         total_traces = total_traces_res.scalar() or 0
 
         # Services
-        services = await cls.get_services(db, user_id)
+        services = await cls.get_services(db, user_id, organization_id)
 
         return TelemetryStatsResponse(
             total_logs_24h=total_logs,
@@ -341,9 +349,11 @@ class TelemetryService:
         )
 
     @classmethod
-    async def _ensure_telemetry_seeded(cls, db: AsyncSession, user_id: int) -> None:
+    async def _ensure_telemetry_seeded(cls, db: AsyncSession, user_id: int, organization_id: int | None = None) -> None:
         """Seed realistic microservices telemetry if no logs exist yet."""
         stmt = select(func.count()).select_from(TelemetryLog).where(TelemetryLog.user_id == user_id)
+        if organization_id is not None:
+            stmt = stmt.where(TelemetryLog.organization_id == organization_id)
         res = await db.execute(stmt)
         if (res.scalar() or 0) > 0:
             return
@@ -370,6 +380,7 @@ class TelemetryService:
             db.add(
                 TelemetryLog(
                     user_id=user_id,
+                    organization_id=organization_id,
                     service_name=svc,
                     level=lvl,
                     message=msg,
@@ -401,6 +412,7 @@ class TelemetryService:
             db.add(
                 TelemetrySpan(
                     user_id=user_id,
+                    organization_id=organization_id,
                     trace_id=tid,
                     span_id=sid,
                     parent_span_id=pid,

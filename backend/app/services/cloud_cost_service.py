@@ -358,7 +358,7 @@ class CloudCostService:
         )
 
     @classmethod
-    async def _seed_default_cost_data(cls, db: AsyncSession, user_id: int) -> None:
+    async def _seed_default_cost_data(cls, db: AsyncSession, user_id: int, organization_id: int | None = None) -> None:
         """Seed authentic multi-cloud cost records and optimization recommendations."""
         today = date.today()
         # Seed 30 days of daily service breakdown
@@ -382,6 +382,7 @@ class CloudCostService:
             for prov, sname, base_cost in services:
                 cost_item = CloudCostItem(
                     user_id=user_id,
+                    organization_id=organization_id,
                     provider=prov,
                     service_name=sname,
                     cost_amount=round(base_cost * variance, 2),
@@ -395,6 +396,7 @@ class CloudCostService:
         db.add(
             CloudBudget(
                 user_id=user_id,
+                organization_id=organization_id,
                 name="Global Multi-Cloud Budget",
                 provider="ALL",
                 monthly_budget=7500.0,
@@ -408,6 +410,7 @@ class CloudCostService:
         db.add(
             CloudBudget(
                 user_id=user_id,
+                organization_id=organization_id,
                 name="AWS Infrastructure Production",
                 provider="AWS",
                 monthly_budget=3500.0,
@@ -423,6 +426,7 @@ class CloudCostService:
         db.add(
             CloudCostOptimization(
                 user_id=user_id,
+                organization_id=organization_id,
                 provider="AWS",
                 title="Downscale Idle Production EC2 Instances",
                 category="IDLE_RESOURCE",
@@ -436,6 +440,7 @@ class CloudCostService:
         db.add(
             CloudCostOptimization(
                 user_id=user_id,
+                organization_id=organization_id,
                 provider="GCP",
                 title="S3 & GCS Cold Storage Lifecycle Rules",
                 category="STORAGE_LIFECYCLE",
@@ -449,6 +454,7 @@ class CloudCostService:
         db.add(
             CloudCostOptimization(
                 user_id=user_id,
+                organization_id=organization_id,
                 provider="AZURE",
                 title="Purchase 1-Year Reserved Instance for Core DB",
                 category="RESERVED_INSTANCE",
@@ -462,6 +468,7 @@ class CloudCostService:
         db.add(
             CloudCostOptimization(
                 user_id=user_id,
+                organization_id=organization_id,
                 provider="AWS",
                 title="Remove Unattached EBS Volume Snapshots",
                 category="IDLE_RESOURCE",
