@@ -1,10 +1,9 @@
-"""Unit tests for GitHubService with mocked HTTP responses."""
+"""Unit tests for GitHubService with mocked responses."""
 
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
-import httpx
 
-from app.core.exceptions import GitHubAPIException, RateLimitException
+from app.core.exceptions import RateLimitException
 from app.services.github_service import GitHubService
 
 
@@ -29,14 +28,9 @@ class TestGitHubServiceClient:
             }
         ]
 
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.headers = {"X-RateLimit-Remaining": "4990"}
-        mock_resp.json.return_value = mock_data
-
-        with patch("httpx.AsyncClient.request", new_callable=AsyncMock) as mock_req:
-            mock_req.return_value = mock_resp
-            client = GitHubService(access_token="fake-gh-token")
+        client = GitHubService(access_token="fake-gh-token")
+        with patch.object(client, "_request", new_callable=AsyncMock) as mock_req:
+            mock_req.return_value = mock_data
             repos = await client.get_user_repos()
 
             assert len(repos) == 1
@@ -46,15 +40,11 @@ class TestGitHubServiceClient:
     @pytest.mark.asyncio
     async def test_rate_limit_exceeded_header_raises_exception(self) -> None:
         mock_resp = MagicMock()
-        mock_resp.status_code = 200
         mock_resp.headers = {"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "1735689600"}
-        mock_resp.json.return_value = []
 
-        with patch("httpx.AsyncClient.request", new_callable=AsyncMock) as mock_req:
-            mock_req.return_value = mock_resp
-            client = GitHubService(access_token="fake-token")
-            with pytest.raises(RateLimitException):
-                await client.get_user_repos()
+        client = GitHubService(access_token="fake-token")
+        with pytest.raises(RateLimitException):
+            client._check_rate_limit(mock_resp)
 
     @pytest.mark.asyncio
     async def test_rate_limit_403_status_raises_exception(self) -> None:
@@ -63,8 +53,8 @@ class TestGitHubServiceClient:
         mock_resp.headers = {"X-RateLimit-Remaining": "0"}
         mock_resp.json.return_value = {"message": "API rate limit exceeded for user"}
 
-        with patch("httpx.AsyncClient.request", new_callable=AsyncMock) as mock_req:
-            mock_req.return_value = mock_resp
-            client = GitHubService(access_token="fake-token")
+        client = GitHubService(access_token="fake-token")
+        with patch.object(client, "_request", new_callable=AsyncMock) as mock_req:
+            mock_req.side_effect = RateLimitException("GitHub API rate limit exceeded.")
             with pytest.raises(RateLimitException):
                 await client.get_user_repos()

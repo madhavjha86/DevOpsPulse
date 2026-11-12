@@ -24,6 +24,7 @@ import { CloudCostPage } from '@/pages/CloudCostPage';
 import { TeamProductivityPage } from '@/pages/TeamProductivityPage';
 import { NotificationsPage } from '@/pages/NotificationsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
+import { OrganizationSettingsPage } from '@/pages/OrganizationSettingsPage';
 
 export const App: React.FC = () => {
   return (
@@ -56,6 +57,7 @@ export const App: React.FC = () => {
         <Route path="/ai/code-intelligence" element={<AICodeIntelligencePage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings/organization" element={<OrganizationSettingsPage />} />
       </Route>
 
       {/* Fallback */}

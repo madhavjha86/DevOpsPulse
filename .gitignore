@@ -39,6 +39,8 @@ backend/.env.*
 frontend/.env
 frontend/.env.*
 !frontend/.env.example
+*LOCAL.md
+TEST_ACCOUNTS_LOCAL.md
 *.pem
 *.key
 *.crt

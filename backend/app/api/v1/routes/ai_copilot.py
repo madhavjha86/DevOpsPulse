@@ -4,8 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_active_user, get_db
-from app.models.user import User
+from app.api.deps import TenantContext, get_db, get_tenant_context
 from app.schemas.ai_copilot import (
     AIConversationCreate,
     AIConversationDetailResponse,
@@ -31,11 +30,13 @@ router = APIRouter(prefix="/ai", tags=["AI Intelligence & Copilot"])
     summary="List AI Copilot conversation threads",
 )
 async def list_conversations(
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[AIConversationResponse]:
-    """Retrieve all Copilot conversations for the authenticated user."""
-    return await AICopilotService.get_conversations(db=db, user_id=current_user.id)
+    """Retrieve all Copilot conversations for active workspace."""
+    return await AICopilotService.get_conversations(
+        db=db, user_id=tenant.user.id, organization_id=tenant.organization_id
+    )
 
 
 @router.post(
@@ -46,12 +47,15 @@ async def list_conversations(
 )
 async def create_conversation(
     payload: AIConversationCreate,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> AIConversationDetailResponse:
     """Initialize a new conversation thread with optional initial prompt and context."""
     return await AICopilotService.create_conversation(
-        db=db, user_id=current_user.id, payload=payload
+        db=db,
+        user_id=tenant.user.id,
+        payload=payload,
+        organization_id=tenant.organization_id,
     )
 
 
@@ -62,12 +66,12 @@ async def create_conversation(
 )
 async def get_conversation(
     conversation_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> AIConversationDetailResponse:
     """Retrieve full conversation history for a given thread."""
     conv = await AICopilotService.get_conversation_detail(
-        db=db, user_id=current_user.id, conversation_id=conversation_id
+        db=db, user_id=tenant.user.id, conversation_id=conversation_id
     )
     if not conv:
         raise HTTPException(
@@ -86,14 +90,14 @@ async def get_conversation(
 async def send_message(
     conversation_id: int,
     payload: AIMessageCreate,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> AIMessageResponse:
     """Post a message to an active conversation and generate the assistant reply."""
     try:
         return await AICopilotService.send_message(
             db=db,
-            user_id=current_user.id,
+            user_id=tenant.user.id,
             conversation_id=conversation_id,
             payload=payload,
         )
@@ -108,12 +112,12 @@ async def send_message(
 )
 async def delete_conversation(
     conversation_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     """Remove a conversation and all its messages."""
     deleted = await AICopilotService.delete_conversation(
-        db=db, user_id=current_user.id, conversation_id=conversation_id
+        db=db, user_id=tenant.user.id, conversation_id=conversation_id
     )
     if not deleted:
         raise HTTPException(
@@ -134,12 +138,15 @@ async def delete_conversation(
 )
 async def generate_rca(
     payload: GenerateRCARequest,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> AIRootCauseAnalysisResponse:
     """Run AI root cause analysis on a failed workflow run, container crash, or error log."""
     return await AICopilotService.generate_rca(
-        db=db, user_id=current_user.id, payload=payload
+        db=db,
+        user_id=tenant.user.id,
+        payload=payload,
+        organization_id=tenant.organization_id,
     )
 
 
@@ -149,13 +156,16 @@ async def generate_rca(
     summary="List all generated Root Cause Analyses",
 )
 async def list_rcas(
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
     limit: int = Query(50, ge=1, le=100),
 ) -> list[AIRootCauseAnalysisResponse]:
-    """Retrieve all historical Root Cause Analysis reports."""
+    """Retrieve all historical Root Cause Analysis reports for workspace."""
     return await AICopilotService.list_rcas(
-        db=db, user_id=current_user.id, limit=limit
+        db=db,
+        user_id=tenant.user.id,
+        limit=limit,
+        organization_id=tenant.organization_id,
     )
 
 
@@ -167,12 +177,12 @@ async def list_rcas(
 async def update_rca_status(
     rca_id: int,
     payload: UpdateRCAStatusRequest,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> AIRootCauseAnalysisResponse:
     """Update RCA report resolution status."""
     updated = await AICopilotService.update_rca_status(
-        db=db, user_id=current_user.id, rca_id=rca_id, status_value=payload.status
+        db=db, user_id=tenant.user.id, rca_id=rca_id, status_value=payload.status
     )
     if not updated:
         raise HTTPException(

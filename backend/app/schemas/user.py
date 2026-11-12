@@ -2,14 +2,14 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 
 class UserResponse(BaseModel):
     """Public user representation."""
 
     id: int
-    email: EmailStr
+    email: str
     username: str
     full_name: str | None = None
     is_active: bool

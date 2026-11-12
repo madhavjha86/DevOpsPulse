@@ -57,33 +57,44 @@ class DockerService:
         }
 
     @classmethod
-    async def get_user_hosts(cls, db: AsyncSession, user_id: int) -> list[DockerHostResponse]:
-        """Fetch all configured Docker hosts for a user."""
-        stmt = (
-            select(DockerHost)
-            .where(DockerHost.user_id == user_id)
-            .order_by(DockerHost.created_at.desc())
-        )
+    async def get_user_hosts(
+        cls, db: AsyncSession, user_id: int, organization_id: int | None = None
+    ) -> list[DockerHostResponse]:
+        """Fetch all configured Docker hosts for a workspace."""
+        stmt = select(DockerHost)
+        if organization_id is not None:
+            stmt = stmt.where(DockerHost.organization_id == organization_id)
+        else:
+            stmt = stmt.where(DockerHost.user_id == user_id)
+        stmt = stmt.order_by(DockerHost.created_at.desc())
         res = await db.execute(stmt)
         hosts = res.scalars().all()
         return [DockerHostResponse.model_validate(h) for h in hosts]
 
     @classmethod
-    async def get_host_by_id(cls, db: AsyncSession, host_id: int, user_id: int) -> DockerHost | None:
-        """Fetch a specific Docker host owned by user."""
-        stmt = select(DockerHost).where(
-            DockerHost.id == host_id,
-            DockerHost.user_id == user_id,
-        )
+    async def get_host_by_id(
+        cls, db: AsyncSession, host_id: int, user_id: int, organization_id: int | None = None
+    ) -> DockerHost | None:
+        """Fetch a specific Docker host owned by workspace."""
+        stmt = select(DockerHost).where(DockerHost.id == host_id)
+        if organization_id is not None:
+            stmt = stmt.where(DockerHost.organization_id == organization_id)
+        else:
+            stmt = stmt.where(DockerHost.user_id == user_id)
         res = await db.execute(stmt)
         return res.scalar_one_or_none()
 
     @classmethod
     async def create_host(
-        cls, db: AsyncSession, user_id: int, payload: DockerHostCreate
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        payload: DockerHostCreate,
+        organization_id: int | None = None,
     ) -> DockerHostResponse:
         """Register a new Docker host endpoint."""
         host = DockerHost(
+            organization_id=organization_id,
             user_id=user_id,
             name=payload.name.strip(),
             host_url=payload.host_url.strip(),

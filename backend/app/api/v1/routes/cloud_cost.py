@@ -4,8 +4,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_active_user, get_db
-from app.models.user import User
+from app.api.deps import (
+    TenantContext,
+    get_db,
+    get_tenant_context,
+    require_tenant_admin,
+    require_tenant_devops,
+)
 from app.schemas.cloud_cost import (
     BudgetCreate,
     BudgetResponse,
@@ -23,13 +28,16 @@ router = APIRouter(prefix="/cloud/cost", tags=["Cloud Cost Intelligence"])
     summary="Get multi-cloud cost intelligence overview",
 )
 async def get_cost_overview(
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
     demo: bool = Query(default=True, description="Include simulated demo telemetry if no live cloud accounts connected"),
 ) -> CloudCostOverviewResponse:
     """Retrieve monthly spend, service breakdown, budget alerts, and optimization recommendations."""
     return await CloudCostService.get_overview(
-        db=db, user_id=current_user.id, include_demo=demo
+        db=db,
+        user_id=tenant.user.id,
+        include_demo=demo,
+        organization_id=tenant.organization_id,
     )
 
 
@@ -39,11 +47,13 @@ async def get_cost_overview(
     summary="List active cloud budgets and alert thresholds",
 )
 async def list_budgets(
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[BudgetResponse]:
     """Retrieve all configured spending limits and warning alerts."""
-    return await CloudCostService.list_budgets(db=db, user_id=current_user.id)
+    return await CloudCostService.list_budgets(
+        db=db, user_id=tenant.user.id, organization_id=tenant.organization_id
+    )
 
 
 @router.post(
@@ -54,12 +64,15 @@ async def list_budgets(
 )
 async def create_budget(
     payload: BudgetCreate,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> BudgetResponse:
     """Set a monthly budget target with automated warning/critical notification triggers."""
     return await CloudCostService.create_budget(
-        db=db, user_id=current_user.id, payload=payload
+        db=db,
+        user_id=tenant.user.id,
+        payload=payload,
+        organization_id=tenant.organization_id,
     )
 
 
@@ -69,13 +82,16 @@ async def create_budget(
     summary="List cost optimization recommendations",
 )
 async def list_optimizations(
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
     status: str | None = Query(default=None, description="Filter by status (OPEN, APPLIED, DISMISSED)"),
 ) -> list[CostOptimizationItem]:
     """Retrieve potential cloud resource cost reductions and right-sizing suggestions."""
     return await CloudCostService.list_optimizations(
-        db=db, user_id=current_user.id, status=status
+        db=db,
+        user_id=tenant.user.id,
+        status=status,
+        organization_id=tenant.organization_id,
     )
 
 
@@ -91,12 +107,15 @@ async def list_optimizations(
 )
 async def apply_optimization(
     optimization_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> CostOptimizationItem:
     """Acknowledge or apply an idle resource shutdown or right-sizing recommendation."""
     opt = await CloudCostService.apply_optimization(
-        db=db, user_id=current_user.id, optimization_id=optimization_id
+        db=db,
+        user_id=tenant.user.id,
+        optimization_id=optimization_id,
+        organization_id=tenant.organization_id,
     )
     if not opt:
         raise HTTPException(
@@ -118,12 +137,12 @@ async def apply_optimization(
 )
 async def dismiss_optimization(
     optimization_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict:
     """Dismiss a cost recommendation from active view."""
     success = await CloudCostService.dismiss_optimization(
-        db=db, user_id=current_user.id, optimization_id=optimization_id
+        db=db, user_id=tenant.user.id, optimization_id=optimization_id
     )
     if not success:
         raise HTTPException(

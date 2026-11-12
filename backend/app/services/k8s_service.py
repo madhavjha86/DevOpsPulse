@@ -45,35 +45,44 @@ class KubernetesService:
         }
 
     @classmethod
-    async def get_user_clusters(cls, db: AsyncSession, user_id: int) -> list[K8sClusterResponse]:
-        """List all configured Kubernetes clusters for a user."""
-        stmt = (
-            select(K8sCluster)
-            .where(K8sCluster.user_id == user_id)
-            .order_by(K8sCluster.created_at.desc())
-        )
+    async def get_user_clusters(
+        cls, db: AsyncSession, user_id: int, organization_id: int | None = None
+    ) -> list[K8sClusterResponse]:
+        """List all configured Kubernetes clusters for a workspace."""
+        stmt = select(K8sCluster)
+        if organization_id is not None:
+            stmt = stmt.where(K8sCluster.organization_id == organization_id)
+        else:
+            stmt = stmt.where(K8sCluster.user_id == user_id)
+        stmt = stmt.order_by(K8sCluster.created_at.desc())
         res = await db.execute(stmt)
         clusters = res.scalars().all()
         return [K8sClusterResponse.model_validate(c) for c in clusters]
 
     @classmethod
     async def get_cluster_by_id(
-        cls, db: AsyncSession, cluster_id: int, user_id: int
+        cls, db: AsyncSession, cluster_id: int, user_id: int, organization_id: int | None = None
     ) -> K8sCluster | None:
-        """Fetch a specific cluster owned by user."""
-        stmt = select(K8sCluster).where(
-            K8sCluster.id == cluster_id,
-            K8sCluster.user_id == user_id,
-        )
+        """Fetch a specific cluster owned by workspace."""
+        stmt = select(K8sCluster).where(K8sCluster.id == cluster_id)
+        if organization_id is not None:
+            stmt = stmt.where(K8sCluster.organization_id == organization_id)
+        else:
+            stmt = stmt.where(K8sCluster.user_id == user_id)
         res = await db.execute(stmt)
         return res.scalar_one_or_none()
 
     @classmethod
     async def create_cluster(
-        cls, db: AsyncSession, user_id: int, payload: K8sClusterCreate
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        payload: K8sClusterCreate,
+        organization_id: int | None = None,
     ) -> K8sClusterResponse:
         """Register a new Kubernetes cluster endpoint."""
         cluster = K8sCluster(
+            organization_id=organization_id,
             user_id=user_id,
             name=payload.name.strip(),
             api_server_url=payload.api_server_url.strip(),

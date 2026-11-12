@@ -32,13 +32,18 @@ class AICopilotService:
 
     @classmethod
     async def create_conversation(
-        cls, db: AsyncSession, user_id: int, payload: AIConversationCreate
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        payload: AIConversationCreate,
+        organization_id: int | None = None,
     ) -> AIConversationDetailResponse:
         """Create a new Copilot chat thread and optional initial prompt."""
         title = payload.title or (
             payload.initial_message[:40] + "..." if payload.initial_message else "New DevOps Discussion"
         )
         conv = AIConversation(
+            organization_id=organization_id,
             user_id=user_id,
             title=title.strip(),
         )
@@ -105,9 +110,9 @@ class AICopilotService:
 
     @classmethod
     async def get_conversations(
-        cls, db: AsyncSession, user_id: int
+        cls, db: AsyncSession, user_id: int, organization_id: int | None = None
     ) -> list[AIConversationResponse]:
-        """Fetch all Copilot conversations for the user with message counts."""
+        """Fetch all Copilot conversations for workspace with message counts."""
         await cls._ensure_demo_copilot_seeded(db, user_id)
 
         stmt = (
@@ -116,8 +121,14 @@ class AICopilotService:
                 func.count(AIMessage.id).label("message_count"),
             )
             .outerjoin(AIMessage, AIMessage.conversation_id == AIConversation.id)
-            .where(AIConversation.user_id == user_id)
-            .group_by(AIConversation.id)
+        )
+        if organization_id is not None:
+            stmt = stmt.where(AIConversation.organization_id == organization_id)
+        else:
+            stmt = stmt.where(AIConversation.user_id == user_id)
+
+        stmt = (
+            stmt.group_by(AIConversation.id)
             .order_by(desc(AIConversation.updated_at))
         )
         res = await db.execute(stmt)
@@ -256,7 +267,11 @@ class AICopilotService:
 
     @classmethod
     async def generate_rca(
-        cls, db: AsyncSession, user_id: int, payload: GenerateRCARequest
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        payload: GenerateRCARequest,
+        organization_id: int | None = None,
     ) -> AIRootCauseAnalysisResponse:
         """Perform automated Root Cause Analysis on a workflow run or error log."""
         workflow_run: WorkflowRun | None = None
@@ -289,6 +304,7 @@ class AICopilotService:
         )
 
         rca_entry = AIRootCauseAnalysis(
+            organization_id=organization_id,
             user_id=user_id,
             workflow_run_id=payload.workflow_run_id,
             repository_id=payload.repository_id or (workflow_run.repository_id if workflow_run else None),
@@ -308,7 +324,9 @@ class AICopilotService:
         # Link to incident if provided
         if payload.incident_id:
             from app.services.incident_service import IncidentService
-            await IncidentService.link_rca(db, user_id, payload.incident_id, rca_entry.id)
+            await IncidentService.link_rca(
+                db, user_id, payload.incident_id, rca_entry.id, organization_id=organization_id
+            )
 
         return AIRootCauseAnalysisResponse(
             id=rca_entry.id,
@@ -331,17 +349,18 @@ class AICopilotService:
 
     @classmethod
     async def list_rcas(
-        cls, db: AsyncSession, user_id: int, limit: int = 50
+        cls, db: AsyncSession, user_id: int, limit: int = 50, organization_id: int | None = None
     ) -> list[AIRootCauseAnalysisResponse]:
-        """Fetch all generated Root Cause Analyses for the user."""
+        """Fetch all generated Root Cause Analyses for the workspace."""
         await cls._ensure_demo_rca_seeded(db, user_id)
 
-        stmt = (
-            select(AIRootCauseAnalysis)
-            .where(AIRootCauseAnalysis.user_id == user_id)
-            .order_by(desc(AIRootCauseAnalysis.created_at))
-            .limit(limit)
-        )
+        stmt = select(AIRootCauseAnalysis)
+        if organization_id is not None:
+            stmt = stmt.where(AIRootCauseAnalysis.organization_id == organization_id)
+        else:
+            stmt = stmt.where(AIRootCauseAnalysis.user_id == user_id)
+
+        stmt = stmt.order_by(desc(AIRootCauseAnalysis.created_at)).limit(limit)
         res = await db.execute(stmt)
         items = res.scalars().all()
 

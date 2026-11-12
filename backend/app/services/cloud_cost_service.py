@@ -23,25 +23,44 @@ class CloudCostService:
 
     @classmethod
     async def get_overview(
-        cls, db: AsyncSession, user_id: int, include_demo: bool = True
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        include_demo: bool = True,
+        organization_id: int | None = None,
     ) -> CloudCostOverviewResponse:
         """Generate full cloud spend overview, service breakdown, and provider connectivity."""
         # 1. Determine provider connection status
-        acc_q = select(CloudAccount).where(CloudAccount.user_id == user_id, CloudAccount.is_active == True)
+        acc_q = select(CloudAccount).where(CloudAccount.is_active == True)
+        if organization_id is not None:
+            acc_q = acc_q.where(CloudAccount.organization_id == organization_id)
+        else:
+            acc_q = acc_q.where(CloudAccount.user_id == user_id)
         acc_res = await db.execute(acc_q)
         accounts = acc_res.scalars().all()
 
         configured_providers = {a.provider.lower(): a for a in accounts}
 
         # Check existing cost items
-        cost_q = select(CloudCostItem).where(CloudCostItem.user_id == user_id)
+        cost_q = select(CloudCostItem)
+        if organization_id is not None:
+            cost_q = cost_q.where(CloudCostItem.organization_id == organization_id)
+        else:
+            cost_q = cost_q.where(CloudCostItem.user_id == user_id)
         cost_res = await db.execute(cost_q)
         items = cost_res.scalars().all()
 
         is_demo = False
         if not items and include_demo:
-            await cls._seed_default_cost_data(db, user_id)
-            cost_res = await db.execute(select(CloudCostItem).where(CloudCostItem.user_id == user_id))
+            await cls._seed_default_cost_data(db, user_id, organization_id)
+            if organization_id is not None:
+                cost_res = await db.execute(
+                    select(CloudCostItem).where(CloudCostItem.organization_id == organization_id)
+                )
+            else:
+                cost_res = await db.execute(
+                    select(CloudCostItem).where(CloudCostItem.user_id == user_id)
+                )
             items = cost_res.scalars().all()
             is_demo = True
 
@@ -159,9 +178,15 @@ class CloudCostService:
         )
 
     @classmethod
-    async def list_budgets(cls, db: AsyncSession, user_id: int) -> list[BudgetResponse]:
+    async def list_budgets(
+        cls, db: AsyncSession, user_id: int, organization_id: int | None = None
+    ) -> list[BudgetResponse]:
         """Fetch all configured spend budgets with alert status."""
-        q = select(CloudBudget).where(CloudBudget.user_id == user_id, CloudBudget.is_active == True)
+        q = select(CloudBudget).where(CloudBudget.is_active == True)
+        if organization_id is not None:
+            q = q.where(CloudBudget.organization_id == organization_id)
+        else:
+            q = q.where(CloudBudget.user_id == user_id)
         res = await db.execute(q)
         budgets = res.scalars().all()
 
@@ -196,21 +221,30 @@ class CloudCostService:
 
     @classmethod
     async def create_budget(
-        cls, db: AsyncSession, user_id: int, payload: BudgetCreate
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        payload: BudgetCreate,
+        organization_id: int | None = None,
     ) -> BudgetResponse:
         """Create a new spend threshold budget and check current progress."""
         # Calculate current spend for budget scope
         first_of_month = date.today().replace(day=1)
         q = select(func.sum(CloudCostItem.cost_amount)).where(
-            CloudCostItem.user_id == user_id,
             CloudCostItem.usage_date >= first_of_month,
         )
+        if organization_id is not None:
+            q = q.where(CloudCostItem.organization_id == organization_id)
+        else:
+            q = q.where(CloudCostItem.user_id == user_id)
+
         if payload.provider != "ALL":
             q = q.where(CloudCostItem.provider == payload.provider)
         res = await db.execute(q)
         curr_spend = float(res.scalar() or 0.0)
 
         budget = CloudBudget(
+            organization_id=organization_id,
             user_id=user_id,
             name=payload.name,
             provider=payload.provider,
@@ -251,10 +285,19 @@ class CloudCostService:
 
     @classmethod
     async def list_optimizations(
-        cls, db: AsyncSession, user_id: int, status: str | None = None
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        status: str | None = None,
+        organization_id: int | None = None,
     ) -> list[CostOptimizationItem]:
         """Fetch cost optimization recommendations."""
-        q = select(CloudCostOptimization).where(CloudCostOptimization.user_id == user_id)
+        q = select(CloudCostOptimization)
+        if organization_id is not None:
+            q = q.where(CloudCostOptimization.organization_id == organization_id)
+        else:
+            q = q.where(CloudCostOptimization.user_id == user_id)
+
         if status:
             q = q.where(CloudCostOptimization.status == status)
         q = q.order_by(CloudCostOptimization.estimated_monthly_savings.desc())
@@ -279,13 +322,19 @@ class CloudCostService:
 
     @classmethod
     async def apply_optimization(
-        cls, db: AsyncSession, user_id: int, optimization_id: int
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        optimization_id: int,
+        organization_id: int | None = None,
     ) -> CostOptimizationItem | None:
         """Mark a cost optimization suggestion as applied."""
-        q = select(CloudCostOptimization).where(
-            CloudCostOptimization.id == optimization_id,
-            CloudCostOptimization.user_id == user_id,
-        )
+        q = select(CloudCostOptimization).where(CloudCostOptimization.id == optimization_id)
+        if organization_id is not None:
+            q = q.where(CloudCostOptimization.organization_id == organization_id)
+        else:
+            q = q.where(CloudCostOptimization.user_id == user_id)
+
         res = await db.execute(q)
         opt = res.scalar_one_or_none()
         if not opt:

@@ -19,6 +19,13 @@ from app.models.ai_code_intelligence import AIPullRequestReview, AIFailurePredic
 from app.models.incident import Incident, IncidentTimelineEvent
 from app.models.cloud_cost import CloudBudget, CloudCostItem, CloudCostOptimization
 from app.models.team_productivity import EngineeringTeam, TeamRepository
+from app.models.organization import (
+    Organization,
+    OrganizationMember,
+    OrganizationInvitation,
+    OrganizationRole,
+    OrganizationType,
+)
 
 __all__ = [
     "User",
@@ -48,4 +55,9 @@ __all__ = [
     "CloudCostOptimization",
     "EngineeringTeam",
     "TeamRepository",
+    "Organization",
+    "OrganizationMember",
+    "OrganizationInvitation",
+    "OrganizationRole",
+    "OrganizationType",
 ]

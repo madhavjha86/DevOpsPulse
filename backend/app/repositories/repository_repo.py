@@ -27,14 +27,20 @@ class RepositoryRepo(BaseRepository[Repository]):
         return result.scalars().first()
 
     async def get_by_user(
-        self, user_id: int, skip: int = 0, limit: int = 20
+        self,
+        user_id: int,
+        skip: int = 0,
+        limit: int = 20,
+        organization_id: int | None = None,
     ) -> tuple[list[Repository], int]:
-        """Return repositories belonging to a user (through their GitHub accounts)."""
-        subq = select(GitHubAccount.id).where(
-            GitHubAccount.user_id == user_id
-        ).subquery()
-
-        base_filter = Repository.github_account_id.in_(select(subq))
+        """Return repositories belonging to a user or scoped to an organization."""
+        if organization_id is not None:
+            base_filter = Repository.organization_id == organization_id
+        else:
+            subq = select(GitHubAccount.id).where(
+                GitHubAccount.user_id == user_id
+            ).subquery()
+            base_filter = Repository.github_account_id.in_(select(subq))
 
         count_result = await self.db.execute(
             select(func.count())

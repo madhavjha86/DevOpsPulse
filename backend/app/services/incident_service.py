@@ -28,10 +28,15 @@ class IncidentService:
 
     @classmethod
     async def create_incident(
-        cls, db: AsyncSession, user_id: int, payload: IncidentCreate
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        payload: IncidentCreate,
+        organization_id: int | None = None,
     ) -> IncidentResponse:
         """Create a new incident and trigger initial audit events and notifications."""
         incident = Incident(
+            organization_id=organization_id,
             user_id=user_id,
             assignee_id=payload.assignee_id,
             repository_id=payload.repository_id,
@@ -102,9 +107,14 @@ class IncidentService:
         service: str | None = None,
         limit: int = 50,
         offset: int = 0,
+        organization_id: int | None = None,
     ) -> list[IncidentResponse]:
         """List incidents with filtering and pagination."""
-        query = select(Incident).where(Incident.user_id == user_id)
+        if organization_id is not None:
+            query = select(Incident).where(Incident.organization_id == organization_id)
+        else:
+            query = select(Incident).where(Incident.user_id == user_id)
+
         if status:
             query = query.where(Incident.status == status)
         if severity:
@@ -124,14 +134,23 @@ class IncidentService:
 
     @classmethod
     async def get_incident(
-        cls, db: AsyncSession, user_id: int, incident_id: int
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        incident_id: int,
+        organization_id: int | None = None,
     ) -> IncidentDetailResponse | None:
         """Fetch complete incident record with timeline events and audit history."""
         q = (
             select(Incident)
             .options(selectinload(Incident.timeline_events))
-            .where(Incident.id == incident_id, Incident.user_id == user_id)
+            .where(Incident.id == incident_id)
         )
+        if organization_id is not None:
+            q = q.where(Incident.organization_id == organization_id)
+        else:
+            q = q.where(Incident.user_id == user_id)
+
         res = await db.execute(q)
         incident = res.scalar_one_or_none()
         if not incident:
@@ -171,12 +190,21 @@ class IncidentService:
 
     @classmethod
     async def update_status(
-        cls, db: AsyncSession, user_id: int, incident_id: int, payload: IncidentStatusUpdate
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        incident_id: int,
+        payload: IncidentStatusUpdate,
+        organization_id: int | None = None,
     ) -> IncidentDetailResponse | None:
         """Advance or update incident lifecycle (Open -> Acknowledged -> Investigating -> Resolved)."""
-        inc_res = await db.execute(
-            select(Incident).where(Incident.id == incident_id, Incident.user_id == user_id)
-        )
+        inc_q = select(Incident).where(Incident.id == incident_id)
+        if organization_id is not None:
+            inc_q = inc_q.where(Incident.organization_id == organization_id)
+        else:
+            inc_q = inc_q.where(Incident.user_id == user_id)
+
+        inc_res = await db.execute(inc_q)
         incident = inc_res.scalar_one_or_none()
         if not incident:
             return None
@@ -219,16 +247,25 @@ class IncidentService:
             db.add(notif)
 
         await db.commit()
-        return await cls.get_incident(db, user_id, incident_id)
+        return await cls.get_incident(db, user_id, incident_id, organization_id=organization_id)
 
     @classmethod
     async def assign_incident(
-        cls, db: AsyncSession, user_id: int, incident_id: int, payload: IncidentAssignUpdate
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        incident_id: int,
+        payload: IncidentAssignUpdate,
+        organization_id: int | None = None,
     ) -> IncidentDetailResponse | None:
         """Assign or reassign an incident owner."""
-        inc_res = await db.execute(
-            select(Incident).where(Incident.id == incident_id, Incident.user_id == user_id)
-        )
+        inc_q = select(Incident).where(Incident.id == incident_id)
+        if organization_id is not None:
+            inc_q = inc_q.where(Incident.organization_id == organization_id)
+        else:
+            inc_q = inc_q.where(Incident.user_id == user_id)
+
+        inc_res = await db.execute(inc_q)
         incident = inc_res.scalar_one_or_none()
         if not incident:
             return None
@@ -257,16 +294,25 @@ class IncidentService:
         )
         db.add(event)
         await db.commit()
-        return await cls.get_incident(db, user_id, incident_id)
+        return await cls.get_incident(db, user_id, incident_id, organization_id=organization_id)
 
     @classmethod
     async def add_comment(
-        cls, db: AsyncSession, user_id: int, incident_id: int, payload: IncidentCommentCreate
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        incident_id: int,
+        payload: IncidentCommentCreate,
+        organization_id: int | None = None,
     ) -> IncidentDetailResponse | None:
         """Add a timeline comment to the incident history."""
-        inc_res = await db.execute(
-            select(Incident).where(Incident.id == incident_id, Incident.user_id == user_id)
-        )
+        inc_q = select(Incident).where(Incident.id == incident_id)
+        if organization_id is not None:
+            inc_q = inc_q.where(Incident.organization_id == organization_id)
+        else:
+            inc_q = inc_q.where(Incident.user_id == user_id)
+
+        inc_res = await db.execute(inc_q)
         incident = inc_res.scalar_one_or_none()
         if not incident:
             return None
@@ -281,16 +327,25 @@ class IncidentService:
         )
         db.add(event)
         await db.commit()
-        return await cls.get_incident(db, user_id, incident_id)
+        return await cls.get_incident(db, user_id, incident_id, organization_id=organization_id)
 
     @classmethod
     async def link_rca(
-        cls, db: AsyncSession, user_id: int, incident_id: int, rca_id: int
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        incident_id: int,
+        rca_id: int,
+        organization_id: int | None = None,
     ) -> IncidentDetailResponse | None:
         """Attach Root Cause Analysis findings to an incident."""
-        inc_res = await db.execute(
-            select(Incident).where(Incident.id == incident_id, Incident.user_id == user_id)
-        )
+        inc_q = select(Incident).where(Incident.id == incident_id)
+        if organization_id is not None:
+            inc_q = inc_q.where(Incident.organization_id == organization_id)
+        else:
+            inc_q = inc_q.where(Incident.user_id == user_id)
+
+        inc_res = await db.execute(inc_q)
         incident = inc_res.scalar_one_or_none()
         if not incident:
             return None
@@ -306,12 +361,17 @@ class IncidentService:
         )
         db.add(event)
         await db.commit()
-        return await cls.get_incident(db, user_id, incident_id)
+        return await cls.get_incident(db, user_id, incident_id, organization_id=organization_id)
 
     @classmethod
-    async def get_incident_stats(cls, db: AsyncSession, user_id: int) -> IncidentStatsSummary:
+    async def get_incident_stats(
+        cls, db: AsyncSession, user_id: int, organization_id: int | None = None
+    ) -> IncidentStatsSummary:
         """Calculate incident KPIs including MTTR, severity distributions, and active counts."""
-        q = select(Incident).where(Incident.user_id == user_id)
+        if organization_id is not None:
+            q = select(Incident).where(Incident.organization_id == organization_id)
+        else:
+            q = select(Incident).where(Incident.user_id == user_id)
         res = await db.execute(q)
         incidents = res.scalars().all()
 

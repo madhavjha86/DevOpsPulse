@@ -28,13 +28,34 @@ class AnalyticsService:
     """Service computing repository, workflow, commit, and CI/CD metrics."""
 
     @staticmethod
-    async def get_dashboard_stats(db: AsyncSession, user_id: int) -> DashboardStats:
-        """Calculate high-level dashboard metrics for a user's repositories."""
-        repo_subq = (
-            select(Repository.id)
-            .join(GitHubAccount, Repository.github_account_id == GitHubAccount.id)
-            .where(GitHubAccount.user_id == user_id)
-        ).subquery()
+    def _build_repo_subq(user_id: int, organization_id: int | None = None, with_name: bool = False):
+        """Build repository subquery scoped to organization or fallback to user's connected GitHub accounts."""
+        if organization_id is not None:
+            if with_name:
+                return (
+                    select(Repository.id, Repository.name)
+                    .where(Repository.organization_id == organization_id)
+                ).subquery()
+            return select(Repository.id).where(Repository.organization_id == organization_id).subquery()
+        else:
+            if with_name:
+                return (
+                    select(Repository.id, Repository.name)
+                    .join(GitHubAccount, Repository.github_account_id == GitHubAccount.id)
+                    .where(GitHubAccount.user_id == user_id)
+                ).subquery()
+            return (
+                select(Repository.id)
+                .join(GitHubAccount, Repository.github_account_id == GitHubAccount.id)
+                .where(GitHubAccount.user_id == user_id)
+            ).subquery()
+
+    @staticmethod
+    async def get_dashboard_stats(
+        db: AsyncSession, user_id: int, organization_id: int | None = None
+    ) -> DashboardStats:
+        """Calculate high-level dashboard metrics for a workspace's repositories."""
+        repo_subq = AnalyticsService._build_repo_subq(user_id, organization_id)
 
         # Total Repositories
         repo_count_res = await db.execute(
@@ -130,14 +151,10 @@ class AnalyticsService:
 
     @staticmethod
     async def get_recent_activity(
-        db: AsyncSession, user_id: int, limit: int = 15
+        db: AsyncSession, user_id: int, limit: int = 15, organization_id: int | None = None
     ) -> RecentActivityResponse:
         """Fetch latest mixed feed of commits, PRs, workflow runs, and issues."""
-        repo_subq = (
-            select(Repository.id, Repository.name)
-            .join(GitHubAccount, Repository.github_account_id == GitHubAccount.id)
-            .where(GitHubAccount.user_id == user_id)
-        ).subquery()
+        repo_subq = AnalyticsService._build_repo_subq(user_id, organization_id, with_name=True)
 
         activities: list[ActivityItem] = []
 
@@ -215,15 +232,11 @@ class AnalyticsService:
 
     @staticmethod
     async def get_workflow_performance(
-        db: AsyncSession, user_id: int, days: int = 14
+        db: AsyncSession, user_id: int, days: int = 14, organization_id: int | None = None
     ) -> WorkflowPerformanceResponse:
         """Generate daily average workflow run duration."""
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-        repo_subq = (
-            select(Repository.id)
-            .join(GitHubAccount, Repository.github_account_id == GitHubAccount.id)
-            .where(GitHubAccount.user_id == user_id)
-        ).subquery()
+        repo_subq = AnalyticsService._build_repo_subq(user_id, organization_id)
 
         # Query runs by execution date
         date_expr = func.date(func.coalesce(WorkflowRun.started_at, WorkflowRun.created_at))
@@ -258,15 +271,11 @@ class AnalyticsService:
 
     @staticmethod
     async def get_repository_activity(
-        db: AsyncSession, user_id: int, days: int = 14
+        db: AsyncSession, user_id: int, days: int = 14, organization_id: int | None = None
     ) -> RepositoryActivityResponse:
         """Generate daily commit frequency for user's repositories."""
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-        repo_subq = (
-            select(Repository.id)
-            .join(GitHubAccount, Repository.github_account_id == GitHubAccount.id)
-            .where(GitHubAccount.user_id == user_id)
-        ).subquery()
+        repo_subq = AnalyticsService._build_repo_subq(user_id, organization_id)
 
         q = (
             select(
@@ -297,15 +306,11 @@ class AnalyticsService:
 
     @staticmethod
     async def get_build_trends(
-        db: AsyncSession, user_id: int, days: int = 30
+        db: AsyncSession, user_id: int, days: int = 30, organization_id: int | None = None
     ) -> BuildTrendResponse:
         """Generate daily success vs failure build trends over time."""
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-        repo_subq = (
-            select(Repository.id)
-            .join(GitHubAccount, Repository.github_account_id == GitHubAccount.id)
-            .where(GitHubAccount.user_id == user_id)
-        ).subquery()
+        repo_subq = AnalyticsService._build_repo_subq(user_id, organization_id)
 
         date_expr = func.date(func.coalesce(WorkflowRun.started_at, WorkflowRun.created_at))
         q = (
@@ -347,13 +352,11 @@ class AnalyticsService:
         )
 
     @staticmethod
-    async def get_dora_metrics(db: AsyncSession, user_id: int) -> DoraMetricsResponse:
+    async def get_dora_metrics(
+        db: AsyncSession, user_id: int, organization_id: int | None = None
+    ) -> DoraMetricsResponse:
         """Calculate the 4 core DORA metrics (DevOps Research and Assessment)."""
-        repo_subq = (
-            select(Repository.id)
-            .join(GitHubAccount, Repository.github_account_id == GitHubAccount.id)
-            .where(GitHubAccount.user_id == user_id)
-        ).subquery()
+        repo_subq = AnalyticsService._build_repo_subq(user_id, organization_id)
 
         # 1. Total deployments & frequency in past 30 days
         cutoff = datetime.now(timezone.utc) - timedelta(days=30)
@@ -462,19 +465,34 @@ class AnalyticsService:
             mttr_desc = "No pipeline failure incidents recorded in the past 30 days"
         else:
             from sqlalchemy import text
-            rec_sql = text("""
-                SELECT f.started_at as failed_at,
-                       (SELECT min(s.completed_at) FROM workflow_runs s
-                        WHERE s.repository_id = f.repository_id
-                          AND s.workflow_name = f.workflow_name
-                          AND s.conclusion = 'success'
-                          AND s.completed_at >= f.started_at) as recovered_at
-                FROM workflow_runs f
-                WHERE f.conclusion = 'failure'
-                  AND f.repository_id IN (SELECT id FROM repositories WHERE github_account_id IN (SELECT id FROM github_accounts WHERE user_id = :u_id))
-                  AND f.created_at >= :cutoff
-            """)
-            rec_res = await db.execute(rec_sql, {"u_id": user_id, "cutoff": cutoff})
+            if organization_id is not None:
+                rec_sql = text("""
+                    SELECT f.started_at as failed_at,
+                           (SELECT min(s.completed_at) FROM workflow_runs s
+                            WHERE s.repository_id = f.repository_id
+                              AND s.workflow_name = f.workflow_name
+                              AND s.conclusion = 'success'
+                              AND s.completed_at >= f.started_at) as recovered_at
+                    FROM workflow_runs f
+                    WHERE f.conclusion = 'failure'
+                      AND f.repository_id IN (SELECT id FROM repositories WHERE organization_id = :org_id)
+                      AND f.created_at >= :cutoff
+                """)
+                rec_res = await db.execute(rec_sql, {"org_id": organization_id, "cutoff": cutoff})
+            else:
+                rec_sql = text("""
+                    SELECT f.started_at as failed_at,
+                           (SELECT min(s.completed_at) FROM workflow_runs s
+                            WHERE s.repository_id = f.repository_id
+                              AND s.workflow_name = f.workflow_name
+                              AND s.conclusion = 'success'
+                              AND s.completed_at >= f.started_at) as recovered_at
+                    FROM workflow_runs f
+                    WHERE f.conclusion = 'failure'
+                      AND f.repository_id IN (SELECT id FROM repositories WHERE github_account_id IN (SELECT id FROM github_accounts WHERE user_id = :u_id))
+                      AND f.created_at >= :cutoff
+                """)
+                rec_res = await db.execute(rec_sql, {"u_id": user_id, "cutoff": cutoff})
             recovery_diffs = []
             for row in rec_res.all():
                 if row.failed_at and row.recovered_at:

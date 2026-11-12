@@ -44,7 +44,11 @@ class GitHubService:
             )
 
     async def _request(
-        self, method: str, endpoint: str, params: dict[str, Any] | None = None
+        self,
+        method: str,
+        endpoint: str,
+        params: dict[str, Any] | None = None,
+        json_data: dict[str, Any] | None = None,
     ) -> Any:
         """Execute HTTP request with authentication and error handling."""
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
@@ -55,6 +59,7 @@ class GitHubService:
                     url=url,
                     headers=self.headers,
                     params=params,
+                    json=json_data,
                 )
             except httpx.RequestError as exc:
                 logger.error("GitHub request connection error", error=str(exc), url=url)
@@ -73,6 +78,7 @@ class GitHubService:
                         url=url,
                         headers=unauth_headers,
                         params=params,
+                        json=json_data,
                     )
                     if retry_resp.status_code == 200:
                         return retry_resp.json()
@@ -90,6 +96,9 @@ class GitHubService:
                 except Exception:
                     pass
                 raise GitHubAPIException(detail=f"GitHub API error ({response.status_code}): {msg}")
+
+            if response.status_code == 204 or not response.content:
+                return {}
 
             return response.json()
 
@@ -168,3 +177,56 @@ class GitHubService:
         params = {"page": page, "per_page": per_page}
         res = await self._request("GET", f"/repos/{owner}/{repo}/deployments", params=params)
         return res if isinstance(res, list) else []
+
+    async def dispatch_workflow(
+        self,
+        owner: str,
+        repo: str,
+        workflow_id_or_name: str | int,
+        ref: str = "main",
+        inputs: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Trigger an on-demand CI/CD GitHub Actions workflow_dispatch event."""
+        payload: dict[str, Any] = {"ref": ref}
+        if inputs:
+            payload["inputs"] = inputs
+        return await self._request(
+            "POST",
+            f"/repos/{owner}/{repo}/actions/workflows/{workflow_id_or_name}/dispatches",
+            json_data=payload,
+        )
+
+    async def get_branches(
+        self, owner: str, repo: str, page: int = 1, per_page: int = 30
+    ) -> list[dict[str, Any]]:
+        """Fetch branches for repository."""
+        params = {"page": page, "per_page": per_page}
+        res = await self._request("GET", f"/repos/{owner}/{repo}/branches", params=params)
+        return res if isinstance(res, list) else []
+
+    async def get_contributors(
+        self, owner: str, repo: str, page: int = 1, per_page: int = 30
+    ) -> list[dict[str, Any]]:
+        """Fetch contributors for repository."""
+        params = {"page": page, "per_page": per_page}
+        res = await self._request("GET", f"/repos/{owner}/{repo}/contributors", params=params)
+        return res if isinstance(res, list) else []
+
+    async def get_releases(
+        self, owner: str, repo: str, page: int = 1, per_page: int = 30
+    ) -> list[dict[str, Any]]:
+        """Fetch releases for repository."""
+        params = {"page": page, "per_page": per_page}
+        res = await self._request("GET", f"/repos/{owner}/{repo}/releases", params=params)
+        return res if isinstance(res, list) else []
+
+    async def get_dependabot_alerts(
+        self, owner: str, repo: str, state: str = "open", per_page: int = 30
+    ) -> list[dict[str, Any]]:
+        """Fetch real GitHub Dependabot security alerts for repository."""
+        params = {"state": state, "per_page": per_page}
+        try:
+            res = await self._request("GET", f"/repos/{owner}/{repo}/dependabot/alerts", params=params)
+            return res if isinstance(res, list) else []
+        except Exception:
+            return []

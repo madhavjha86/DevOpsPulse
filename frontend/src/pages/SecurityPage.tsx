@@ -170,7 +170,18 @@ export const SecurityPage: React.FC = () => {
             </div>
 
             <div className="divide-y divide-[#F1F5F9]">
-              {data.vulnerabilities.map((v: Vulnerability) => (
+              {data.vulnerabilities.length === 0 ? (
+                <div className="p-8 text-center">
+                  <div className="h-10 w-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-2 border border-emerald-200">
+                    <CheckCircle2 className="h-6 w-6" />
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-800">Zero Open Vulnerabilities</h4>
+                  <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                    All audited project dependencies meet current security advisories with no active CVE vulnerabilities detected.
+                  </p>
+                </div>
+              ) : (
+                data.vulnerabilities.map((v: Vulnerability) => (
                 <div key={v.id} className="p-5 hover:bg-slate-50/70 transition-colors space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5">
@@ -203,7 +214,7 @@ export const SecurityPage: React.FC = () => {
                     </span>
                   </div>
                 </div>
-              ))}
+              )))}
             </div>
           </div>
 

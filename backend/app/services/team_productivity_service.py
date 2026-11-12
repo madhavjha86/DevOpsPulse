@@ -27,10 +27,14 @@ class TeamProductivityService:
 
     @classmethod
     async def get_overview(
-        cls, db: AsyncSession, user_id: int, team_id: int | None = None
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        team_id: int | None = None,
+        organization_id: int | None = None,
     ) -> TeamProductivityOverview:
         """Compute aggregated team productivity, review cycle time, and collaboration bottlenecks."""
-        await cls._ensure_default_teams(db, user_id)
+        await cls._ensure_default_teams(db, user_id, organization_id)
 
         # 1. Fetch team or default
         team_name = "All Engineering Teams"
@@ -40,8 +44,13 @@ class TeamProductivityService:
             team_q = (
                 select(EngineeringTeam)
                 .options(selectinload(EngineeringTeam.team_repositories))
-                .where(EngineeringTeam.id == team_id, EngineeringTeam.user_id == user_id)
+                .where(EngineeringTeam.id == team_id)
             )
+            if organization_id is not None:
+                team_q = team_q.where(EngineeringTeam.organization_id == organization_id)
+            else:
+                team_q = team_q.where(EngineeringTeam.user_id == user_id)
+
             team_res = await db.execute(team_q)
             team = team_res.scalar_one_or_none()
             if team:
@@ -49,10 +58,15 @@ class TeamProductivityService:
                 repo_ids = [tr.repository_id for tr in team.team_repositories]
 
         if not repo_ids:
-            # Fall back to all repositories owned by user
-            all_repos_res = await db.execute(
-                select(Repository.id).where(Repository.github_account_id.isnot(None))
-            )
+            # Fall back to all repositories scoped to organization or user
+            if organization_id is not None:
+                all_repos_res = await db.execute(
+                    select(Repository.id).where(Repository.organization_id == organization_id)
+                )
+            else:
+                all_repos_res = await db.execute(
+                    select(Repository.id).where(Repository.github_account_id.isnot(None))
+                )
             repo_ids = [r for (r,) in all_repos_res.all()]
 
         # 2. Query Pull Requests for review duration and size distribution
@@ -226,15 +240,21 @@ class TeamProductivityService:
         )
 
     @classmethod
-    async def list_teams(cls, db: AsyncSession, user_id: int) -> list[TeamResponse]:
+    async def list_teams(
+        cls, db: AsyncSession, user_id: int, organization_id: int | None = None
+    ) -> list[TeamResponse]:
         """Fetch all configured engineering teams."""
-        await cls._ensure_default_teams(db, user_id)
+        await cls._ensure_default_teams(db, user_id, organization_id)
         q = (
             select(EngineeringTeam)
             .options(selectinload(EngineeringTeam.team_repositories))
-            .where(EngineeringTeam.user_id == user_id)
             .order_by(EngineeringTeam.id.asc())
         )
+        if organization_id is not None:
+            q = q.where(EngineeringTeam.organization_id == organization_id)
+        else:
+            q = q.where(EngineeringTeam.user_id == user_id)
+
         res = await db.execute(q)
         teams = res.scalars().all()
 
@@ -254,11 +274,16 @@ class TeamProductivityService:
 
     @classmethod
     async def create_team(
-        cls, db: AsyncSession, user_id: int, payload: TeamCreate
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        payload: TeamCreate,
+        organization_id: int | None = None,
     ) -> TeamResponse:
         """Create a new engineering team grouping."""
         team = EngineeringTeam(
             user_id=user_id,
+            organization_id=organization_id,
             name=payload.name,
             description=payload.description,
             target_lead_time_hours=payload.target_lead_time_hours,
@@ -287,19 +312,32 @@ class TeamProductivityService:
         )
 
     @classmethod
-    async def _ensure_default_teams(cls, db: AsyncSession, user_id: int) -> None:
+    async def _ensure_default_teams(
+        cls, db: AsyncSession, user_id: int, organization_id: int | None = None
+    ) -> None:
         """Seed initial teams if none exist."""
-        q = select(func.count(EngineeringTeam.id)).where(EngineeringTeam.user_id == user_id)
+        q = select(func.count(EngineeringTeam.id))
+        if organization_id is not None:
+            q = q.where(EngineeringTeam.organization_id == organization_id)
+        else:
+            q = q.where(EngineeringTeam.user_id == user_id)
+
         res = await db.execute(q)
         if (res.scalar() or 0) > 0:
             return
 
         # Fetch available repositories
-        repos_res = await db.execute(select(Repository).limit(5))
+        if organization_id is not None:
+            repos_res = await db.execute(
+                select(Repository).where(Repository.organization_id == organization_id).limit(5)
+            )
+        else:
+            repos_res = await db.execute(select(Repository).limit(5))
         repos = repos_res.scalars().all()
 
         team1 = EngineeringTeam(
             user_id=user_id,
+            organization_id=organization_id,
             name="Platform & Core Services",
             description="Core backend infrastructure, API gateways, database clusters, and microservices.",
             target_lead_time_hours=12.0,
@@ -308,6 +346,7 @@ class TeamProductivityService:
         )
         team2 = EngineeringTeam(
             user_id=user_id,
+            organization_id=organization_id,
             name="Frontend & Design Systems",
             description="React applications, UI design system components, accessibility, and client telemetry.",
             target_lead_time_hours=8.0,
@@ -316,6 +355,7 @@ class TeamProductivityService:
         )
         team3 = EngineeringTeam(
             user_id=user_id,
+            organization_id=organization_id,
             name="SRE & DevOps Automation",
             description="Kubernetes clusters, CI/CD runners, cloud cost budgets, and incident management.",
             target_lead_time_hours=6.0,

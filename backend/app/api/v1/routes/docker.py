@@ -4,8 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_active_user, get_db
-from app.models.user import User
+from app.api.deps import TenantContext, get_db, get_tenant_context, require_tenant_devops
 from app.schemas.docker_monitoring import (
     DockerActionRequest,
     DockerActionResponse,
@@ -27,19 +26,23 @@ router = APIRouter(prefix="/infrastructure/docker", tags=["Docker Infrastructure
     summary="List all configured Docker hosts",
 )
 async def list_docker_hosts(
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[DockerHostResponse]:
-    """Retrieve all Docker hosts registered by the authenticated user."""
-    hosts = await DockerService.get_user_hosts(db, current_user.id)
-    # If user has no hosts, auto-seed a default Local Docker Host entry
+    """Retrieve all Docker hosts registered in the active workspace."""
+    hosts = await DockerService.get_user_hosts(
+        db, tenant.user.id, organization_id=tenant.organization_id
+    )
+    # If workspace has no hosts, auto-seed a default Local Docker Host entry
     if not hosts:
         default_payload = DockerHostCreate(
             name="Local Docker Daemon",
             host_url="http://localhost:2375",
             tls_verify=False,
         )
-        created = await DockerService.create_host(db, current_user.id, default_payload)
+        created = await DockerService.create_host(
+            db, tenant.user.id, default_payload, organization_id=tenant.organization_id
+        )
         return [created]
     return hosts
 
@@ -52,11 +55,13 @@ async def list_docker_hosts(
 )
 async def create_docker_host(
     payload: DockerHostCreate,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> DockerHostResponse:
     """Add a new Docker host daemon endpoint for container monitoring."""
-    return await DockerService.create_host(db, current_user.id, payload)
+    return await DockerService.create_host(
+        db, tenant.user.id, payload, organization_id=tenant.organization_id
+    )
 
 
 @router.get(
@@ -66,11 +71,13 @@ async def create_docker_host(
 )
 async def get_docker_host(
     host_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> DockerHostResponse:
     """Fetch details of a specific Docker host."""
-    host = await DockerService.get_host_by_id(db, host_id, current_user.id)
+    host = await DockerService.get_host_by_id(
+        db, host_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not host:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -87,11 +94,13 @@ async def get_docker_host(
 async def update_docker_host(
     host_id: int,
     payload: DockerHostUpdate,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> DockerHostResponse:
     """Update settings for a Docker host."""
-    host = await DockerService.get_host_by_id(db, host_id, current_user.id)
+    host = await DockerService.get_host_by_id(
+        db, host_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not host:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -107,11 +116,13 @@ async def update_docker_host(
 )
 async def delete_docker_host(
     host_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     """Remove a configured Docker host endpoint."""
-    host = await DockerService.get_host_by_id(db, host_id, current_user.id)
+    host = await DockerService.get_host_by_id(
+        db, host_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not host:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -127,11 +138,13 @@ async def delete_docker_host(
 )
 async def check_docker_host_health(
     host_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> DockerHealthResponse:
     """Trigger a live ping/health check against the Docker daemon."""
-    host = await DockerService.get_host_by_id(db, host_id, current_user.id)
+    host = await DockerService.get_host_by_id(
+        db, host_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not host:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -147,11 +160,13 @@ async def check_docker_host_health(
 )
 async def get_docker_containers(
     host_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> DockerContainerListResponse:
     """Retrieve real-time containers, operational states, and CPU/memory statistics."""
-    host = await DockerService.get_host_by_id(db, host_id, current_user.id)
+    host = await DockerService.get_host_by_id(
+        db, host_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not host:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -168,12 +183,14 @@ async def get_docker_containers(
 async def get_container_logs(
     host_id: int,
     container_id: str,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
     tail: int = Query(default=100, ge=10, le=1000, description="Number of tail lines to retrieve"),
 ) -> DockerLogsResponse:
     """Retrieve logs stream output from a specific container."""
-    host = await DockerService.get_host_by_id(db, host_id, current_user.id)
+    host = await DockerService.get_host_by_id(
+        db, host_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not host:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -191,11 +208,13 @@ async def execute_container_action(
     host_id: int,
     container_id: str,
     payload: DockerActionRequest,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> DockerActionResponse:
     """Control container runtime state directly from DevOpsPulse."""
-    host = await DockerService.get_host_by_id(db, host_id, current_user.id)
+    host = await DockerService.get_host_by_id(
+        db, host_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not host:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -4,8 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_active_user, get_db
-from app.models.user import User
+from app.api.deps import TenantContext, get_db, get_tenant_context, require_tenant_writer
 from app.schemas.incident import (
     IncidentAssignUpdate,
     IncidentCommentCreate,
@@ -26,7 +25,7 @@ router = APIRouter(prefix="/incidents", tags=["Smart Incident Management"])
     summary="List tracked incidents with filters",
 )
 async def list_incidents(
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
     status: str | None = Query(default=None, description="Filter by status (OPEN, ACKNOWLEDGED, INVESTIGATING, RESOLVED, CLOSED)"),
     severity: str | None = Query(default=None, description="Filter by severity (CRITICAL, HIGH, MEDIUM, LOW)"),
@@ -37,12 +36,13 @@ async def list_incidents(
     """Retrieve filtered list of operational outages and incidents."""
     return await IncidentService.list_incidents(
         db=db,
-        user_id=current_user.id,
+        user_id=tenant.user.id,
         status=status,
         severity=severity,
         service=service,
         limit=limit,
         offset=offset,
+        organization_id=tenant.organization_id,
     )
 
 
@@ -54,12 +54,15 @@ async def list_incidents(
 )
 async def create_incident(
     payload: IncidentCreate,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_writer)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> IncidentResponse:
     """Report a new outage or service disruption and dispatch alerts."""
     return await IncidentService.create_incident(
-        db=db, user_id=current_user.id, payload=payload
+        db=db,
+        user_id=tenant.user.id,
+        payload=payload,
+        organization_id=tenant.organization_id,
     )
 
 
@@ -74,11 +77,13 @@ async def create_incident(
     summary="Get incident metrics and MTTR summary",
 )
 async def get_incident_stats(
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> IncidentStatsSummary:
     """Retrieve aggregate MTTR, open incident count, and severity distributions."""
-    return await IncidentService.get_incident_stats(db=db, user_id=current_user.id)
+    return await IncidentService.get_incident_stats(
+        db=db, user_id=tenant.user.id, organization_id=tenant.organization_id
+    )
 
 
 @router.get(
@@ -88,12 +93,15 @@ async def get_incident_stats(
 )
 async def get_incident(
     incident_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> IncidentDetailResponse:
     """Fetch complete incident record including chronological timeline events."""
     incident = await IncidentService.get_incident(
-        db=db, user_id=current_user.id, incident_id=incident_id
+        db=db,
+        user_id=tenant.user.id,
+        incident_id=incident_id,
+        organization_id=tenant.organization_id,
     )
     if not incident:
         raise HTTPException(
@@ -111,12 +119,16 @@ async def get_incident(
 async def update_incident_status(
     incident_id: int,
     payload: IncidentStatusUpdate,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_writer)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> IncidentDetailResponse:
     """Transition incident through Open -> Acknowledged -> Investigating -> Resolved."""
     updated = await IncidentService.update_status(
-        db=db, user_id=current_user.id, incident_id=incident_id, payload=payload
+        db=db,
+        user_id=tenant.user.id,
+        incident_id=incident_id,
+        payload=payload,
+        organization_id=tenant.organization_id,
     )
     if not updated:
         raise HTTPException(
@@ -134,12 +146,16 @@ async def update_incident_status(
 async def assign_incident(
     incident_id: int,
     payload: IncidentAssignUpdate,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_writer)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> IncidentDetailResponse:
     """Assign an incident to an engineer or SRE team member."""
     updated = await IncidentService.assign_incident(
-        db=db, user_id=current_user.id, incident_id=incident_id, payload=payload
+        db=db,
+        user_id=tenant.user.id,
+        incident_id=incident_id,
+        payload=payload,
+        organization_id=tenant.organization_id,
     )
     if not updated:
         raise HTTPException(
@@ -158,12 +174,16 @@ async def assign_incident(
 async def add_incident_comment(
     incident_id: int,
     payload: IncidentCommentCreate,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_writer)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> IncidentDetailResponse:
     """Append a timestamped comment into the incident audit timeline."""
     updated = await IncidentService.add_comment(
-        db=db, user_id=current_user.id, incident_id=incident_id, payload=payload
+        db=db,
+        user_id=tenant.user.id,
+        incident_id=incident_id,
+        payload=payload,
+        organization_id=tenant.organization_id,
     )
     if not updated:
         raise HTTPException(

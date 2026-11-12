@@ -390,26 +390,48 @@ class WorkflowService:
     async def dispatch_workflow(
         db: AsyncSession, user_id: int, data: WorkflowDispatchRequest
     ) -> WorkflowRunResponse:
-        """Trigger an on-demand CI/CD workflow pipeline dispatch."""
-        import random
+        """Trigger an on-demand CI/CD workflow pipeline dispatch via real GitHub Actions API."""
         repo_db = RepositoryRepo(db)
         repo = await repo_db.get(data.repository_id)
         if not repo:
             raise NotFoundException(detail="Repository not found")
 
+        user_repo = UserRepository(db)
+        gh_account = await user_repo.get_github_account_by_user_id(user_id)
+        token = gh_account.access_token if gh_account else None
+        gh_client = GitHubService(access_token=token)
+
+        owner, repo_name = repo.full_name.split("/")
         now = datetime.now(timezone.utc)
-        sim_gh_id = random.randint(9000000, 9999999)
+
+        # Call real GitHub Actions API when credentials exist
+        if token and not token.startswith("demo_") and not token.startswith("ghp_demo_") and token not in ("public_viewer", "none"):
+            await gh_client.dispatch_workflow(
+                owner=owner,
+                repo=repo_name,
+                workflow_id_or_name=data.workflow_name,
+                ref=data.branch,
+            )
+
+        # Query max run number for this repository
+        max_run_res = await db.execute(
+            select(func.max(WorkflowRun.run_number)).where(WorkflowRun.repository_id == repo.id)
+        )
+        current_max = max_run_res.scalar() or 0
+        new_run_number = current_max + 1
+        record_id = int(now.timestamp())
+
         new_run = WorkflowRun(
             repository_id=repo.id,
-            github_id=sim_gh_id,
+            github_id=record_id,
             workflow_name=data.workflow_name,
-            workflow_id=101,
-            run_number=random.randint(150, 999),
-            status="in_progress",
+            workflow_id=repo.id * 1000 + new_run_number,
+            run_number=new_run_number,
+            status="queued",
             conclusion=None,
             branch=data.branch,
             event="workflow_dispatch",
-            url=f"{repo.html_url}/actions/runs/{sim_gh_id}",
+            url=f"{repo.html_url}/actions",
             started_at=now,
             duration_seconds=None,
         )
@@ -418,10 +440,10 @@ class WorkflowService:
         notif = Notification(
             user_id=user_id,
             title="Pipeline Triggered",
-            message=f"Manual workflow '{data.workflow_name}' dispatched on {repo.name} ({data.branch}).",
+            message=f"Manual workflow '{data.workflow_name}' #{new_run_number} queued on {repo.name} ({data.branch}).",
             type="info",
             reference_type="workflow_run",
-            reference_id=sim_gh_id,
+            reference_id=record_id,
         )
         db.add(notif)
         await db.commit()

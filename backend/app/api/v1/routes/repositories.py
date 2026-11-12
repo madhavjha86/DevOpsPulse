@@ -4,7 +4,15 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import PaginationParams, get_current_active_user, get_db
+from app.api.deps import (
+    PaginationParams,
+    TenantContext,
+    get_current_active_user,
+    get_db,
+    get_tenant_context,
+    require_tenant_admin,
+    require_tenant_writer,
+)
 from app.models.user import User
 from app.schemas.repository import (
     CommitResponse,
@@ -27,15 +35,16 @@ router = APIRouter(prefix="/repositories", tags=["Repositories"])
 )
 async def list_repositories(
     pagination: Annotated[PaginationParams, Depends()],
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> RepositoryListResponse:
-    """Return paginated list of repositories tracked for the authenticated user."""
+    """Return paginated list of repositories tracked for the active workspace."""
     return await RepositoryService.get_repositories(
         db=db,
-        user_id=current_user.id,
+        user_id=tenant.user.id,
         page=pagination.page,
         per_page=pagination.per_page,
+        organization_id=tenant.organization_id,
     )
 
 
@@ -47,14 +56,15 @@ async def list_repositories(
 )
 async def import_repository(
     data: ImportRepositoryRequest,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_writer)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> RepositoryResponse:
-    """Import a GitHub repository by 'owner/repo' using user's GitHub credentials."""
+    """Import a GitHub repository into the active workspace."""
     return await RepositoryService.import_repository(
         db=db,
-        user_id=current_user.id,
+        user_id=tenant.user.id,
         full_name=data.github_repo_full_name,
+        organization_id=tenant.organization_id,
     )
 
 
@@ -66,14 +76,15 @@ async def import_repository(
 )
 async def get_repository(
     repo_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> RepositoryResponse:
-    """Fetch details for a specific repository."""
+    """Fetch details for a specific repository within the active workspace."""
     return await RepositoryService.get_repository(
         db=db,
         repo_id=repo_id,
-        user_id=current_user.id,
+        user_id=tenant.user.id,
+        organization_id=tenant.organization_id,
     )
 
 
@@ -103,14 +114,14 @@ async def sync_repository(
 )
 async def delete_repository(
     repo_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, str]:
     """Delete a tracked repository and its associated data."""
     await RepositoryService.delete_repository(
         db=db,
         repo_id=repo_id,
-        user_id=current_user.id,
+        user_id=tenant.user.id,
     )
     return {"message": "Repository removed successfully"}
 

@@ -24,6 +24,9 @@ class Repository(Base, TimestampMixin):
     __tablename__ = "repositories"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    organization_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     github_account_id: Mapped[int] = mapped_column(
         ForeignKey("github_accounts.id", ondelete="CASCADE"), index=True
     )

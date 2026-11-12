@@ -43,9 +43,9 @@ test.describe('DevOpsPulse v1.1 Four Major Features', () => {
     await expect(page.locator('h1')).toContainText(/Cloud Cost Intelligence/i);
 
     // Provider cards (AWS, AZURE, GCP)
-    await expect(page.getByText('AWS', { exact: true })).toBeVisible();
-    await expect(page.getByText('AZURE', { exact: true })).toBeVisible();
-    await expect(page.getByText('GCP', { exact: true })).toBeVisible();
+    await expect(page.getByText('AWS', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('AZURE', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('GCP', { exact: true }).first()).toBeVisible();
 
     // Budget and optimization sections
     await expect(page.getByText(/Configured Cloud Budgets/i)).toBeVisible();

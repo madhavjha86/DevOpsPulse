@@ -162,3 +162,62 @@ export interface GitHubAccount {
   avatar_url?: string;
   is_active?: boolean;
 }
+
+export type OrganizationRoleType =
+  | 'SUPER_ADMIN'
+  | 'ORGANIZATION_ADMIN'
+  | 'DEVOPS_ENGINEER'
+  | 'DEVELOPER'
+  | 'SECURITY_ENGINEER'
+  | 'VIEWER';
+
+export type OrganizationType = 'PERSONAL' | 'COMPANY';
+
+export interface OrganizationMember {
+  id: number;
+  organization_id: number;
+  user_id: number;
+  email: string;
+  username?: string;
+  full_name: string | null;
+  user_email?: string;
+  user_full_name?: string | null;
+  role: OrganizationRoleType;
+  joined_at?: string;
+  created_at?: string;
+}
+
+export interface Organization {
+  id: number;
+  name: string;
+  slug: string;
+  type: OrganizationType;
+  owner_id: number;
+  created_at: string;
+  updated_at: string;
+  role?: OrganizationRoleType;
+  member_count?: number;
+  is_active?: boolean;
+}
+
+export interface OrganizationInvitation {
+  id: number;
+  organization_id: number;
+  email: string;
+  role: OrganizationRoleType;
+  token: string;
+  is_accepted: boolean;
+  expires_at: string;
+  created_at: string;
+}
+
+export interface CreateOrganizationPayload {
+  name: string;
+  slug?: string;
+  type?: OrganizationType;
+}
+
+export interface InviteMemberPayload {
+  email: string;
+  role: OrganizationRoleType;
+}

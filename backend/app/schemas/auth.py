@@ -1,6 +1,6 @@
 """Authentication Pydantic schemas."""
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 
 class TokenResponse(BaseModel):
@@ -22,14 +22,14 @@ class TokenPayload(BaseModel):
 class LoginRequest(BaseModel):
     """User login credentials."""
 
-    email: EmailStr
+    email: str = Field(..., min_length=3, max_length=255)
     password: str = Field(..., min_length=6)
 
 
 class RegisterRequest(BaseModel):
     """New user registration data."""
 
-    email: EmailStr
+    email: str = Field(..., min_length=3, max_length=255)
     username: str = Field(..., min_length=3, max_length=100, pattern=r"^[a-zA-Z0-9_-]+$")
     password: str = Field(..., min_length=8, max_length=128)
     full_name: str | None = Field(None, max_length=255)

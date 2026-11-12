@@ -20,6 +20,7 @@ import {
   DollarSign,
   ShieldAlert,
   Terminal,
+  Building2,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -51,6 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { name: 'Observability', path: '/observability/telemetry', icon: Activity },
     { name: 'Uptime & Monitors', path: '/uptime', icon: AlertTriangle },
     { name: 'Reports', path: '/deployments', icon: FileText },
+    { name: 'Organization', path: '/settings/organization', icon: Building2 },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
@@ -105,6 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               <NavLink
                 key={item.path}
                 to={item.path}
+                end={item.path === '/dashboard'}
                 onClick={onClose}
                 className={({ isActive }) =>
                   `group flex items-center justify-between rounded-xl px-3.5 py-2.5 min-h-[44px] text-xs sm:text-sm font-medium transition-all duration-150 ${
@@ -212,6 +215,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               <NavLink
                 key={item.path}
                 to={item.path}
+                end
                 onClick={onClose}
                 className={({ isActive }) =>
                   `group flex items-center justify-between rounded-xl px-3.5 py-2.5 min-h-[44px] text-xs sm:text-sm font-medium transition-all duration-150 ${

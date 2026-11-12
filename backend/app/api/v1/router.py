@@ -22,10 +22,12 @@ from app.api.v1.routes.workflows import router as workflows_router
 from app.api.v1.routes.cloud_cost import router as cloud_cost_router
 from app.api.v1.routes.incidents import router as incidents_router
 from app.api.v1.routes.team_productivity import router as team_productivity_router
+from app.api.v1.routes.organizations import router as organizations_router
 
 api_router = APIRouter()
 
 api_router.include_router(auth_router)
+api_router.include_router(organizations_router)
 api_router.include_router(users_router)
 api_router.include_router(repositories_router)
 api_router.include_router(workflows_router)

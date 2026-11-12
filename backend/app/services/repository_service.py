@@ -29,7 +29,7 @@ class RepositoryService:
 
     @staticmethod
     async def import_repository(
-        db: AsyncSession, user_id: int, full_name: str
+        db: AsyncSession, user_id: int, full_name: str, organization_id: int | None = None
     ) -> RepositoryResponse:
         """Import a repository from GitHub using the user's connected GitHub account."""
         user_repo = UserRepository(db)
@@ -61,6 +61,7 @@ class RepositoryService:
 
         new_repo = await repo_db.create({
             "github_account_id": gh_account.id,
+            "organization_id": organization_id,
             "github_id": repo_data["id"],
             "name": repo_data["name"],
             "full_name": repo_data["full_name"],
@@ -228,12 +229,18 @@ class RepositoryService:
 
     @staticmethod
     async def get_repositories(
-        db: AsyncSession, user_id: int, page: int = 1, per_page: int = 20
+        db: AsyncSession,
+        user_id: int,
+        page: int = 1,
+        per_page: int = 20,
+        organization_id: int | None = None,
     ) -> RepositoryListResponse:
-        """Fetch paginated repositories for user."""
+        """Fetch paginated repositories for user or active organization."""
         repo_db = RepositoryRepo(db)
         skip = (page - 1) * per_page
-        repos, total = await repo_db.get_by_user(user_id, skip=skip, limit=per_page)
+        repos, total = await repo_db.get_by_user(
+            user_id, skip=skip, limit=per_page, organization_id=organization_id
+        )
         return RepositoryListResponse(
             repositories=[RepositoryResponse.model_validate(r) for r in repos],
             total=total,
@@ -243,13 +250,19 @@ class RepositoryService:
 
     @staticmethod
     async def get_repository(
-        db: AsyncSession, repo_id: int, user_id: int
+        db: AsyncSession,
+        repo_id: int,
+        user_id: int,
+        organization_id: int | None = None,
     ) -> RepositoryResponse:
-        """Fetch single repository."""
+        """Fetch single repository with tenant isolation check."""
         repo_db = RepositoryRepo(db)
         repo = await repo_db.get(repo_id)
         if not repo:
             raise NotFoundException(detail="Repository not found")
+        if organization_id is not None and repo.organization_id is not None:
+            if repo.organization_id != organization_id:
+                raise NotFoundException(detail="Repository not found")
         return RepositoryResponse.model_validate(repo)
 
     @staticmethod

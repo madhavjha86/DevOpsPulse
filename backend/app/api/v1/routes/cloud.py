@@ -4,8 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_active_user, get_db
-from app.models.user import User
+from app.api.deps import TenantContext, get_db, get_tenant_context, require_tenant_admin
 from app.schemas.cloud_monitoring import (
     CloudAccountCreate,
     CloudAccountResponse,
@@ -24,18 +23,22 @@ router = APIRouter(prefix="/infrastructure/cloud", tags=["Cloud Infrastructure"]
     summary="List all configured cloud provider accounts",
 )
 async def list_cloud_accounts(
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[CloudAccountResponse]:
     """Retrieve all cloud provider accounts. Auto-seeds default AWS entry if none exist."""
-    accounts = await CloudMonitoringService.get_user_accounts(db, current_user.id)
+    accounts = await CloudMonitoringService.get_user_accounts(
+        db, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not accounts:
         default_payload = CloudAccountCreate(
             provider="aws",
             name="AWS Production Account",
             region="us-east-1",
         )
-        created = await CloudMonitoringService.create_account(db, current_user.id, default_payload)
+        created = await CloudMonitoringService.create_account(
+            db, tenant.user.id, default_payload, organization_id=tenant.organization_id
+        )
         return [created]
     return accounts
 
@@ -48,11 +51,13 @@ async def list_cloud_accounts(
 )
 async def create_cloud_account(
     payload: CloudAccountCreate,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> CloudAccountResponse:
     """Connect a new AWS, Azure, or GCP account with encrypted credentials."""
-    return await CloudMonitoringService.create_account(db, current_user.id, payload)
+    return await CloudMonitoringService.create_account(
+        db, tenant.user.id, payload, organization_id=tenant.organization_id
+    )
 
 
 @router.get(
@@ -62,11 +67,13 @@ async def create_cloud_account(
 )
 async def get_cloud_account(
     account_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> CloudAccountResponse:
     """Fetch details of a specific cloud account."""
-    account = await CloudMonitoringService.get_account_by_id(db, account_id, current_user.id)
+    account = await CloudMonitoringService.get_account_by_id(
+        db, account_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not account:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -83,11 +90,13 @@ async def get_cloud_account(
 async def update_cloud_account(
     account_id: int,
     payload: CloudAccountUpdate,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> CloudAccountResponse:
-    """Update settings for a cloud account."""
-    account = await CloudMonitoringService.get_account_by_id(db, account_id, current_user.id)
+    """Update region or credentials for a cloud account."""
+    account = await CloudMonitoringService.get_account_by_id(
+        db, account_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not account:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -103,11 +112,13 @@ async def update_cloud_account(
 )
 async def delete_cloud_account(
     account_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     """Remove a configured cloud provider account."""
-    account = await CloudMonitoringService.get_account_by_id(db, account_id, current_user.id)
+    account = await CloudMonitoringService.get_account_by_id(
+        db, account_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not account:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -118,15 +129,17 @@ async def delete_cloud_account(
 
 @router.get(
     "/accounts/{account_id}/health",
-    summary="Test cloud credentials and provider API connectivity",
+    summary="Test cloud provider API connectivity",
 )
 async def check_cloud_account_health(
     account_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict:
-    """Test cloud API credentials and connection health."""
-    account = await CloudMonitoringService.get_account_by_id(db, account_id, current_user.id)
+    """Probe cloud provider credentials and return connectivity verification."""
+    account = await CloudMonitoringService.get_account_by_id(
+        db, account_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not account:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -138,38 +151,42 @@ async def check_cloud_account_health(
 @router.get(
     "/accounts/{account_id}/overview",
     response_model=CloudOverviewResponse,
-    summary="Cloud account resource inventory and cost estimate",
+    summary="Get account resource inventory and health scorecard",
 )
-async def get_cloud_overview(
+async def get_cloud_account_overview(
     account_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> CloudOverviewResponse:
-    """Retrieve compute VMs, cloud databases, and serverless resources overview."""
-    account = await CloudMonitoringService.get_account_by_id(db, account_id, current_user.id)
+    """Retrieve full cloud resource inventory and status overview."""
+    account = await CloudMonitoringService.get_account_by_id(
+        db, account_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not account:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Cloud account with ID {account_id} not found",
         )
-    return await CloudMonitoringService.get_overview(db, account)
+    return await CloudMonitoringService.get_overview(account)
 
 
 @router.get(
     "/accounts/{account_id}/metrics",
     response_model=CloudMetricsResponse,
-    summary="Get 24h CPU and Network telemetry timeseries",
+    summary="Get multi-dimensional telemetry timeseries",
 )
-async def get_cloud_metrics(
+async def get_cloud_account_metrics(
     account_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> CloudMetricsResponse:
-    """Retrieve 24-hour resource telemetry stream."""
-    account = await CloudMonitoringService.get_account_by_id(db, account_id, current_user.id)
+    """Retrieve timeseries telemetry for CPU, Network, Storage, and Cost."""
+    account = await CloudMonitoringService.get_account_by_id(
+        db, account_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not account:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Cloud account with ID {account_id} not found",
         )
-    return await CloudMonitoringService.get_metrics_timeseries(account)
+    return await CloudMonitoringService.get_metrics(account)

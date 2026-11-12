@@ -4,8 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_active_user, get_db
-from app.models.user import User
+from app.api.deps import TenantContext, get_db, get_tenant_context
 from app.schemas.team_productivity import (
     TeamCreate,
     TeamProductivityOverview,
@@ -22,13 +21,16 @@ router = APIRouter(prefix="/analytics/team-productivity", tags=["Team Productivi
     summary="Get engineering team productivity analytics and DORA metrics",
 )
 async def get_team_productivity_overview(
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
     team_id: int | None = Query(default=None, description="Optional team ID filter"),
 ) -> TeamProductivityOverview:
     """Retrieve team-level DORA metrics, PR review durations, and collaboration bottlenecks (zero individual developer rankings)."""
     return await TeamProductivityService.get_overview(
-        db=db, user_id=current_user.id, team_id=team_id
+        db=db,
+        user_id=tenant.user.id,
+        team_id=team_id,
+        organization_id=tenant.organization_id,
     )
 
 
@@ -38,11 +40,15 @@ async def get_team_productivity_overview(
     summary="List configured engineering teams",
 )
 async def list_teams(
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[TeamResponse]:
     """Retrieve all engineering teams monitored for collective throughput."""
-    return await TeamProductivityService.list_teams(db=db, user_id=current_user.id)
+    return await TeamProductivityService.list_teams(
+        db=db,
+        user_id=tenant.user.id,
+        organization_id=tenant.organization_id,
+    )
 
 
 @router.post(
@@ -53,10 +59,13 @@ async def list_teams(
 )
 async def create_team(
     payload: TeamCreate,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TeamResponse:
     """Register a new engineering team and associate designated repositories."""
     return await TeamProductivityService.create_team(
-        db=db, user_id=current_user.id, payload=payload
+        db=db,
+        user_id=tenant.user.id,
+        payload=payload,
+        organization_id=tenant.organization_id,
     )

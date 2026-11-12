@@ -7,12 +7,16 @@ const api = axios.create({
   },
 });
 
-// Request interceptor: attach Bearer token
+// Request interceptor: attach Bearer token & Tenant Workspace boundary
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    const activeOrgId = localStorage.getItem('active_organization_id');
+    if (activeOrgId) {
+      config.headers['X-Organization-Id'] = activeOrgId;
     }
     return config;
   },

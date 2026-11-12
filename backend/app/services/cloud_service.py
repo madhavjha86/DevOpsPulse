@@ -90,37 +90,44 @@ class CloudMonitoringService:
 
     @classmethod
     async def get_user_accounts(
-        cls, db: AsyncSession, user_id: int
+        cls, db: AsyncSession, user_id: int, organization_id: int | None = None
     ) -> list[CloudAccountResponse]:
-        """Fetch all cloud provider accounts for a user."""
-        stmt = (
-            select(CloudAccount)
-            .where(CloudAccount.user_id == user_id)
-            .order_by(CloudAccount.created_at.desc())
-        )
+        """Fetch all cloud provider accounts for a workspace."""
+        stmt = select(CloudAccount)
+        if organization_id is not None:
+            stmt = stmt.where(CloudAccount.organization_id == organization_id)
+        else:
+            stmt = stmt.where(CloudAccount.user_id == user_id)
+        stmt = stmt.order_by(CloudAccount.created_at.desc())
         res = await db.execute(stmt)
         accounts = res.scalars().all()
         return [cls._to_response(a) for a in accounts]
 
     @classmethod
     async def get_account_by_id(
-        cls, db: AsyncSession, account_id: int, user_id: int
+        cls, db: AsyncSession, account_id: int, user_id: int, organization_id: int | None = None
     ) -> CloudAccount | None:
-        """Fetch a specific cloud account owned by user."""
-        stmt = select(CloudAccount).where(
-            CloudAccount.id == account_id,
-            CloudAccount.user_id == user_id,
-        )
+        """Fetch a specific cloud account owned by workspace."""
+        stmt = select(CloudAccount).where(CloudAccount.id == account_id)
+        if organization_id is not None:
+            stmt = stmt.where(CloudAccount.organization_id == organization_id)
+        else:
+            stmt = stmt.where(CloudAccount.user_id == user_id)
         res = await db.execute(stmt)
         return res.scalar_one_or_none()
 
     @classmethod
     async def create_account(
-        cls, db: AsyncSession, user_id: int, payload: CloudAccountCreate
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        payload: CloudAccountCreate,
+        organization_id: int | None = None,
     ) -> CloudAccountResponse:
         """Register a new cloud provider account with encrypted credentials."""
         encrypted = cls._pack_credentials(payload)
         account = CloudAccount(
+            organization_id=organization_id,
             user_id=user_id,
             provider=payload.provider,
             name=payload.name.strip(),

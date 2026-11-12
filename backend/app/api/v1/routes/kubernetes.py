@@ -1,11 +1,10 @@
-"""Kubernetes Infrastructure API routes for cluster, node, and pod observability."""
+"""Kubernetes API server monitoring and workload observability API endpoints."""
 
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_active_user, get_db
-from app.models.user import User
+from app.api.deps import TenantContext, get_db, get_tenant_context, require_tenant_devops
 from app.schemas.k8s_monitoring import (
     K8sClusterCreate,
     K8sClusterResponse,
@@ -28,11 +27,13 @@ router = APIRouter(prefix="/infrastructure/k8s", tags=["Kubernetes Infrastructur
     summary="List all configured Kubernetes clusters",
 )
 async def list_clusters(
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[K8sClusterResponse]:
-    """Fetch all clusters registered by the user. Auto-seeds default local cluster if none exist."""
-    clusters = await KubernetesService.get_user_clusters(db, current_user.id)
+    """Fetch all clusters registered in workspace. Auto-seeds default local cluster if none exist."""
+    clusters = await KubernetesService.get_user_clusters(
+        db, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not clusters:
         default_payload = K8sClusterCreate(
             name="Local Minikube / Kind",
@@ -41,7 +42,9 @@ async def list_clusters(
             namespace_filter="all",
             tls_verify=False,
         )
-        created = await KubernetesService.create_cluster(db, current_user.id, default_payload)
+        created = await KubernetesService.create_cluster(
+            db, tenant.user.id, default_payload, organization_id=tenant.organization_id
+        )
         return [created]
     return clusters
 
@@ -54,11 +57,13 @@ async def list_clusters(
 )
 async def create_cluster(
     payload: K8sClusterCreate,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> K8sClusterResponse:
     """Connect a new Kubernetes cluster to DevOpsPulse."""
-    return await KubernetesService.create_cluster(db, current_user.id, payload)
+    return await KubernetesService.create_cluster(
+        db, tenant.user.id, payload, organization_id=tenant.organization_id
+    )
 
 
 @router.get(
@@ -68,11 +73,13 @@ async def create_cluster(
 )
 async def get_cluster(
     cluster_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> K8sClusterResponse:
     """Retrieve details for a specific cluster."""
-    cluster = await KubernetesService.get_cluster_by_id(db, cluster_id, current_user.id)
+    cluster = await KubernetesService.get_cluster_by_id(
+        db, cluster_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not cluster:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -89,11 +96,13 @@ async def get_cluster(
 async def update_cluster(
     cluster_id: int,
     payload: K8sClusterUpdate,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> K8sClusterResponse:
     """Update settings for a cluster."""
-    cluster = await KubernetesService.get_cluster_by_id(db, cluster_id, current_user.id)
+    cluster = await KubernetesService.get_cluster_by_id(
+        db, cluster_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not cluster:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -109,11 +118,13 @@ async def update_cluster(
 )
 async def delete_cluster(
     cluster_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     """Remove a configured cluster."""
-    cluster = await KubernetesService.get_cluster_by_id(db, cluster_id, current_user.id)
+    cluster = await KubernetesService.get_cluster_by_id(
+        db, cluster_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not cluster:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -128,11 +139,13 @@ async def delete_cluster(
 )
 async def check_cluster_health(
     cluster_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict:
     """Probe Kubernetes API-server health and version info."""
-    cluster = await KubernetesService.get_cluster_by_id(db, cluster_id, current_user.id)
+    cluster = await KubernetesService.get_cluster_by_id(
+        db, cluster_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not cluster:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -148,11 +161,13 @@ async def check_cluster_health(
 )
 async def get_cluster_overview(
     cluster_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> K8sOverviewResponse:
     """Retrieve cluster scorecard with node/pod status breakdown."""
-    cluster = await KubernetesService.get_cluster_by_id(db, cluster_id, current_user.id)
+    cluster = await KubernetesService.get_cluster_by_id(
+        db, cluster_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not cluster:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -168,11 +183,13 @@ async def get_cluster_overview(
 )
 async def get_cluster_nodes(
     cluster_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[K8sNodeItem]:
     """Retrieve all cluster nodes."""
-    cluster = await KubernetesService.get_cluster_by_id(db, cluster_id, current_user.id)
+    cluster = await KubernetesService.get_cluster_by_id(
+        db, cluster_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not cluster:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -188,12 +205,14 @@ async def get_cluster_nodes(
 )
 async def get_cluster_pods(
     cluster_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
     namespace: str | None = Query(default=None, description="Optional namespace filter"),
 ) -> list[K8sPodItem]:
     """Retrieve pods with restart loop detection."""
-    cluster = await KubernetesService.get_cluster_by_id(db, cluster_id, current_user.id)
+    cluster = await KubernetesService.get_cluster_by_id(
+        db, cluster_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not cluster:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -210,13 +229,15 @@ async def get_cluster_pods(
 async def get_pod_logs(
     cluster_id: int,
     pod_name: str,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
     namespace: str = Query(default="default", description="Pod namespace"),
     tail: int = Query(default=100, ge=10, le=1000, description="Tail lines count"),
 ) -> K8sPodLogsResponse:
     """Retrieve stdout/stderr logs from a pod."""
-    cluster = await KubernetesService.get_cluster_by_id(db, cluster_id, current_user.id)
+    cluster = await KubernetesService.get_cluster_by_id(
+        db, cluster_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not cluster:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -234,12 +255,14 @@ async def scale_deployment(
     cluster_id: int,
     deployment_name: str,
     payload: K8sScaleRequest,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
     db: Annotated[AsyncSession, Depends(get_db)],
     namespace: str = Query(default="default", description="Deployment namespace"),
 ) -> K8sScaleResponse:
     """Scale a deployment's replicas up or down."""
-    cluster = await KubernetesService.get_cluster_by_id(db, cluster_id, current_user.id)
+    cluster = await KubernetesService.get_cluster_by_id(
+        db, cluster_id, tenant.user.id, organization_id=tenant.organization_id
+    )
     if not cluster:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

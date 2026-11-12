@@ -26,13 +26,18 @@ class TelemetryService:
 
     @classmethod
     async def ingest_log(
-        cls, db: AsyncSession, user_id: int, payload: TelemetryLogCreate
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        payload: TelemetryLogCreate,
+        organization_id: int | None = None,
     ) -> TelemetryLogResponse:
         """Store an application structured log entry."""
         ts = payload.timestamp or datetime.now(timezone.utc)
         attr_str = json.dumps(payload.attributes) if payload.attributes else None
 
         log_entry = TelemetryLog(
+            organization_id=organization_id,
             user_id=user_id,
             service_name=payload.service_name.strip(),
             level=payload.level,
@@ -60,7 +65,11 @@ class TelemetryService:
 
     @classmethod
     async def ingest_span(
-        cls, db: AsyncSession, user_id: int, payload: TelemetrySpanCreate
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        payload: TelemetrySpanCreate,
+        organization_id: int | None = None,
     ) -> TelemetrySpanResponse:
         """Store an OpenTelemetry span entry and compute duration."""
         duration_ms = max(
@@ -70,6 +79,7 @@ class TelemetryService:
         attr_str = json.dumps(payload.attributes) if payload.attributes else None
 
         span = TelemetrySpan(
+            organization_id=organization_id,
             user_id=user_id,
             trace_id=payload.trace_id.strip(),
             span_id=payload.span_id.strip(),
@@ -116,11 +126,17 @@ class TelemetryService:
         trace_id: str | None = None,
         limit: int = 50,
         offset: int = 0,
+        organization_id: int | None = None,
     ) -> TelemetryLogQueryResponse:
         """Filter and search structured log entries."""
-        await cls._ensure_telemetry_seeded(db, user_id)
+        await cls._ensure_telemetry_seeded(db, user_id, organization_id)
 
-        stmt = select(TelemetryLog).where(TelemetryLog.user_id == user_id)
+        stmt = select(TelemetryLog)
+        if organization_id is not None:
+            stmt = stmt.where(TelemetryLog.organization_id == organization_id)
+        else:
+            stmt = stmt.where(TelemetryLog.user_id == user_id)
+
         if service_name and service_name != "all":
             stmt = stmt.where(TelemetryLog.service_name == service_name)
         if level and level != "all":
@@ -164,18 +180,19 @@ class TelemetryService:
         service_name: str | None = None,
         has_error: bool | None = None,
         limit: int = 25,
+        organization_id: int | None = None,
     ) -> list[TelemetryTraceSummary]:
         """Query recent trace roots and calculate durations and span counts."""
-        await cls._ensure_telemetry_seeded(db, user_id)
+        await cls._ensure_telemetry_seeded(db, user_id, organization_id)
 
-        # Get all distinct trace_ids for user
-        stmt = (
-            select(TelemetrySpan.trace_id)
-            .where(TelemetrySpan.user_id == user_id)
-            .distinct()
-            .order_by(TelemetrySpan.trace_id.desc())
-            .limit(limit * 2)
-        )
+        # Get all distinct trace_ids for workspace
+        stmt = select(TelemetrySpan.trace_id)
+        if organization_id is not None:
+            stmt = stmt.where(TelemetrySpan.organization_id == organization_id)
+        else:
+            stmt = stmt.where(TelemetrySpan.user_id == user_id)
+        stmt = stmt.distinct().order_by(TelemetrySpan.trace_id.desc()).limit(limit * 2)
+
         res = await db.execute(stmt)
         trace_ids = res.scalars().all()
 

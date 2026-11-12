@@ -4,7 +4,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import PaginationParams, get_current_active_user, get_db
+from app.api.deps import (
+    PaginationParams,
+    TenantContext,
+    get_current_active_user,
+    get_db,
+    require_tenant_devops,
+)
 from app.models.user import User
 from app.schemas.workflow import (
     DeploymentListResponse,
@@ -159,9 +165,9 @@ async def sync_repo_deployments(
 )
 async def dispatch_workflow(
     data: WorkflowDispatchRequest,
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> WorkflowRunResponse:
     """Trigger an on-demand CI/CD workflow pipeline dispatch."""
-    return await WorkflowService.dispatch_workflow(db, current_user.id, data)
+    return await WorkflowService.dispatch_workflow(db, tenant.user.id, data)
 
