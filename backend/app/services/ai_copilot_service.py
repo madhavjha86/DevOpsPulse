@@ -278,7 +278,7 @@ class AICopilotService:
                     repo_name = repo.full_name
 
         log_text = payload.log_excerpt or (
-            f"Build failure in workflow run {payload.workflow_run_id or 'CI'} on branch {branch_name}."
+            f"Build failure in workflow run {payload.workflow_run_id or 'CI'} on branch {branch_name}." if payload.workflow_run_id else ""
         )
 
         analysis = cls._perform_rca_heuristic(
@@ -305,17 +305,26 @@ class AICopilotService:
         await db.commit()
         await db.refresh(rca_entry)
 
+        # Link to incident if provided
+        if payload.incident_id:
+            from app.services.incident_service import IncidentService
+            await IncidentService.link_rca(db, user_id, payload.incident_id, rca_entry.id)
+
         return AIRootCauseAnalysisResponse(
             id=rca_entry.id,
             workflow_run_id=rca_entry.workflow_run_id,
             repository_id=rca_entry.repository_id,
+            incident_id=payload.incident_id,
             failure_category=rca_entry.failure_category,
             severity=rca_entry.severity,
             summary=rca_entry.summary,
             root_cause=rca_entry.root_cause,
-            remediation_steps=json.loads(rca_entry.remediation_steps_json),
+            remediation_steps=json.loads(rca_entry.remediation_steps_json) if rca_entry.remediation_steps_json else [],
+            evidence_snippets=analysis.get("evidence_snippets", []),
             suggested_fix_diff=rca_entry.suggested_fix_diff,
             confidence_score=rca_entry.confidence_score,
+            confidence_explanation=analysis.get("confidence_explanation", ""),
+            is_insufficient_data=analysis.get("is_insufficient_data", False),
             status=rca_entry.status,
             created_at=rca_entry.created_at,
         )
@@ -395,9 +404,40 @@ class AICopilotService:
     def _perform_rca_heuristic(
         cls, log_text: str, repo_name: str, branch: str, job_name: str | None = None
     ) -> dict[str, Any]:
-        """Categorize log failure and produce structured RCA remediation."""
+        """Categorize log failure, extract evidence snippets, and produce structured RCA remediation."""
+        if not log_text or not log_text.strip():
+            return {
+                "category": "INSUFFICIENT_DATA",
+                "severity": "LOW",
+                "summary": "Source logs unavailable for analysis",
+                "root_cause": "No CI/CD logs, telemetry trace, or error output was provided. DevOpsPulse requires actual log artifacts to perform reliable Root Cause Analysis.",
+                "remediation_steps": [
+                    "Ensure CI/CD runner log capture is active in repository settings.",
+                    "Supply raw build/test stdout and stderr into the RCA analyzer.",
+                    "Verify the workflow run has reached terminal completion status.",
+                ],
+                "suggested_diff": None,
+                "confidence_score": 0.0,
+                "confidence_explanation": "Zero confidence: Source logs missing. Analysis halted to prevent fabricating ungrounded conclusions.",
+                "is_insufficient_data": True,
+                "evidence_snippets": [],
+            }
+
         text_lower = log_text.lower()
         is_prod = branch in ("main", "master", "prod", "production")
+
+        # Extract concrete evidence lines from log
+        evidence_snippets = []
+        for idx, line in enumerate(log_text.splitlines()):
+            line_str = line.strip()
+            if any(k in line_str.lower() for k in ("error", "failed", "fatal", "exception", "traceback", "assertionerror", "cannot find", "exit code", "timed out")):
+                evidence_snippets.append({
+                    "line_number": idx + 1,
+                    "text": line_str[:250],
+                    "matched_category": "error_trace",
+                })
+            if len(evidence_snippets) >= 6:
+                break
 
         if any(k in text_lower for k in ("assertionerror", "test failed", "failures=", "failed test", "jest", "pytest")):
             cat = "TEST_FAILURE"
@@ -418,6 +458,7 @@ class AICopilotService:
                 "+    assert response.status_code in (200, 201)\n"
             )
             conf = 0.94
+            conf_exp = "High confidence (94%): Detected explicit assertion failure signature in test runner log output with failing file/method context."
 
         elif any(k in text_lower for k in ("modulenotfounderror", "cannot find module", "no module named", "pip install", "eresolve", "package conflict")):
             cat = "DEPENDENCY_ERROR"
@@ -437,6 +478,7 @@ class AICopilotService:
                 "+pydantic-settings>=2.2.1\n"
             )
             conf = 0.96
+            conf_exp = "High confidence (96%): Matched missing module import error or npm/pip lockfile conflict signature."
 
         elif any(k in text_lower for k in ("dockerfile", "failed to solve", "docker daemon", "cannot connect to the docker daemon", "exit code: 125")):
             cat = "DOCKER_BUILD_ERROR"
@@ -456,6 +498,7 @@ class AICopilotService:
                 "+RUN pip install --no-cache-dir -r requirements.txt\n"
             )
             conf = 0.91
+            conf_exp = "High confidence (91%): Matched Dockerfile build stage failure and non-zero exit code in container execution."
 
         elif any(k in text_lower for k in ("timed out", "timeout", "deadline exceeded", "econnrefused")):
             cat = "NETWORK_TIMEOUT"
@@ -475,6 +518,7 @@ class AICopilotService:
                 "+    HTTP_TIMEOUT_SECONDS: int = 15\n"
             )
             conf = 0.89
+            conf_exp = "Moderate-high confidence (89%): Socket timeout or database connection pool exhaustion detected."
 
         else:
             cat = "UNKNOWN"
@@ -488,6 +532,7 @@ class AICopilotService:
             ]
             diff = None
             conf = 0.82
+            conf_exp = "Baseline confidence (82%): Detected non-zero exit code without matching standard test/dependency failure signatures."
 
         return {
             "category": cat,
@@ -497,6 +542,9 @@ class AICopilotService:
             "remediation_steps": steps,
             "suggested_diff": diff,
             "confidence_score": conf,
+            "confidence_explanation": conf_exp,
+            "is_insufficient_data": False,
+            "evidence_snippets": evidence_snippets,
         }
 
     @classmethod

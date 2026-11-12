@@ -61,6 +61,7 @@ class GenerateRCARequest(BaseModel):
 
     workflow_run_id: int | None = None
     repository_id: int | None = None
+    incident_id: int | None = None
     log_excerpt: str | None = Field(default=None, max_length=50000)
     job_name: str | None = None
 
@@ -73,13 +74,17 @@ class AIRootCauseAnalysisResponse(BaseModel):
     id: int
     workflow_run_id: int | None = None
     repository_id: int | None = None
+    incident_id: int | None = None
     failure_category: str
     severity: str
     summary: str
     root_cause: str
     remediation_steps: list[str] = []
+    evidence_snippets: list[dict[str, Any]] = []
     suggested_fix_diff: str | None = None
     confidence_score: float
+    confidence_explanation: str = ""
+    is_insufficient_data: bool = False
     status: str
     created_at: datetime
 

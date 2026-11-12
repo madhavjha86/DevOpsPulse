@@ -28,13 +28,23 @@ export interface AIRootCauseAnalysis {
   id: number;
   workflow_run_id?: number | null;
   repository_id?: number | null;
+  incident_id?: number | null;
   failure_category: string;
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   summary: string;
   root_cause: string;
   remediation_steps: string[];
+  evidence_snippets?: Array<{
+    type?: string;
+    file_or_step?: string;
+    line_number?: number | null;
+    raw_log?: string;
+    explanation?: string;
+  }>;
   suggested_fix_diff?: string | null;
   confidence_score: number;
+  confidence_explanation?: string;
+  is_insufficient_data?: boolean;
   status: 'generated' | 'acknowledged' | 'resolved';
   created_at: string;
 }
@@ -42,6 +52,7 @@ export interface AIRootCauseAnalysis {
 export interface GenerateRCARequest {
   workflow_run_id?: number | null;
   repository_id?: number | null;
+  incident_id?: number | null;
   log_excerpt?: string | null;
   job_name?: string | null;
 }

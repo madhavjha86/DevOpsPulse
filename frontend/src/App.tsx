@@ -18,6 +18,10 @@ import CloudMonitoringPage from '@/pages/CloudMonitoringPage';
 import { TelemetryPage } from '@/pages/TelemetryPage';
 import { AICopilotPage } from '@/pages/AICopilotPage';
 import { AICodeIntelligencePage } from '@/pages/AICodeIntelligencePage';
+import { IncidentsPage } from '@/pages/IncidentsPage';
+import { AIRootCauseAnalysisPage } from '@/pages/AIRootCauseAnalysisPage';
+import { CloudCostPage } from '@/pages/CloudCostPage';
+import { TeamProductivityPage } from '@/pages/TeamProductivityPage';
 import { NotificationsPage } from '@/pages/NotificationsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 
@@ -38,13 +42,17 @@ export const App: React.FC = () => {
         <Route path="/workflows" element={<WorkflowsPage />} />
         <Route path="/deployments" element={<DeploymentsPage />} />
         <Route path="/dora" element={<DoraPage />} />
+        <Route path="/analytics/team-productivity" element={<TeamProductivityPage />} />
+        <Route path="/incidents" element={<IncidentsPage />} />
         <Route path="/uptime" element={<UptimePage />} />
         <Route path="/security" element={<SecurityPage />} />
         <Route path="/infrastructure/docker" element={<DockerContainersPage />} />
         <Route path="/infrastructure/kubernetes" element={<KubernetesPage />} />
         <Route path="/infrastructure/cloud" element={<CloudMonitoringPage />} />
+        <Route path="/infrastructure/cost" element={<CloudCostPage />} />
         <Route path="/observability/telemetry" element={<TelemetryPage />} />
         <Route path="/ai/copilot" element={<AICopilotPage />} />
+        <Route path="/ai/rca" element={<AIRootCauseAnalysisPage />} />
         <Route path="/ai/code-intelligence" element={<AICodeIntelligencePage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/settings" element={<SettingsPage />} />

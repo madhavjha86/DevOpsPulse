@@ -19,6 +19,10 @@ from app.api.v1.routes.users import router as users_router
 from app.api.v1.routes.webhooks import router as webhooks_router
 from app.api.v1.routes.workflows import router as workflows_router
 
+from app.api.v1.routes.cloud_cost import router as cloud_cost_router
+from app.api.v1.routes.incidents import router as incidents_router
+from app.api.v1.routes.team_productivity import router as team_productivity_router
+
 api_router = APIRouter()
 
 api_router.include_router(auth_router)
@@ -34,6 +38,9 @@ api_router.include_router(security_router)
 api_router.include_router(docker_router)
 api_router.include_router(k8s_router)
 api_router.include_router(cloud_router)
+api_router.include_router(cloud_cost_router)
 api_router.include_router(telemetry_router)
 api_router.include_router(ai_router)
 api_router.include_router(ai_intelligence_router)
+api_router.include_router(incidents_router)
+api_router.include_router(team_productivity_router)

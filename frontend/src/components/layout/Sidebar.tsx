@@ -16,6 +16,10 @@ import {
   Cloud,
   Server,
   X,
+  Users,
+  DollarSign,
+  ShieldAlert,
+  Terminal,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -35,6 +39,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: Home },
     { name: 'DORA Metrics', path: '/dora', icon: BarChart2 },
+    { name: 'Team Productivity', path: '/analytics/team-productivity', icon: Users },
+    { name: 'Incidents', path: '/incidents', icon: ShieldAlert },
+    { name: 'AI Root Cause', path: '/ai/rca', icon: Terminal },
     { name: 'AI Copilot', path: '/ai/copilot', icon: Sparkles },
     { name: 'Repositories', path: '/repositories', icon: FolderGit2 },
     { name: 'CI/CD Pipelines', path: '/workflows', icon: GitBranch },
@@ -42,7 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   const secondaryNavItems = [
     { name: 'Observability', path: '/observability/telemetry', icon: Activity },
-    { name: 'Incidents', path: '/uptime', icon: AlertTriangle },
+    { name: 'Uptime & Monitors', path: '/uptime', icon: AlertTriangle },
     { name: 'Reports', path: '/deployments', icon: FileText },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
@@ -77,7 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           </div>
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-[#7C3AED] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-xs">
-              v1.0.0
+              v1.1.0
             </span>
             {/* Close button for mobile touch */}
             <button
@@ -179,6 +186,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 >
                   <Cloud className="h-3.5 w-3.5" />
                   <span>Cloud Telemetry</span>
+                </NavLink>
+                <NavLink
+                  to="/infrastructure/cost"
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 rounded-lg px-2.5 py-2 min-h-[38px] text-xs font-medium transition-colors ${
+                      isActive
+                        ? 'text-[#7C3AED] font-bold bg-purple-50'
+                        : 'text-dark-400 hover:text-dark-100 hover:bg-slate-50'
+                    }`
+                  }
+                >
+                  <DollarSign className="h-3.5 w-3.5" />
+                  <span>Cloud Cost</span>
                 </NavLink>
               </div>
             )}
