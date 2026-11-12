@@ -69,14 +69,25 @@ class TeamProductivityService:
         small_durations, med_durations, large_durations = [], [], []
 
         for pr in prs:
-            # PR size estimation (commits or default heuristic)
-            size = pr.commits_count * 45 if pr.commits_count else 120
-            # Durations
-            if pr.created_at:
-                if pr.merged_at:
-                    hrs = max((pr.merged_at - pr.created_at).total_seconds() / 3600.0, 0.5)
+            # PR size estimation from additions + deletions or default heuristic
+            adds = getattr(pr, "additions", 0) or 0
+            dels = getattr(pr, "deletions", 0) or 0
+            size = (adds + dels) if (adds + dels) > 0 else 120
+
+            # Durations (support created_at_gh or created_at with safe timestamp comparison)
+            created = getattr(pr, "created_at_gh", None) or getattr(pr, "created_at", None)
+            merged = getattr(pr, "merged_at", None)
+
+            if created:
+                if merged:
+                    try:
+                        c_ts = created.timestamp() if hasattr(created, "timestamp") else 0
+                        m_ts = merged.timestamp() if hasattr(merged, "timestamp") else 0
+                        hrs = max((m_ts - c_ts) / 3600.0, 0.5) if m_ts > c_ts else 1.0
+                    except Exception:
+                        hrs = 8.0
                     merge_hours.append(hrs)
-                    first_rev = hrs * 0.35  # First review ~35% of total merge time
+                    first_rev = round(hrs * 0.35, 1)
                     first_review_hours.append(first_rev)
                 else:
                     hrs = 12.0
@@ -103,10 +114,14 @@ class TeamProductivityService:
         weekly_trend = []
         for w in range(4, -1, -1):
             w_label = (today - timedelta(weeks=w)).strftime("Wk %U")
+            rev_val = round(max(med_first_review + (w - 2) * 0.4, 1.2), 1)
+            merge_val = round(max(med_merge + (w - 2) * 0.8, 3.5), 1)
             weekly_trend.append({
                 "week": w_label,
-                "first_review_hours": round(max(med_first_review + (w - 2) * 0.4, 1.2), 1),
-                "merge_hours": round(max(med_merge + (w - 2) * 0.8, 3.5), 1),
+                "first_review_hrs": rev_val,
+                "first_review_hours": rev_val,
+                "merge_hrs": merge_val,
+                "merge_hours": merge_val,
             })
 
         pr_metrics = PRReviewMetrics(
