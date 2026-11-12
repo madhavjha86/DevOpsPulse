@@ -55,7 +55,7 @@ export const CloudCostPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, [selectedProvider]);
 
   const handleCreateBudget = async (e: React.FormEvent) => {

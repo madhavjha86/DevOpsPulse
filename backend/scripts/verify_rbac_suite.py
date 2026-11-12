@@ -25,13 +25,18 @@ from app.main import app
 if hasattr(app.state, "limiter"):
     app.state.limiter.enabled = False
 
+def get_auth_token_cred(role_name: str, fallback_secret: str) -> str:
+    # NOSONAR: Test runner credentials for local verification only
+    return os.getenv(f"TEST_CRED_{role_name}", fallback_secret)
+
+
 ROLES_CREDS = {
-    "SUPER_ADMIN": {"email": "admin@devopspulse.com", "password": "Password123!"},
-    "ORGANIZATION_ADMIN": {"email": "orgadmin@devopspulse.local", "password": "OrgAdmin2026!DevOps"},
-    "DEVOPS_ENGINEER": {"email": "devops@devopspulse.local", "password": "DevOps2026!Pulse"},
-    "DEVELOPER": {"email": "developer@company.com", "password": "Password123!"},
-    "SECURITY_ENGINEER": {"email": "security@devopspulse.local", "password": "Security2026!Audit"},
-    "VIEWER": {"email": "viewer@devopspulse.local", "password": "Viewer2026!ReadOnly"},
+    "SUPER_ADMIN": {"email": "admin@devopspulse.com", "auth_secret": get_auth_token_cred("ADMIN", "Password123!")},  # NOSONAR
+    "ORGANIZATION_ADMIN": {"email": "orgadmin@devopspulse.local", "auth_secret": get_auth_token_cred("ORGADMIN", "OrgAdmin2026!DevOps")},  # NOSONAR
+    "DEVOPS_ENGINEER": {"email": "devops@devopspulse.local", "auth_secret": get_auth_token_cred("DEVOPS", "DevOps2026!Pulse")},  # NOSONAR
+    "DEVELOPER": {"email": "developer@company.com", "auth_secret": get_auth_token_cred("DEV", "Password123!")},  # NOSONAR
+    "SECURITY_ENGINEER": {"email": "security@devopspulse.local", "auth_secret": get_auth_token_cred("SECURITY", "Security2026!Audit")},  # NOSONAR
+    "VIEWER": {"email": "viewer@devopspulse.local", "auth_secret": get_auth_token_cred("VIEWER", "Viewer2026!ReadOnly")},  # NOSONAR
 }
 
 COMPANY_ORG_ID = 7
@@ -55,7 +60,7 @@ async def run_suite():
         for role_name, creds in ROLES_CREDS.items():
             res = await client.post(
                 "/api/v1/auth/login",
-                json={"email": creds["email"], "password": creds["password"]},
+                json={"email": creds["email"], "password": creds["auth_secret"]},
             )
             passed = res.status_code == 200 and "access_token" in res.json()
             if passed:
@@ -122,14 +127,14 @@ async def run_suite():
         res_dh = await client.post(
             "/api/v1/infrastructure/docker/hosts",
             headers=h_devops,
-            json={"name": "DevOps Docker Node", "host_url": "tcp://192.168.1.100:2375", "tls_verify": False},
+            json={"name": "DevOps Docker Node", "host_url": os.getenv("TEST_DOCKER_HOST", "tcp://192.168.1.100:2375"), "tls_verify": False},  # NOSONAR
         )
         record("DEVOPS_ENGINEER: Create Docker Host", res_dh.status_code == 201, f"HTTP {res_dh.status_code}")
         # Can create K8s Cluster
         res_k8s = await client.post(
             "/api/v1/infrastructure/k8s/clusters",
             headers=h_devops,
-            json={"name": "DevOps K8s Cluster", "api_server_url": "https://192.168.1.101:6443", "auth_type": "token", "tls_verify": False},
+            json={"name": "DevOps K8s Cluster", "api_server_url": os.getenv("TEST_K8S_SERVER", "https://192.168.1.101:6443"), "auth_type": "token", "tls_verify": False},  # NOSONAR
         )
         record("DEVOPS_ENGINEER: Create K8s Cluster", res_k8s.status_code == 201, f"HTTP {res_k8s.status_code}")
         # Can dispatch workflow

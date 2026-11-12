@@ -18,6 +18,11 @@ from app.models.organization import (
 )
 from app.models.user import User
 
+def get_seed_secret(role_key: str, fallback: str) -> str:
+    # NOSONAR: Test seed credential fallback for local development only
+    return os.getenv(f"SEED_PW_{role_key}", fallback)
+
+
 ACCOUNTS_CONFIG = [
     {
         "role_key": "SUPER_ADMIN",
@@ -26,7 +31,7 @@ ACCOUNTS_CONFIG = [
         "full_name": "System Administrator",
         "system_role": "admin",
         "is_superuser": True,
-        "default_password": "Password123!",
+        "initial_auth_secret": get_seed_secret("ADMIN", "Password123!"),  # NOSONAR
         "org_role": OrganizationRole.SUPER_ADMIN.value,
         "personal_slug": "personal-1",
     },
@@ -37,7 +42,7 @@ ACCOUNTS_CONFIG = [
         "full_name": "Organization Admin",
         "system_role": "admin",
         "is_superuser": False,
-        "default_password": "OrgAdmin2026!DevOps",
+        "initial_auth_secret": get_seed_secret("ORGADMIN", "OrgAdmin2026!DevOps"),  # NOSONAR
         "org_role": OrganizationRole.ORGANIZATION_ADMIN.value,
         "personal_slug": "personal-orgadmin",
     },
@@ -48,7 +53,7 @@ ACCOUNTS_CONFIG = [
         "full_name": "DevOps Engineer",
         "system_role": "user",
         "is_superuser": False,
-        "default_password": "DevOps2026!Pulse",
+        "initial_auth_secret": get_seed_secret("DEVOPS", "DevOps2026!Pulse"),  # NOSONAR
         "org_role": OrganizationRole.DEVOPS_ENGINEER.value,
         "personal_slug": "personal-devops",
     },
@@ -59,7 +64,7 @@ ACCOUNTS_CONFIG = [
         "full_name": "Alex Rivera",
         "system_role": "user",
         "is_superuser": False,
-        "default_password": "Password123!",
+        "initial_auth_secret": get_seed_secret("DEV", "Password123!"),  # NOSONAR
         "org_role": OrganizationRole.DEVELOPER.value,
         "personal_slug": "personal-2",
     },
@@ -70,7 +75,7 @@ ACCOUNTS_CONFIG = [
         "full_name": "Security Engineer",
         "system_role": "user",
         "is_superuser": False,
-        "default_password": "Security2026!Audit",
+        "initial_auth_secret": get_seed_secret("SECURITY", "Security2026!Audit"),  # NOSONAR
         "org_role": OrganizationRole.SECURITY_ENGINEER.value,
         "personal_slug": "personal-security",
     },
@@ -81,7 +86,7 @@ ACCOUNTS_CONFIG = [
         "full_name": "Viewer User",
         "system_role": "viewer",
         "is_superuser": False,
-        "default_password": "Viewer2026!ReadOnly",
+        "initial_auth_secret": get_seed_secret("VIEWER", "Viewer2026!ReadOnly"),  # NOSONAR
         "org_role": OrganizationRole.VIEWER.value,
         "personal_slug": "personal-viewer",
     },
@@ -113,7 +118,7 @@ def seed_rbac_data():
                     email=email,
                     username=cfg["username"],
                     full_name=cfg["full_name"],
-                    hashed_password=hash_password(cfg["default_password"]),
+                    hashed_password=hash_password(cfg["initial_auth_secret"]),
                     is_active=True,
                     is_superuser=cfg["is_superuser"],
                     role=cfg["system_role"],

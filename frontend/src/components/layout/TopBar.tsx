@@ -127,7 +127,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
                         onClick={() => {
                           setWorkspaceDropdownOpen(false);
                           if (!isActive) {
-                            switchOrganization(org.id);
+                            void switchOrganization(org.id);
                           }
                         }}
                         className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs transition-colors ${

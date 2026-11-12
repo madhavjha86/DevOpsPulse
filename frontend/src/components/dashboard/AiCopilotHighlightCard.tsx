@@ -37,7 +37,7 @@ export const AiCopilotHighlightCard: React.FC = () => {
         if (isMounted) setLoading(false);
       }
     };
-    fetchLatestReview();
+    void fetchLatestReview();
     return () => {
       isMounted = false;
     };

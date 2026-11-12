@@ -76,7 +76,7 @@ export const IncidentsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, []);
 
   const openDetail = async (id: number) => {

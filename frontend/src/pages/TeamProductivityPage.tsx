@@ -47,7 +47,7 @@ export const TeamProductivityPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, [selectedTeamId]);
 
   const handleCreateTeam = async (e: React.FormEvent) => {

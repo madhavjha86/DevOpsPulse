@@ -56,7 +56,7 @@ export const AIRootCauseAnalysisPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, []);
 
   const handleGenerateRCA = async (e: React.FormEvent) => {
@@ -84,7 +84,7 @@ export const AIRootCauseAnalysisPage: React.FC = () => {
   };
 
   const copyToClipboard = (text: string, index: number) => {
-    navigator.clipboard.writeText(text);
+    void navigator.clipboard.writeText(text);
     setCopiedIndex(index);
     setTimeout(() => setCopiedIndex(null), 2000);
   };
