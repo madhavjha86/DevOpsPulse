@@ -69,7 +69,7 @@ export const AcceptInvitationPage: React.FC = () => {
       }
     };
 
-    checkToken();
+    void checkToken();
   }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -274,11 +274,12 @@ export const AcceptInvitationPage: React.FC = () => {
 
                     {(!currentUser || currentUser.email.toLowerCase() !== verifyData.email.toLowerCase()) && (
                       <div>
-                        <label className="block text-xs font-medium text-slate-300 mb-1">
+                        <label htmlFor="existing-account-password" className="block text-xs font-medium text-slate-300 mb-1">
                           Account Password
                         </label>
                         <div className="relative">
                           <input
+                            id="existing-account-password"
                             type={showPassword ? 'text' : 'password'}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
@@ -300,12 +301,13 @@ export const AcceptInvitationPage: React.FC = () => {
                 ) : (
                   <>
                     <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-1">
+                      <label htmlFor="invite-full-name" className="block text-xs font-medium text-slate-300 mb-1">
                         Full Name
                       </label>
                       <div className="relative">
                         <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
                         <input
+                          id="invite-full-name"
                           type="text"
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
@@ -317,10 +319,11 @@ export const AcceptInvitationPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-1">
+                      <label htmlFor="invite-username" className="block text-xs font-medium text-slate-300 mb-1">
                         Username
                       </label>
                       <input
+                        id="invite-username"
                         type="text"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
@@ -331,12 +334,13 @@ export const AcceptInvitationPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-1">
+                      <label htmlFor="invite-new-password" className="block text-xs font-medium text-slate-300 mb-1">
                         Create Your Password <span className="text-slate-500">(minimum 8 characters)</span>
                       </label>
                       <div className="relative">
                         <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
                         <input
+                          id="invite-new-password"
                           type={showPassword ? 'text' : 'password'}
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
@@ -359,10 +363,11 @@ export const AcceptInvitationPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-1">
+                      <label htmlFor="invite-confirm-password" className="block text-xs font-medium text-slate-300 mb-1">
                         Confirm Password
                       </label>
                       <input
+                        id="invite-confirm-password"
                         type="password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}

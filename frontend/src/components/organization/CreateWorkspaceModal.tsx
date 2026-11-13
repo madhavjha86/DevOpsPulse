@@ -70,9 +70,9 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({ isOp
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-dark-200 mb-1.5">
+            <span className="block text-xs font-semibold text-dark-200 mb-1.5">
               Workspace Type
-            </label>
+            </span>
             <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
@@ -109,16 +109,16 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({ isOp
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-dark-200 mb-1.5">
+            <label htmlFor="workspace-name-input" className="block text-xs font-semibold text-dark-200 mb-1.5">
               Workspace Name
             </label>
             <input
+              id="workspace-name-input"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={type === 'COMPANY' ? 'Acme Corp, Cyberdyne...' : 'My Workspace'}
               className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-dark-100 placeholder-dark-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
-              autoFocus
             />
           </div>
 

@@ -95,6 +95,7 @@ class EmailService:
         msg.attach(MIMEText(plain_text, "plain"))
         msg.attach(MIMEText(html_content, "html"))
 
+        server = None
         try:
             if settings.SMTP_SSL:
                 server = smtplib.SMTP_SSL(
@@ -115,9 +116,14 @@ class EmailService:
                 server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
 
             server.sendmail(settings.SMTP_FROM_EMAIL, [to_email], msg.as_string())
-            server.quit()
             logger.info("Successfully dispatched invitation email to %s via SMTP", to_email)
             return True, "SENT"
         except Exception as exc:
             logger.warning("SMTP email dispatch failed to %s: %s", to_email, str(exc))
             return False, f"FAILED: {exc.__class__.__name__}"
+        finally:
+            if server:
+                try:
+                    server.quit()
+                except Exception:
+                    pass

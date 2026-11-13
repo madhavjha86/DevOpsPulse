@@ -87,7 +87,7 @@ export const OrganizationSettingsPage: React.FC = () => {
   }, [activeOrg, isOrgAdmin]);
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, [loadData]);
 
   const handleRoleChange = async (targetUserId: number, newRole: OrganizationRoleType) => {
@@ -195,7 +195,7 @@ export const OrganizationSettingsPage: React.FC = () => {
   };
 
   const copyToClipboard = (text: string, id: number) => {
-    navigator.clipboard.writeText(text);
+    void navigator.clipboard.writeText(text);
     setCopiedTokenId(id);
     setTimeout(() => setCopiedTokenId(null), 2500);
   };
@@ -469,12 +469,12 @@ export const OrganizationSettingsPage: React.FC = () => {
                           <select
                             value={member.role}
                             disabled={updatingUserId === member.user_id}
-                            onChange={(e) =>
-                              handleRoleChange(
+                            onChange={(e) => {
+                              void handleRoleChange(
                                 member.user_id,
                                 e.target.value as OrganizationRoleType
-                              )
-                            }
+                              );
+                            }}
                             className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-dark-100 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500/20"
                           >
                             {isSuperAdmin && (
@@ -503,7 +503,9 @@ export const OrganizationSettingsPage: React.FC = () => {
                       <td className="px-6 py-4 text-right">
                         {!isOwner && (
                           <button
-                            onClick={() => handleRemoveMember(member.user_id, memberEmail)}
+                            onClick={() => {
+                              void handleRemoveMember(member.user_id, memberEmail);
+                            }}
                             className="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50 transition-colors"
                             title="Remove Member"
                           >
@@ -578,7 +580,9 @@ export const OrganizationSettingsPage: React.FC = () => {
                             {isPending && (
                               <>
                                 <button
-                                  onClick={() => handleResendInvite(inv.id)}
+                                  onClick={() => {
+                                    void handleResendInvite(inv.id);
+                                  }}
                                   disabled={isActionLoading}
                                   className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
                                   title="Resend invitation & reset 48-hour expiration"
@@ -591,7 +595,9 @@ export const OrganizationSettingsPage: React.FC = () => {
                                   Resend
                                 </button>
                                 <button
-                                  onClick={() => handleRevokeInvite(inv.id)}
+                                  onClick={() => {
+                                    void handleRevokeInvite(inv.id);
+                                  }}
                                   disabled={isActionLoading}
                                   className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2.5 py-1 text-[11px] font-medium text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50"
                                   title="Revoke invitation"
@@ -708,25 +714,26 @@ export const OrganizationSettingsPage: React.FC = () => {
             {!lastCreatedInvite && (
               <form onSubmit={handleSendInvite} className="mt-4 space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-dark-200 mb-1.5">
+                  <label htmlFor="invite-email-input" className="block text-xs font-semibold text-dark-200 mb-1.5">
                     User Email Address
                   </label>
                   <input
+                    id="invite-email-input"
                     type="email"
                     required
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     placeholder="colleague@example.com"
                     className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-dark-100 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
-                    autoFocus
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-dark-200 mb-1.5">
+                  <label htmlFor="invite-role-select" className="block text-xs font-semibold text-dark-200 mb-1.5">
                     Assigned Workspace Role
                   </label>
                   <select
+                    id="invite-role-select"
                     value={inviteRole}
                     onChange={(e) => setInviteRole(e.target.value as OrganizationRoleType)}
                     className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs font-medium text-dark-100 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
