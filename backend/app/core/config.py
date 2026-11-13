@@ -93,6 +93,20 @@ class Settings(BaseSettings):
     # Webhook
     WEBHOOK_SECRET: str = "webhook-secret-change-me"
 
+    # Frontend Application URL (for invitation and notification links)
+    FRONTEND_URL: str = "http://localhost:3000"
+
+    # SMTP / Email Provider Configuration
+    SMTP_HOST: str | None = None
+    SMTP_PORT: int = 587
+    SMTP_USER: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_FROM_EMAIL: str = "noreply@devopspulse.com"
+    SMTP_FROM_NAME: str = "DevOpsPulse"
+    SMTP_TLS: bool = True
+    SMTP_SSL: bool = False
+    SMTP_TIMEOUT_SECONDS: int = 10
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -3,6 +3,9 @@ import type {
   Organization,
   OrganizationMember,
   OrganizationInvitation,
+  OrganizationInviteVerifyResponse,
+  OrganizationInviteAcceptPayload,
+  OrganizationInviteAcceptResponse,
   CreateOrganizationPayload,
   InviteMemberPayload,
   OrganizationRoleType,
@@ -74,6 +77,34 @@ export const organizationService = {
 
   async listInvitations(orgId: number): Promise<OrganizationInvitation[]> {
     const res = await api.get<OrganizationInvitation[]>(`/api/v1/organizations/${orgId}/invitations`);
+    return res.data;
+  },
+
+  async resendInvitation(orgId: number, invitationId: number): Promise<OrganizationInvitation> {
+    const res = await api.post<OrganizationInvitation>(
+      `/api/v1/organizations/${orgId}/invitations/${invitationId}/resend`
+    );
+    return res.data;
+  },
+
+  async revokeInvitation(orgId: number, invitationId: number): Promise<void> {
+    await api.post(`/api/v1/organizations/${orgId}/invitations/${invitationId}/revoke`);
+  },
+
+  async verifyInvitation(token: string): Promise<OrganizationInviteVerifyResponse> {
+    const res = await api.get<OrganizationInviteVerifyResponse>(
+      `/api/v1/organizations/invitations/verify?token=${encodeURIComponent(token)}`
+    );
+    return res.data;
+  },
+
+  async acceptInvitationOnboarding(
+    payload: OrganizationInviteAcceptPayload
+  ): Promise<OrganizationInviteAcceptResponse> {
+    const res = await api.post<OrganizationInviteAcceptResponse>(
+      '/api/v1/organizations/invitations/accept',
+      payload
+    );
     return res.data;
   },
 

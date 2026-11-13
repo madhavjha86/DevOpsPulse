@@ -55,6 +55,30 @@ async def get_current_active_user(
     return current_user
 
 
+async def get_current_user_optional(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User | None:
+    """Extract authenticated user if Bearer token is provided, else return None without raising error."""
+    if not credentials:
+        return None
+    try:
+        token = credentials.credentials
+        payload = decode_token(token)
+        if payload.get("type") != "access":
+            return None
+        user_id_str = payload.get("sub")
+        if not user_id_str:
+            return None
+        repo = UserRepository(db)
+        user = await repo.get(int(user_id_str))
+        if user and user.is_active:
+            return user
+        return None
+    except Exception:
+        return None
+
+
 async def require_admin(
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> User:

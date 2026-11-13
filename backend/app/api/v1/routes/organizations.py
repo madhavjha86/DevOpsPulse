@@ -1,12 +1,13 @@
 """Multi-Tenant Organization, Workspace, and Team RBAC API routes."""
 
 from typing import Annotated
-from fastapi import APIRouter, Depends, Path, status
+from fastapi import APIRouter, Depends, Path, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
     TenantContext,
     get_current_active_user,
+    get_current_user_optional,
     get_db,
     get_tenant_context,
     require_tenant_admin,
@@ -15,7 +16,10 @@ from app.models.user import User
 from app.schemas.organization import (
     OrganizationCreate,
     OrganizationInvitationResponse,
+    OrganizationInviteAcceptPayload,
+    OrganizationInviteAcceptResponse,
     OrganizationInviteCreate,
+    OrganizationInviteVerifyResponse,
     OrganizationMemberResponse,
     OrganizationMemberUpdateRole,
     OrganizationResponse,
@@ -180,9 +184,89 @@ async def list_invitations(
 
 
 @router.post(
+    "/{org_id}/invitations/{invitation_id}/resend",
+    response_model=OrganizationInvitationResponse,
+    summary="Resend an invitation email and refresh expiration token",
+)
+async def resend_invitation(
+    org_id: int,
+    invitation_id: int,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> OrganizationInvitationResponse:
+    """Regenerate single-use invitation token, refresh 48h expiry, and resend email."""
+    return await OrganizationService.resend_invitation(
+        db=db, user=current_user, org_id=org_id, invitation_id=invitation_id
+    )
+
+
+@router.post(
+    "/{org_id}/invitations/{invitation_id}/revoke",
+    response_model=OrganizationInvitationResponse,
+    summary="Revoke an invitation",
+)
+async def revoke_invitation(
+    org_id: int,
+    invitation_id: int,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> OrganizationInvitationResponse:
+    """Revoke a pending or expired invitation."""
+    return await OrganizationService.revoke_invitation(
+        db=db, user=current_user, org_id=org_id, invitation_id=invitation_id
+    )
+
+
+@router.delete(
+    "/{org_id}/invitations/{invitation_id}",
+    response_model=OrganizationInvitationResponse,
+    summary="Revoke an invitation (DELETE)",
+)
+async def delete_invitation(
+    org_id: int,
+    invitation_id: int,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> OrganizationInvitationResponse:
+    """Delete/revoke an invitation."""
+    return await OrganizationService.revoke_invitation(
+        db=db, user=current_user, org_id=org_id, invitation_id=invitation_id
+    )
+
+
+@router.get(
+    "/invitations/verify",
+    response_model=OrganizationInviteVerifyResponse,
+    summary="Verify invitation token authenticity for onboarding",
+)
+async def verify_invitation(
+    token: Annotated[str, Query(..., description="Raw invitation token")],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> OrganizationInviteVerifyResponse:
+    """Public verification endpoint to check if an invitation token is valid and unexpired."""
+    return await OrganizationService.verify_invitation_token(db=db, token=token)
+
+
+@router.post(
+    "/invitations/accept",
+    response_model=OrganizationInviteAcceptResponse,
+    summary="Accept an invitation and complete onboarding / join workspace",
+)
+async def accept_invitation_onboarding(
+    payload: OrganizationInviteAcceptPayload,
+    current_user: Annotated[User | None, Depends(get_current_user_optional)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> OrganizationInviteAcceptResponse:
+    """Accept an invitation, creating a new user (with custom password) or linking an existing user."""
+    return await OrganizationService.accept_invitation_onboarding(
+        db=db, payload=payload, current_user=current_user
+    )
+
+
+@router.post(
     "/invitations/{token}/accept",
     response_model=OrganizationResponse,
-    summary="Accept an invitation and join organization",
+    summary="Legacy accept invitation endpoint",
 )
 async def accept_invitation(
     token: str,

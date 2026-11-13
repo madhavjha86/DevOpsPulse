@@ -25,6 +25,7 @@ SECRET_PATTERNS = [
 WHITELIST = {
     "AKIAIOSFODNN7EXAMPLE",
     "postgres:your_local_pg_password@localhost",
+    "postgres:YourSecurePassword@localhost",
     "postgres:devopspulse@localhost",
 }
 

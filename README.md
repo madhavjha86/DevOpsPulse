@@ -1,6 +1,6 @@
 # 🚀 DevOpsPulse
 
-**Enterprise-Ready Developer Productivity & CI/CD Observability Platform**
+**Enterprise-Grade Developer Productivity, Multi-Tenant SaaS & CI/CD Observability Platform**
 
 [![CI/CD Pipeline](https://github.com/madhavjha86/DevOpsPulse/actions/workflows/ci.yml/badge.svg)](https://github.com/madhavjha86/DevOpsPulse/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -13,7 +13,7 @@
 
 ---
 
-DevOpsPulse is an open-source Developer Productivity, CI/CD Observability, and Pipeline Monitoring Platform. Connect your GitHub repositories, track real-time commit velocity and pull requests, monitor GitHub Actions workflows, analyze build failure rates, calculate DORA metrics, diagnose pipeline failures using an AI-powered Copilot, and monitor Docker, Kubernetes, and Cloud infrastructure from a unified dashboard.
+DevOpsPulse is an open-source Developer Productivity, CI/CD Observability, and Pipeline Monitoring Platform. Connect your GitHub repositories, track real-time commit velocity and pull requests, monitor GitHub Actions workflows, analyze build failure rates, calculate DORA metrics, diagnose pipeline failures using an AI-powered Copilot, and monitor Docker, Kubernetes, and Cloud infrastructure from a unified, multi-tenant dashboard.
 
 ---
 
@@ -37,10 +37,12 @@ Live observability across Docker hosts, Kubernetes clusters, and multi-cloud acc
 
 ---
 
-## 🌟 Feature Breakdown
+## 🌟 Core Features
 
-### ✅ Implemented Features (v1.0 Production Release)
-- **🔐 Enterprise Authentication & Access Control**: Stateless JWT access (30m) & refresh (7d) tokens, bcrypt password hashing, GitHub OAuth 2.0 single sign-on, and RBAC (`admin`, `user`, `viewer`).
+- **🏢 Multi-Tenant SaaS Architecture**: Strict workspace boundary isolation supporting individual developer **Personal Workspaces** and enterprise **Company Workspaces** (`organizations` & `organization_members` partitioned data).
+- **🛡️ 6 Enterprise RBAC Roles**: Granular permission enforcement for `SUPER_ADMIN`, `ORGANIZATION_ADMIN`, `DEVOPS_ENGINEER`, `DEVELOPER`, `SECURITY_ENGINEER`, and `VIEWER`. Privilege escalation is strictly blocked (only Super Admins can assign Super Admin).
+- **✉️ Secure Single-Use Invitations & Onboarding**: Single-use URL-safe invitation tokens hashed with SHA-256 in PostgreSQL, 48-hour expiration, self-service password onboarding, and configurable SMTP email dispatch with `EMAIL_NOT_CONFIGURED` direct link sharing.
+- **🔐 Enterprise Authentication & Access Control**: Stateless JWT access (30m) & refresh (7d) tokens, bcrypt password hashing (12 rounds), GitHub OAuth 2.0 single sign-on, and context-driven workspace switching.
 - **🐙 GitHub Integration & Webhooks**: Connect GitHub accounts, import public/private repositories, sync commits, PRs, and workflow runs, with HMAC-SHA256 signature verification on inbound webhooks.
 - **📊 Real-Time Analytics Dashboard**: Real-time KPI summary (Repositories, Commits, PRs, Issues, Builds, Success Rate), Recharts 30-day build success/failure area charts, workflow duration histograms, and commit velocity charts.
 - **📈 DORA Metrics Engine**: Automatic calculation of Deployment Frequency, Lead Time for Changes, Change Failure Rate, and MTTR with realistic "Awaiting Deployments" empty states.
@@ -50,13 +52,6 @@ Live observability across Docker hosts, Kubernetes clusters, and multi-cloud acc
 - **📡 OpenTelemetry Telemetry Ingestion**: Ingest and query distributed spans, service waterfalls, and structured logs.
 - **🔔 Smart In-App Notifications**: Real-time pipeline failure alerts, completion notifications, and unread counters.
 
-### 🗺️ Planned Roadmap Features (v1.1+)
-- [ ] Multi-tenant Organization Workspaces with granular permissions.
-- [ ] Slack & PagerDuty webhook alert dispatchers.
-- [ ] GitLab, Bitbucket, and Azure DevOps repository connectors.
-- [ ] Automated PR remediation auto-commit bots.
-- [ ] Prometheus & Grafana native metric scrapers.
-
 ---
 
 ## 🏗️ Architecture & Technology Stack
@@ -64,13 +59,13 @@ Live observability across Docker hosts, Kubernetes clusters, and multi-cloud acc
 ```mermaid
 graph TD
     Client["React 18 + TypeScript + Vite SPA<br/>(Tailwind CSS Dark Theme & Recharts)"]
-    API["FastAPI Backend (Python 3.12+)<br/>Clean Layered Architecture (v1)"]
-    DB[("PostgreSQL 18 / 16<br/>20 Relational ORM Models")]
+    API["FastAPI Backend (Python 3.12+)<br/>Multi-Tenant Layered Architecture"]
+    DB[("PostgreSQL 18 / 16<br/>31 Relational ORM Models")]
     Cache[("Redis 7 Cache<br/>Rate Limiting & Celery Broker")]
     Workers["Celery 5.4 Background Workers<br/>Async Pipeline Sync Tasks"]
     GH["GitHub REST & Webhooks API<br/>(HMAC SHA-256 Authentication)"]
 
-    Client -->|Axios REST /api/v1| API
+    Client -->|Axios REST /api/v1 (X-Organization-Id)| API
     API -->|AsyncPG / SQLAlchemy 2.0| DB
     API -->|aioredis / slowapi| Cache
     API -->|Task Dispatch| Workers
@@ -81,13 +76,165 @@ graph TD
 
 | Layer | Technologies | Purpose |
 |---|---|---|
-| **Backend** | Python 3.12+, FastAPI, SQLAlchemy 2.0 (async), Pydantic v2 | High-concurrency async REST API |
-| **Database** | PostgreSQL 18 / 16 + Alembic (7 migrations) | ACID relational persistence across 20 models |
+| **Backend API** | Python 3.12+, FastAPI, SQLAlchemy 2.0 (async), Pydantic v2 | High-concurrency async REST API with tenant scoping |
+| **Database** | PostgreSQL 18 / 16 + Alembic (9 migrations) | ACID relational persistence across 31 partitioned models |
 | **Queue & Cache** | Redis 7 + Celery 5.4 | Background synchronization and task queues |
-| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons | Responsive dark-mode dashboard |
+| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons | Responsive dark-mode dashboard with tenant switching |
 | **Data Viz** | Recharts | Interactive time-series and area charts |
-| **E2E Testing** | Playwright (Chromium) | Headless end-to-end browser journey verification |
-| **DevOps** | Docker, Docker Compose, GitHub Actions | Containerized orchestration and CI testing |
+| **DevOps & CI** | Docker, Docker Compose, GitHub Actions | Multi-container orchestration and automated CI testing |
+
+---
+
+## 🛡️ Multi-Tenant RBAC Permissions Matrix
+
+DevOpsPulse partitions all data and actions across 6 roles:
+
+| Role | Hierarchy / Description | Primary Authority Scope |
+|---|---|---|
+| **SUPER_ADMIN** | Platform Administrator with root-level privileges | All organizations, system users, global telemetry, and workspace management. |
+| **ORGANIZATION_ADMIN** | Tenant Workspace Owner / Administrator | Full control within designated organization: invite members, assign roles, configure integrations. |
+| **DEVOPS_ENGINEER** | Operations, SRE, and Infrastructure Lead | CI/CD pipelines, Docker hosts, Kubernetes clusters, telemetry, and cost optimization. |
+| **DEVELOPER** | Software Engineer / Contributor | Repositories, branches, commits, pull requests, AI code intelligence, and incident bug reporting. |
+| **SECURITY_ENGINEER** | Security & Compliance Specialist | Security posture scorecard, vulnerability CVE triage, secret leak detection, and security scans. |
+| **VIEWER** | Stakeholder / Auditor (Read-Only) | Read-only access to all dashboards, analytics, reports, repositories, and active monitors. |
+
+### Privilege Escalation & Boundary Rules
+1. **Super Admin Guard:** Only users with `is_superuser=True` can assign the `SUPER_ADMIN` role. Attempts by Organization Admins return `403 Forbidden`.
+2. **Tenant Partitioning:** All requests include the `X-Organization-Id` header. The backend validates user membership; cross-tenant access returns `403 Forbidden`.
+3. **Invitation Cryptography:** Raw invitation tokens are 43-character URL-safe strings (`secrets.token_urlsafe(32)`). Only the SHA-256 hexadecimal hash is stored in PostgreSQL. Tokens expire in 48 hours and can only be used once.
+
+---
+
+## ⚡ Quick Start Installation Guide
+
+> 📖 **Full Multi-Platform Guide:** For a detailed step-by-step installation guide across Windows, Linux, and macOS, refer to [PUBLIC_INSTALLATION_GUIDE.md](PUBLIC_INSTALLATION_GUIDE.md).
+
+### Prerequisites
+- **Python:** 3.12+ (or 3.13)
+- **Node.js:** 20.x LTS (with npm)
+- **PostgreSQL:** 16.x or 18.x
+- **Redis:** 7.x
+- **Docker & Docker Compose** *(Optional, for containerized run)*
+
+---
+
+### Option A: Docker Compose (Fastest)
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/madhavjha86/DevOpsPulse.git
+cd DevOpsPulse
+
+# 2. Configure environment files
+cp .env.example .env
+cp backend/.env.example backend/.env
+
+# 3. Start all services
+docker compose up --build
+```
+- **Frontend Dashboard:** [http://localhost:3000](http://localhost:3000)
+- **Backend API Docs (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Backend Health Check:** [http://localhost:8000/health](http://localhost:8000/health)
+
+---
+
+### Option B: Local Native Setup (Windows, Linux, macOS)
+
+#### 1. Database & Cache Setup
+- **PostgreSQL:** Start your PostgreSQL service and create a database:
+  ```sql
+  CREATE DATABASE devopspulse;
+  ```
+- **Redis:** Start Redis on default port `6379` (`redis-server` or via Docker: `docker run -d -p 6379:6379 redis:7-alpine`).
+
+#### 2. Backend Setup (FastAPI)
+```bash
+cd backend
+
+# Create and activate virtual environment
+# On Linux/macOS:
+python3 -m venv venv && source venv/bin/activate
+# On Windows (PowerShell):
+python -m venv venv; .\venv\Scripts\Activate.ps1
+
+# Install pinned dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+# Edit backend/.env with your PostgreSQL credentials
+
+# Run database migrations to HEAD (all 31 tables)
+alembic upgrade head
+
+# (Optional) Seed development demo accounts
+python scripts/seed_rbac_accounts.py
+python seed_data.py
+
+# Start the FastAPI server
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+#### 3. Frontend Setup (React & Vite)
+```bash
+# In a new terminal:
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start Vite dev server
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## 🔌 Integration Configuration Reference
+
+> 📖 **Credentials & Policies Reference:** For complete IAM policies, webhook configurations, and environment variables, refer to [REQUIRED_CREDENTIALS_AND_SETUP.md](REQUIRED_CREDENTIALS_AND_SETUP.md).
+
+DevOpsPulse operates with progressive enhancement across local and production setups:
+
+| Integration | Out-of-the-Box Local Behavior | Connected Production Requirement |
+|---|---|---|
+| **User Authentication** | Fully functional (Bcrypt + JWT tokens) | Set a strong `SECRET_KEY` (64 random hex characters) |
+| **Organization Invitations** | Displays `EMAIL_NOT_CONFIGURED` & copyable direct link | Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` in `backend/.env` |
+| **GitHub OAuth 2.0** | Local email/password login active | Register GitHub OAuth App; set `GITHUB_CLIENT_ID` & `GITHUB_CLIENT_SECRET` |
+| **GitHub Webhooks** | Signature verification enforced | Set `WEBHOOK_SECRET` and configure webhook in GitHub repo settings |
+| **Docker Engine** | Offline graceful tolerance card | Mount `/var/run/docker.sock` or set Host URL `http://localhost:2375` |
+| **Kubernetes Monitoring** | Offline graceful empty state | Apply read-only ServiceAccount manifest; supply cluster token & API URL |
+| **Cloud FinOps** | Demo analytics with unconfigured badge | Attach read-only IAM policy (e.g. AWS Cost Explorer `ce:GetCostAndUsage`) |
+| **AI Copilot & RCA** | Rule-based static analyzer fallback | Set `GEMINI_API_KEY` (Google AI Studio) or `OPENAI_API_KEY` in `backend/.env` |
+
+---
+
+## 🧪 Automated Testing
+
+DevOpsPulse incorporates comprehensive test suites across both backend and frontend layers:
+
+### Backend Pytest Suite (78 / 78 Passing)
+```bash
+cd backend
+python -m pytest tests/ -v
+```
+Validates JWT auth, password hashing, 6 RBAC roles, multi-tenant boundaries, token SHA-256 hashing, HMAC webhooks, rate limiting, and all REST endpoints.
+
+### Frontend Quality & Type Check
+```bash
+cd frontend
+npm run lint    # ESLint (0 errors, 0 warnings)
+npm run build   # TypeScript tsc + Vite production build (0 errors)
+```
+
+### End-to-End Browser Testing (Playwright)
+```bash
+cd frontend
+python run_e2e.py    # Automated stack runner + Playwright tests
+# Or directly:
+npx playwright test
+```
 
 ---
 
@@ -99,30 +246,30 @@ DevOpsPulse/
 │   └── workflows/
 │       └── ci.yml                         # GitHub Actions automated CI pipeline
 ├── backend/
-│   ├── alembic/                           # Database schema migrations (001 - 007)
+│   ├── alembic/                           # Database schema migrations (001 - 009)
 │   ├── app/
-│   │   ├── api/v1/routes/                 # REST API endpoints (auth, repos, telemetry, etc.)
+│   │   ├── api/v1/routes/                 # REST API endpoints (auth, orgs, repos, telemetry, etc.)
 │   │   ├── core/                          # Security, config, exceptions, logging
 │   │   ├── db/                            # SQLAlchemy async session & declarative base
 │   │   ├── middleware/                    # Rate limiting & request logging
-│   │   ├── models/                        # 20 ORM database models
+│   │   ├── models/                        # 31 ORM database models
 │   │   ├── repositories/                  # Data access layer
 │   │   ├── schemas/                       # Pydantic v2 request/response schemas
-│   │   ├── services/                      # Domain business services
+│   │   ├── services/                      # Domain business services (email, audit, orgs, etc.)
 │   │   └── workers/                       # Celery async tasks
-│   ├── scripts/                           # Release verification and utility scripts
-│   ├── tests/                             # 58 pytest unit & integration test cases
-│   ├── .env.example                       # Sanitized environment template (DEBUG=false)
+│   ├── scripts/                           # Security audits, seed scripts, and verification
+│   ├── tests/                             # 78 pytest unit & integration test cases
+│   ├── .env.example                       # Sanitized environment template
 │   ├── Dockerfile                         # Container image definition
 │   ├── pytest.ini                         # Pytest runner configuration
 │   └── requirements.txt                   # Pinned Python dependencies
 ├── frontend/
-│   ├── e2e/                               # 11 Playwright end-to-end browser test suites
+│   ├── e2e/                               # Playwright end-to-end browser test suites
 │   ├── public/                            # Static web assets
 │   ├── src/
 │   │   ├── components/                    # UI, layout, auth, and dashboard components
-│   │   ├── context/                       # AuthContext state management
-│   │   ├── pages/                         # Application views (Dashboard, DORA, etc.)
+│   │   ├── context/                       # AuthContext & OrganizationContext state management
+│   │   ├── pages/                         # Application views (Dashboard, OrgSettings, AcceptInvite, etc.)
 │   │   ├── services/                      # Axios API clients
 │   │   └── types/                         # TypeScript definitions
 │   ├── Dockerfile                         # Frontend container image definition
@@ -130,178 +277,33 @@ DevOpsPulse/
 │   ├── package.json                       # Dependencies and scripts
 │   ├── playwright.config.ts               # Playwright configuration
 │   └── run_e2e.py                         # Automated E2E test stack orchestrator
-├── docs/
-│   ├── api/                               # REST API specifications
-│   ├── architecture/                      # Architecture reference documents
-│   └── screenshots/                       # High-resolution application screenshots
+├── docs/                                  # API specs, architecture, and screenshots
 ├── .env.example                           # Root sanitized environment template
 ├── .gitignore                             # Hardened ignore rules (databases, secrets, caches)
 ├── docker-compose.yml                     # Multi-service container orchestration
 ├── CONTRIBUTING.md                        # Contribution guidelines
+├── CODE_OF_CONDUCT.md                     # Code of conduct
 ├── SECURITY.md                            # Vulnerability disclosure policy
+├── PUBLIC_INSTALLATION_GUIDE.md           # Public multi-platform installation guide
+├── REQUIRED_CREDENTIALS_AND_SETUP.md      # Credentials & integrations setup reference
 ├── LICENSE                                # MIT License
-└── README.md
+└── README.md                              # Master project documentation
 ```
 
 ---
 
-## ⚡ Quick Start
+## 🔒 Security & Vulnerability Reporting
 
-### Prerequisites
-- **Git** (v2.30+)
-- **Node.js** (v20+ or v18+) and **npm**
-- **Python** (v3.12+ or v3.13+)
-- **PostgreSQL** (v16+ or v18+) or **Docker Desktop**
-
----
-
-### Option A: Docker Compose Setup
-
-> [!NOTE]
-> Docker Compose orchestration is verified via static configuration audit. Ensure the Docker daemon or Docker Desktop is active on your machine before starting.
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/madhavjha86/DevOpsPulse.git
-   cd DevOpsPulse
-   ```
-
-2. **Configure environment**:
-   ```bash
-   cp .env.example .env
-   ```
-
-3. **Start services**:
-   ```bash
-   docker compose up --build
-   ```
-
-- **Frontend Dashboard:** [http://localhost:3000](http://localhost:3000)
-- **Backend API:** [http://localhost:8000](http://localhost:8000)
-- **Interactive Swagger Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
-
----
-
-### Option B: Local Manual Setup (Without Docker)
-
-#### 1. Backend Setup
-```bash
-cd backend
-
-# Create and activate Python virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Copy environment configuration
-cp .env.example .env
-
-# Run database migrations
-alembic upgrade head
-
-# (Optional) Seed demo users and repositories
-python seed_data.py
-
-# Start FastAPI backend
-uvicorn app.main:app --reload --port 8000
-```
-
-#### 2. Frontend Setup
-```bash
-cd frontend
-
-# Install Node.js dependencies
-npm install
-
-# Start Vite development server
-npm run dev
-```
-
----
-
-## 🔌 Integration Modes & Credential Dependencies
-
-DevOpsPulse operates with progressive enhancement across local and production setups:
-
-| Integration | Out-of-the-Box Local Behavior | Connected Production Requirement |
-|---|---|---|
-| **User Authentication** | Fully functional (Bcrypt + JWT tokens) | Set strong `SECRET_KEY` (32+ random characters) |
-| **GitHub OAuth 2.0** | Username/password authentication active | Register GitHub OAuth App; set `GITHUB_CLIENT_ID` & `GITHUB_CLIENT_SECRET` |
-| **GitHub Repository Sync** | Seeded sample repositories (`react`, `flask`) | Provide GitHub Personal Access Token or OAuth token for live sync |
-| **Cloud Monitoring** | Demo/mock accounts with realistic metrics | Supply AWS IAM keys, Azure Service Principal, or GCP Service Account JSON |
-| **Docker & Kubernetes** | Graceful offline tolerance; demo hosts/clusters | Mount `/var/run/docker.sock` or supply `KUBECONFIG` path |
-| **AI Copilot & PR Review** | Rule-based static analyzer & heuristic prediction | Optional LLM API integration |
-| **Asynchronous Worker** | Synchronous fallback; memory rate-limiter | Running Redis instance (`REDIS_URL=redis://localhost:6379/0`) |
-
-> [!WARNING]
-> Default demo credentials (`admin@devopspulse.com` / `Password123!`) are strictly intended for local development and integration testing. Change administrator credentials immediately upon deploying to any public or staging environment.
-
----
-
-## 🧪 Automated Testing
-
-DevOpsPulse incorporates comprehensive test suites across both backend and frontend layers:
-
-### Backend Pytest Suite
-```bash
-cd backend
-pytest -v
-```
-Validates JWT auth, password hashing, HMAC webhooks, rate limiting, and all REST endpoints (**58/58 tests passing**).
-
-### Frontend Code Quality & Type Check
-```bash
-cd frontend
-npm run lint    # ESLint (0 errors, 0 warnings)
-npm run build   # TypeScript tsc + Vite production build
-```
-
-### Frontend Playwright End-to-End Suite
-```bash
-# Automated stack runner (starts Uvicorn + Vite and executes Playwright tests):
-python frontend/run_e2e.py
-
-# Or directly using the Playwright CLI:
-cd frontend
-npx playwright test
-```
-Validates authentication flows, protected route navigation, dashboard KPI cards, and repository detail views in headless Chromium (**11/11 tests passing**).
-
----
-
-## 📡 API Reference Overview
-
-| HTTP Method | Route | Description | Auth Required |
-|---|---|---|---|
-| `POST` | `/api/v1/auth/register` | Register new user account | No |
-| `POST` | `/api/v1/auth/login` | Exchange credentials for JWT access/refresh tokens | No |
-| `GET` | `/api/v1/auth/github/authorize` | Get GitHub OAuth URL | No |
-| `GET` | `/api/v1/repositories` | List tracked repositories (paginated) | Yes |
-| `POST` | `/api/v1/repositories/import` | Import a repository by `owner/repo` | Yes |
-| `POST` | `/api/v1/repositories/{id}/sync` | Trigger on-demand sync from GitHub | Yes |
-| `GET` | `/api/v1/workflows` | List GitHub Actions workflow runs | Yes |
-| `GET` | `/api/v1/analytics/dashboard` | Aggregate dashboard summary metrics | Yes |
-| `GET` | `/api/v1/analytics/dora` | Compute DORA metrics (Deployment Frequency, Lead Time, CFR, MTTR) | Yes |
-| `GET` | `/api/v1/analytics/build-trends` | 30-day build success vs. failure time-series | Yes |
-| `POST` | `/api/v1/ai/copilot/chat` | Send prompt to AI Copilot assistant | Yes |
-| `POST` | `/api/v1/ai/intelligence/reviews/generate` | Run automated PR code review & security scan | Yes |
-| `POST` | `/api/v1/webhooks/github` | Receive GitHub events with HMAC verification | Signature Header |
-
-Interactive Swagger documentation is available at `/docs`.
+- **Zero Hardcoded Secrets:** Passwords, tokens, and keys are strictly managed via environment variables.
+- **Token Security:** Single-use invitation tokens are hashed with SHA-256 before storage in PostgreSQL and expire after 48 hours.
+- **Password Security:** User passwords are encrypted with bcrypt (12 rounds) and individual salts.
+- **Vulnerability Disclosure:** Please review [SECURITY.md](SECURITY.md) to report security concerns responsibly.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on code style, commit conventions, and pull request guidelines.
-
----
-
-## 🔒 Security
-
-For vulnerability disclosure, please refer to [SECURITY.md](SECURITY.md).
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on code style, commit conventions, and pull request workflows.
 
 ---
 

@@ -19,7 +19,7 @@ SECRET_KEY=generate-a-secure-random-64-character-hex-key
 BACKEND_CORS_ORIGINS=["http://localhost:3000","https://devopspulse.yourdomain.com"]
 
 # --- Database (PostgreSQL 18) ---
-DATABASE_URL=postgresql+asyncpg://postgres:YourSecurePassword@localhost:5432/devopspulse
+DATABASE_URL=postgresql+asyncpg://postgres:your_local_pg_password@localhost:5432/devopspulse
 
 # --- Redis & Celery Workers ---
 REDIS_URL=redis://localhost:6379/0

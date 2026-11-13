@@ -25,6 +25,7 @@ import { TeamProductivityPage } from '@/pages/TeamProductivityPage';
 import { NotificationsPage } from '@/pages/NotificationsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { OrganizationSettingsPage } from '@/pages/OrganizationSettingsPage';
+import { AcceptInvitationPage } from '@/pages/AcceptInvitationPage';
 
 export const App: React.FC = () => {
   return (
@@ -33,6 +34,7 @@ export const App: React.FC = () => {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/auth/github/callback" element={<GitHubCallbackPage />} />
+      <Route path="/invitations/accept" element={<AcceptInvitationPage />} />
 
       {/* Protected routes wrapped in Layout */}
       <Route element={<Layout />}>

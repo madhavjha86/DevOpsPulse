@@ -83,11 +83,60 @@ class OrganizationInvitationResponse(BaseModel):
     organization_name: str | None = None
     email: str
     role: str
-    token: str
-    status: str
+    token: str = Field(description="SHA-256 hashed token representation stored in database")
+    status: str  # PENDING, ACCEPTED, REVOKED, EXPIRED
     invited_by_name: str | None = None
     expires_at: datetime
     created_at: datetime
+    email_status: str = Field(
+        default="EMAIL_NOT_CONFIGURED",
+        description="Status of invitation dispatch: EMAIL_NOT_CONFIGURED, SENT, or FAILED",
+    )
+    invite_url: str | None = Field(
+        default=None,
+        description="Direct onboarding URL containing single-use token (provided when created/resent)",
+    )
+    raw_token: str | None = Field(
+        default=None,
+        description="Plaintext token provided once at dispatch for manual distribution",
+    )
+
+
+class OrganizationInviteVerifyResponse(BaseModel):
+    """Public verification details for an invitation token."""
+
+    valid: bool
+    organization_id: int
+    organization_name: str
+    email: str
+    role: str
+    expires_at: datetime
+    user_exists: bool
+    existing_user_name: str | None = None
+
+
+class OrganizationInviteAcceptPayload(BaseModel):
+    """Payload to accept an invitation and onboard/join organization."""
+
+    token: str = Field(..., description="Raw invitation token from email/link")
+    password: str | None = Field(
+        default=None,
+        min_length=8,
+        description="Password set by the newly onboarded user (required if user does not exist)",
+    )
+    full_name: str | None = Field(default=None, max_length=150)
+    username: str | None = Field(default=None, min_length=3, max_length=50)
+
+
+class OrganizationInviteAcceptResponse(BaseModel):
+    """Result of accepting an invitation."""
+
+    organization: OrganizationResponse
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    is_new_user: bool = False
+    message: str = "Successfully joined organization workspace"
 
 
 class TenantContextInfo(BaseModel):

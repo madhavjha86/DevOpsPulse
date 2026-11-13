@@ -6,6 +6,7 @@ export interface User {
   is_active: boolean;
   role: string;
   avatar_url: string | null;
+  is_superuser?: boolean;
   created_at: string;
 }
 
@@ -207,8 +208,43 @@ export interface OrganizationInvitation {
   role: OrganizationRoleType;
   token: string;
   is_accepted: boolean;
+  status?: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED';
+  email_status?: 'SENT' | 'EMAIL_NOT_CONFIGURED' | 'FAILED';
+  invite_url?: string;
+  raw_token?: string;
+  organization_name?: string;
+  invited_by_name?: string;
   expires_at: string;
   created_at: string;
+}
+
+export interface OrganizationInviteVerifyResponse {
+  valid: boolean;
+  organization_id: number;
+  organization_name: string;
+  email: string;
+  role: OrganizationRoleType;
+  expires_at: string;
+  user_exists: boolean;
+}
+
+export interface OrganizationInviteAcceptPayload {
+  token: string;
+  password?: string;
+  full_name?: string;
+  username?: string;
+}
+
+export interface OrganizationInviteAcceptResponse {
+  success: boolean;
+  message: string;
+  organization_id: number;
+  organization_name: string;
+  role: OrganizationRoleType;
+  is_new_user: boolean;
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
 }
 
 export interface CreateOrganizationPayload {
