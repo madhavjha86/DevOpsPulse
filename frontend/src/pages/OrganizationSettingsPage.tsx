@@ -48,7 +48,9 @@ export const OrganizationSettingsPage: React.FC = () => {
       setError(null);
       const [membersData, invitesData] = await Promise.all([
         organizationService.listMembers(activeOrg.id),
-        organizationService.listInvitations(activeOrg.id).catch(() => []),
+        isAdmin
+          ? organizationService.listInvitations(activeOrg.id).catch(() => [])
+          : Promise.resolve([]),
       ]);
       setMembers(membersData);
       setInvitations(invitesData);
@@ -58,7 +60,7 @@ export const OrganizationSettingsPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [activeOrg]);
+  }, [activeOrg, isAdmin]);
 
   useEffect(() => {
     loadData();

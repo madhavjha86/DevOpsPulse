@@ -502,7 +502,10 @@ class OrganizationService:
         )
         res = await db.execute(q)
         member = res.scalar_one_or_none()
-        if not member or member.role != OrganizationRole.ORGANIZATION_ADMIN.value:
+        if not member or member.role not in (
+            OrganizationRole.ORGANIZATION_ADMIN.value,
+            OrganizationRole.SUPER_ADMIN.value,
+        ):
             raise ForbiddenException(
                 detail="Organization Administrator privileges required for this action."
             )
