@@ -234,6 +234,37 @@ async def test_invitation_lifecycle_and_onboarding(
     assert "organization.invitation.resent" in actions
     assert "organization.invitation.revoked" in actions
 
+    # 12. Test Audit Logs REST API Endpoints (List, Filter & CSV Export)
+    audit_list_resp = await client.get(
+        f"/api/v1/organizations/{org_id}/audit-logs",
+        headers=org_headers,
+    )
+    assert audit_list_resp.status_code == 200
+    audit_data = audit_list_resp.json()
+    assert audit_data["total"] >= 4
+    assert len(audit_data["items"]) >= 4
+    assert audit_data["page"] == 1
+    assert any("invitation" in item["action"] for item in audit_data["items"])
+
+    # Test filter by action
+    filtered_resp = await client.get(
+        f"/api/v1/organizations/{org_id}/audit-logs?action=organization.invitation.created",
+        headers=org_headers,
+    )
+    assert filtered_resp.status_code == 200
+    assert all(item["action"] == "organization.invitation.created" for item in filtered_resp.json()["items"])
+
+    # Test CSV Export
+    csv_resp = await client.get(
+        f"/api/v1/organizations/{org_id}/audit-logs/export",
+        headers=org_headers,
+    )
+    assert csv_resp.status_code == 200
+    assert "text/csv" in csv_resp.headers.get("content-type", "")
+    assert "Timestamp (UTC)" in csv_resp.text
+    assert "Action" in csv_resp.text
+    assert "organization.invitation.created" in csv_resp.text
+
 
 @pytest.mark.asyncio
 async def test_email_service_smtp_mock():

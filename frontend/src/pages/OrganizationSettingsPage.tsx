@@ -20,6 +20,12 @@ import {
   Ban,
   Clock,
   ExternalLink,
+  History,
+  Download,
+  Search,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useOrganization } from '@/context/OrganizationContext';
 import { useAuth } from '@/context/AuthContext';
@@ -28,6 +34,7 @@ import type {
   OrganizationMember,
   OrganizationInvitation,
   OrganizationRoleType,
+  AuditLogEntry,
 } from '@/types';
 
 export const OrganizationSettingsPage: React.FC = () => {
@@ -47,6 +54,12 @@ export const OrganizationSettingsPage: React.FC = () => {
     activeOrg?.role === 'ORGANIZATION_ADMIN' ||
     Boolean(isAdmin && activeTenantInfo?.organization_id === activeOrg?.id);
 
+  const canViewAuditLogs =
+    isOrgAdmin ||
+    isSuperAdmin ||
+    userRole === 'SECURITY_ENGINEER' ||
+    Boolean(activeTenantInfo?.is_security);
+
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [invitations, setInvitations] = useState<OrganizationInvitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,6 +77,64 @@ export const OrganizationSettingsPage: React.FC = () => {
   // Member update / action states
   const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
   const [actionInProgressInviteId, setActionInProgressInviteId] = useState<number | null>(null);
+
+  // Audit Logs state
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [auditTotal, setAuditTotal] = useState(0);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditPages, setAuditPages] = useState(1);
+  const [auditActionFilter, setAuditActionFilter] = useState('');
+  const [auditSearchQuery, setAuditSearchQuery] = useState('');
+  const [isAuditLoading, setIsAuditLoading] = useState(false);
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
+  const [selectedAuditLog, setSelectedAuditLog] = useState<AuditLogEntry | null>(null);
+
+  const loadAuditLogs = useCallback(async () => {
+    if (!activeOrg || !canViewAuditLogs) return;
+    try {
+      setIsAuditLoading(true);
+      const data = await organizationService.listAuditLogs(activeOrg.id, {
+        action: auditActionFilter || undefined,
+        search: auditSearchQuery || undefined,
+        page: auditPage,
+        perPage: 15,
+      });
+      setAuditLogs(data.items);
+      setAuditTotal(data.total);
+      setAuditPages(data.pages);
+    } catch {
+      // Gracefully handle if audit log fetching fails
+    } finally {
+      setIsAuditLoading(false);
+    }
+  }, [activeOrg, canViewAuditLogs, auditActionFilter, auditSearchQuery, auditPage]);
+
+  useEffect(() => {
+    void loadAuditLogs();
+  }, [loadAuditLogs]);
+
+  const handleExportAuditLogs = async () => {
+    if (!activeOrg) return;
+    try {
+      setIsExportingCsv(true);
+      const blob = await organizationService.exportAuditLogsCsv(activeOrg.id, {
+        action: auditActionFilter || undefined,
+        search: auditSearchQuery || undefined,
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `devopspulse_audit_logs_org_${activeOrg.id}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      setError('Failed to export audit logs');
+    } finally {
+      setIsExportingCsv(false);
+    }
+  };
 
   const loadData = useCallback(async () => {
     if (!activeOrg) return;
@@ -287,6 +358,70 @@ export const OrganizationSettingsPage: React.FC = () => {
           </span>
         );
     }
+  };
+
+  const getActionBadge = (action: string) => {
+    if (action.startsWith('member.invited')) {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-bold text-indigo-700 border border-indigo-200">
+          Member Invited
+        </span>
+      );
+    }
+    if (action.startsWith('member.role_updated')) {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-0.5 text-[11px] font-bold text-purple-700 border border-purple-200">
+          Role Updated
+        </span>
+      );
+    }
+    if (action.startsWith('member.removed')) {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700 border border-rose-200">
+          Member Removed
+        </span>
+      );
+    }
+    if (action.startsWith('invitation.accepted')) {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
+          Invitation Accepted
+        </span>
+      );
+    }
+    if (action.startsWith('invitation.revoked')) {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700 border border-amber-200">
+          Invitation Revoked
+        </span>
+      );
+    }
+    if (action.startsWith('incident.created')) {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700 border border-rose-200">
+          Incident Created
+        </span>
+      );
+    }
+    if (action.startsWith('incident.resolved')) {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
+          Incident Resolved
+        </span>
+      );
+    }
+    if (action.startsWith('incident.post_mortem_generated')) {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-cyan-50 px-2 py-0.5 text-[11px] font-bold text-cyan-700 border border-cyan-200">
+          AI Post-Mortem
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700 border border-slate-200">
+        {action}
+      </span>
+    );
   };
 
   return (
@@ -616,6 +751,239 @@ export const OrganizationSettingsPage: React.FC = () => {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Security & Compliance Audit Trail */}
+      {canViewAuditLogs && (
+        <div className="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
+          <div className="border-b border-slate-100 px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <History className="h-4 w-4 text-purple-600" />
+              <div>
+                <h2 className="text-sm font-bold text-dark-100">
+                  Security & Compliance Audit Trail ({auditTotal})
+                </h2>
+                <p className="text-[11px] text-dark-400">
+                  Immutable record of administrative, role, invitation, and incident actions (SOC2 / ISO 27001 readiness)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                <input
+                  id="audit-search-input"
+                  aria-label="Search audit logs"
+                  type="text"
+                  placeholder="Search logs..."
+                  value={auditSearchQuery}
+                  onChange={(e) => {
+                    setAuditSearchQuery(e.target.value);
+                    setAuditPage(1);
+                  }}
+                  className="rounded-xl border border-slate-200 pl-8 pr-3 py-1.5 text-xs text-dark-100 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500/20 w-44"
+                />
+              </div>
+
+              {/* Action Filter */}
+              <select
+                id="audit-action-filter"
+                aria-label="Filter audit logs by action"
+                value={auditActionFilter}
+                onChange={(e) => {
+                  setAuditActionFilter(e.target.value);
+                  setAuditPage(1);
+                }}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-dark-100 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500/20"
+              >
+                <option value="">All Actions</option>
+                <option value="member.invited">Member Invited</option>
+                <option value="member.role_updated">Role Updated</option>
+                <option value="member.removed">Member Removed</option>
+                <option value="invitation.accepted">Invitation Accepted</option>
+                <option value="invitation.revoked">Invitation Revoked</option>
+                <option value="incident.created">Incident Created</option>
+                <option value="incident.resolved">Incident Resolved</option>
+                <option value="incident.post_mortem_generated">Post-Mortem Generated</option>
+              </select>
+
+              {/* Export CSV Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  void handleExportAuditLogs();
+                }}
+                disabled={isExportingCsv || auditTotal === 0}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 px-3.5 py-1.5 text-xs font-bold transition-all disabled:opacity-50"
+                title="Download complete audit log as CSV"
+              >
+                {isExportingCsv ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" />
+                )}
+                Export CSV
+              </button>
+            </div>
+          </div>
+
+          {isAuditLoading ? (
+            <div className="p-8 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin text-purple-600" />
+              Loading audit logs...
+            </div>
+          ) : auditLogs.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-xs">
+              No audit log entries matching criteria.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-dark-400 border-b border-slate-100">
+                  <tr>
+                    <th className="px-6 py-3.5">Timestamp (UTC)</th>
+                    <th className="px-6 py-3.5">Action</th>
+                    <th className="px-6 py-3.5">Actor</th>
+                    <th className="px-6 py-3.5">Resource</th>
+                    <th className="px-6 py-3.5">IP Address</th>
+                    <th className="px-6 py-3.5 text-right">Details</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {auditLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-3.5 text-dark-400 whitespace-nowrap">
+                        {new Date(log.created_at).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-3.5">{getActionBadge(log.action)}</td>
+                      <td className="px-6 py-3.5 font-medium text-dark-100">
+                        <div>{log.user_name || log.user_email || 'System'}</div>
+                        {log.user_email && log.user_name && (
+                          <div className="text-[10px] text-dark-400">{log.user_email}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-3.5 text-dark-300 font-mono text-[11px]">
+                        {log.resource_type ? `${log.resource_type}:${log.resource_id ?? ''}` : '—'}
+                      </td>
+                      <td className="px-6 py-3.5 text-dark-400 font-mono text-[11px]">
+                        {log.ip_address || '—'}
+                      </td>
+                      <td className="px-6 py-3.5 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedAuditLog(log)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+                        >
+                          <FileText className="h-3 w-3 text-slate-500" />
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Pagination */}
+              {auditPages > 1 && (
+                <div className="flex items-center justify-between border-t border-slate-100 px-6 py-3 text-xs text-dark-400">
+                  <span>
+                    Showing page {auditPage} of {auditPages} ({auditTotal} total events)
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={auditPage <= 1}
+                      onClick={() => setAuditPage((p) => Math.max(1, p - 1))}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                      Prev
+                    </button>
+                    <button
+                      type="button"
+                      disabled={auditPage >= auditPages}
+                      onClick={() => setAuditPage((p) => Math.min(auditPages, p + 1))}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                    >
+                      Next
+                      <ChevronRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Selected Audit Log Details Modal */}
+      {selectedAuditLog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <History className="h-4 w-4 text-purple-600" />
+                <h3 className="text-sm font-bold text-dark-100">
+                  Audit Event #{selectedAuditLog.id}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedAuditLog(null)}
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Action</span>
+                  <span className="font-semibold text-dark-100">{selectedAuditLog.action}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Timestamp</span>
+                  <span className="text-dark-300">{new Date(selectedAuditLog.created_at).toLocaleString()}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Actor</span>
+                  <span className="text-dark-200">{selectedAuditLog.user_email || 'System'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">IP / Origin</span>
+                  <span className="font-mono text-dark-300">{selectedAuditLog.ip_address || '—'}</span>
+                </div>
+              </div>
+
+              <div>
+                <span className="text-[11px] font-bold text-dark-200 block mb-1">Event Payload Details:</span>
+                <pre className="rounded-xl bg-slate-900 p-3.5 text-[11px] font-mono text-emerald-400 overflow-x-auto max-h-60 border border-slate-800">
+                  {JSON.stringify(selectedAuditLog.details || {}, null, 2)}
+                </pre>
+              </div>
+
+              {selectedAuditLog.user_agent && (
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">User Agent</span>
+                  <span className="text-[11px] font-mono text-slate-600 break-all">{selectedAuditLog.user_agent}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-4 mt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setSelectedAuditLog(null)}
+                className="rounded-xl bg-purple-600 px-4 py-2 text-xs font-bold text-white hover:bg-purple-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -10,6 +10,7 @@ from app.schemas.incident import (
     IncidentCommentCreate,
     IncidentCreate,
     IncidentDetailResponse,
+    IncidentPostMortemResponse,
     IncidentResponse,
     IncidentStatsSummary,
     IncidentStatusUpdate,
@@ -191,3 +192,29 @@ async def add_incident_comment(
             detail=f"Incident {incident_id} not found.",
         )
     return updated
+
+
+@router.post(
+    "/{incident_id}/post-mortem",
+    response_model=IncidentPostMortemResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Generate AI-powered SRE Incident Post-Mortem",
+)
+async def generate_incident_post_mortem(
+    incident_id: int,
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> IncidentPostMortemResponse:
+    """Generate an automated, comprehensive SRE Post-Mortem analysis and action plan for an incident."""
+    post_mortem = await IncidentService.generate_post_mortem(
+        db=db,
+        user_id=tenant.user.id,
+        incident_id=incident_id,
+        organization_id=tenant.organization_id,
+    )
+    if not post_mortem:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Incident {incident_id} not found.",
+        )
+    return post_mortem

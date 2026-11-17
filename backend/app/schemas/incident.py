@@ -121,3 +121,24 @@ class IncidentStatsSummary(BaseModel):
     mttr_minutes: float
     by_severity: dict[str, int]
     by_service: dict[str, int]
+
+
+class IncidentPostMortemResponse(BaseModel):
+    """AI Generated SRE Incident Post-Mortem and Root Cause Report."""
+
+    incident_id: int
+    title: str
+    severity: str
+    service: str
+    status: str
+    duration_minutes: float | None = None
+    generated_at: datetime
+    executive_summary: str
+    root_cause: str
+    impact_analysis: str
+    timeline_summary: list[dict[str, Any]]
+    detection_analysis: str
+    resolution_summary: str
+    action_items: list[dict[str, str]]
+    lessons_learned: list[str]
+    markdown_report: str

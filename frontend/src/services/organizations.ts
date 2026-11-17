@@ -9,6 +9,7 @@ import type {
   CreateOrganizationPayload,
   InviteMemberPayload,
   OrganizationRoleType,
+  PaginatedAuditLogs,
 } from '@/types';
 
 export interface ActiveTenantContextInfo {
@@ -111,5 +112,43 @@ export const organizationService = {
   async acceptInvitation(token: string): Promise<Organization> {
     const res = await api.post<Organization>(`/api/v1/organizations/invitations/${token}/accept`);
     return res.data;
+  },
+
+  async listAuditLogs(
+    orgId: number,
+    params?: {
+      action?: string;
+      userId?: number;
+      search?: string;
+      page?: number;
+      perPage?: number;
+    }
+  ): Promise<PaginatedAuditLogs> {
+    const query = new URLSearchParams();
+    if (params?.action) query.set('action', params.action);
+    if (params?.userId) query.set('user_id', String(params.userId));
+    if (params?.search) query.set('search', params.search);
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.perPage) query.set('per_page', String(params.perPage));
+
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    const res = await api.get<PaginatedAuditLogs>(`/api/v1/organizations/${orgId}/audit-logs${qs}`);
+    return res.data;
+  },
+
+  async exportAuditLogsCsv(
+    orgId: number,
+    params?: { action?: string; userId?: number; search?: string }
+  ): Promise<Blob> {
+    const query = new URLSearchParams();
+    if (params?.action) query.set('action', params.action);
+    if (params?.userId) query.set('user_id', String(params.userId));
+    if (params?.search) query.set('search', params.search);
+
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    const res = await api.get(`/api/v1/organizations/${orgId}/audit-logs/export${qs}`, {
+      responseType: 'blob',
+    });
+    return res.data as Blob;
   },
 };

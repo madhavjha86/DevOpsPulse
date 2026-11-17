@@ -1,7 +1,7 @@
 """Multi-Tenant Organization, Workspace, and Team RBAC API routes."""
 
 from typing import Annotated
-from fastapi import APIRouter, Depends, Path, Query, status
+from fastapi import APIRouter, Depends, Path, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
@@ -24,8 +24,10 @@ from app.schemas.organization import (
     OrganizationMemberUpdateRole,
     OrganizationResponse,
     OrganizationUpdate,
+    PaginatedAuditLogsResponse,
     TenantContextInfo,
 )
+from app.services.audit_service import AuditService
 from app.services.organization_service import OrganizationService
 
 router = APIRouter(prefix="/organizations", tags=["Multi-Tenant Organizations"])
@@ -276,4 +278,63 @@ async def accept_invitation(
     """Join an organization using a valid invitation token."""
     return await OrganizationService.accept_invitation(
         db=db, user=current_user, token=token
+    )
+
+
+@router.get(
+    "/{org_id}/audit-logs",
+    response_model=PaginatedAuditLogsResponse,
+    summary="List organization audit logs and compliance activity",
+)
+async def list_organization_audit_logs(
+    org_id: int,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    action: str | None = Query(default=None, description="Filter by event action (e.g. member.invited, member.role_updated)"),
+    user_id: int | None = Query(default=None, description="Filter by actor user ID"),
+    search: str | None = Query(default=None, description="Search keyword in action, details, or user email"),
+    page: int = Query(default=1, ge=1, description="Page number"),
+    per_page: int = Query(default=20, ge=1, le=100, description="Items per page"),
+) -> PaginatedAuditLogsResponse:
+    """Retrieve paginated audit trail records (requires Organization Admin or Security Engineer role)."""
+    await OrganizationService.require_org_security_or_admin(db, current_user, org_id)
+    logs_data = await AuditService.get_organization_audit_logs(
+        db=db,
+        organization_id=org_id,
+        action=action,
+        user_id=user_id,
+        search=search,
+        page=page,
+        per_page=per_page,
+    )
+    return PaginatedAuditLogsResponse(**logs_data)
+
+
+@router.get(
+    "/{org_id}/audit-logs/export",
+    summary="Export organization audit trail as CSV",
+)
+async def export_organization_audit_logs(
+    org_id: int,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    action: str | None = Query(default=None, description="Filter by event action"),
+    user_id: int | None = Query(default=None, description="Filter by actor user ID"),
+    search: str | None = Query(default=None, description="Search keyword"),
+) -> Response:
+    """Download organization audit trail as CSV for compliance audits (SOC2 / ISO 27001)."""
+    await OrganizationService.require_org_security_or_admin(db, current_user, org_id)
+    csv_content = await AuditService.export_audit_logs_csv(
+        db=db,
+        organization_id=org_id,
+        action=action,
+        user_id=user_id,
+        search=search,
+    )
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="devopspulse_audit_logs_org_{org_id}.csv"'
+        },
     )

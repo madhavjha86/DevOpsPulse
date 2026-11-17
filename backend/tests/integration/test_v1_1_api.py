@@ -69,6 +69,18 @@ async def test_incidents_api_endpoints(authenticated_client: tuple[AsyncClient, 
         for ev in comment_resp.json()["timeline_events"]
     )
 
+    # 7. Generate AI SRE Post-Mortem
+    pm_resp = await client.post(f"/api/v1/incidents/{inc_id}/post-mortem")
+    assert pm_resp.status_code == 200
+    pm_data = pm_resp.json()
+    assert pm_data["incident_id"] == inc_id
+    assert "executive_summary" in pm_data
+    assert "root_cause" in pm_data
+    assert "impact_analysis" in pm_data
+    assert len(pm_data["action_items"]) > 0
+    assert len(pm_data["timeline_summary"]) >= 1
+    assert "# Post-Mortem" in pm_data["markdown_report"]
+
 
 @pytest.mark.asyncio
 async def test_cloud_cost_api_endpoints(authenticated_client: tuple[AsyncClient, User]):

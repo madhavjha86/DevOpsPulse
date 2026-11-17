@@ -1,4 +1,5 @@
 import api from './api';
+import type { IncidentPostMortem } from '@/types';
 
 export type IncidentSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 export type IncidentPriority = 'P1' | 'P2' | 'P3' | 'P4';
@@ -127,6 +128,11 @@ export const incidentService = {
 
   linkRCA: async (id: number, rcaId: number): Promise<Incident> => {
     const res = await api.post<Incident>(`/api/v1/incidents/${id}/rca/${rcaId}`);
+    return res.data;
+  },
+
+  generatePostMortem: async (id: number): Promise<IncidentPostMortem> => {
+    const res = await api.post<IncidentPostMortem>(`/api/v1/incidents/${id}/post-mortem`);
     return res.data;
   },
 };

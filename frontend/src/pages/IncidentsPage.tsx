@@ -11,6 +11,12 @@ import {
   MessageSquare,
   ChevronRight,
   ShieldAlert,
+  Sparkles,
+  Download,
+  Copy,
+  Check,
+  FileText,
+  Loader2,
 } from 'lucide-react';
 import {
   incidentService,
@@ -21,6 +27,7 @@ import {
   IncidentPriority,
   IncidentStatus,
 } from '@/services/incidents';
+import type { IncidentPostMortem } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -57,6 +64,45 @@ export const IncidentsPage: React.FC = () => {
   const [sendEmail, setSendEmail] = useState<boolean>(true);
   const [sendSlack, setSendSlack] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // AI Post-Mortem State
+  const [postMortemData, setPostMortemData] = useState<IncidentPostMortem | null>(null);
+  const [isGeneratingPostMortem, setIsGeneratingPostMortem] = useState<boolean>(false);
+  const [isPostMortemModalOpen, setIsPostMortemModalOpen] = useState<boolean>(false);
+  const [isCopiedPostMortem, setIsCopiedPostMortem] = useState<boolean>(false);
+
+  const handleGeneratePostMortem = async (incidentId: number) => {
+    try {
+      setIsGeneratingPostMortem(true);
+      const data = await incidentService.generatePostMortem(incidentId);
+      setPostMortemData(data);
+      setIsPostMortemModalOpen(true);
+    } catch {
+      alert('Failed to generate AI Post-Mortem report.');
+    } finally {
+      setIsGeneratingPostMortem(false);
+    }
+  };
+
+  const handleCopyPostMortem = () => {
+    if (!postMortemData) return;
+    void navigator.clipboard.writeText(postMortemData.markdown_report);
+    setIsCopiedPostMortem(true);
+    setTimeout(() => setIsCopiedPostMortem(false), 2000);
+  };
+
+  const handleDownloadPostMortem = () => {
+    if (!postMortemData) return;
+    const blob = new Blob([postMortemData.markdown_report], { type: 'text/markdown;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `incident_${postMortemData.incident_id}_post_mortem.md`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -306,6 +352,8 @@ export const IncidentsPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-slate-400" />
               <select
+                id="filter-incident-severity"
+                aria-label="Filter incidents by severity"
                 value={severityFilter}
                 onChange={(e) => setSeverityFilter(e.target.value)}
                 className="text-xs font-medium rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
@@ -322,6 +370,8 @@ export const IncidentsPage: React.FC = () => {
             <div className="relative min-w-[200px]">
               <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
               <input
+                id="search-incidents-input"
+                aria-label="Search incidents or service"
                 type="text"
                 placeholder="Search incidents or service..."
                 value={searchQuery}
@@ -482,6 +532,8 @@ export const IncidentsPage: React.FC = () => {
                 <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 space-y-3">
                   <h4 className="text-xs font-bold text-emerald-900">Document Resolution Notes</h4>
                   <textarea
+                    id="incident-resolution-notes"
+                    aria-label="Incident resolution notes"
                     rows={3}
                     placeholder="Describe how the incident was mitigated or fixed..."
                     value={resolutionNotes}
@@ -521,6 +573,36 @@ export const IncidentsPage: React.FC = () => {
                 </div>
               )}
 
+              {/* AI SRE Post-Mortem Banner */}
+              <div className="p-3.5 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200/80 rounded-xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-600 text-white shrink-0">
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-purple-950">AI SRE Incident Post-Mortem</h4>
+                    <p className="text-[11px] text-purple-800/80">
+                      Generate executive summary, root cause, chronological impact, and action items
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    void handleGeneratePostMortem(selectedIncident.id);
+                  }}
+                  disabled={isGeneratingPostMortem}
+                  className="bg-purple-600 hover:bg-purple-700 text-white text-xs shrink-0 flex items-center gap-1.5 shadow-sm"
+                >
+                  {isGeneratingPostMortem ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
+                  )}
+                  Generate Report
+                </Button>
+              </div>
+
               {/* Audit Timeline */}
               <div className="space-y-3">
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -553,6 +635,8 @@ export const IncidentsPage: React.FC = () => {
               {/* Add Comment */}
               <form onSubmit={handleAddComment} className="pt-4 border-t border-slate-100 flex gap-2">
                 <input
+                  id="incident-timeline-comment"
+                  aria-label="Add timeline note or comment"
                   type="text"
                   placeholder="Add a timeline note or comment..."
                   value={commentText}
@@ -593,8 +677,9 @@ export const IncidentsPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Description *</label>
+            <label htmlFor="create-incident-desc" className="block text-xs font-bold text-slate-700 mb-1">Description *</label>
             <textarea
+              id="create-incident-desc"
               rows={4}
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
@@ -606,8 +691,9 @@ export const IncidentsPage: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Severity</label>
+              <label htmlFor="create-incident-severity-select" className="block text-xs font-bold text-slate-700 mb-1">Severity</label>
               <select
+                id="create-incident-severity-select"
                 value={newSeverity}
                 onChange={(e) => setNewSeverity(e.target.value as IncidentSeverity)}
                 className="w-full text-xs p-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
@@ -620,8 +706,9 @@ export const IncidentsPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Priority</label>
+              <label htmlFor="create-incident-priority-select" className="block text-xs font-bold text-slate-700 mb-1">Priority</label>
               <select
+                id="create-incident-priority-select"
                 value={newPriority}
                 onChange={(e) => setNewPriority(e.target.value as IncidentPriority)}
                 className="w-full text-xs p-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
@@ -696,6 +783,131 @@ export const IncidentsPage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* AI Post-Mortem Report Modal */}
+      {isPostMortemModalOpen && postMortemData && (
+        <Modal
+          isOpen={isPostMortemModalOpen}
+          onClose={() => setIsPostMortemModalOpen(false)}
+          title={`SRE Incident Post-Mortem: #${postMortemData.incident_id}`}
+        >
+          <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1 text-xs text-slate-800">
+            {/* Modal Header Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-900">{postMortemData.service}</span>
+                <span className="text-slate-400">•</span>
+                <span className="font-semibold text-purple-700">Duration: ~{postMortemData.duration_minutes ?? '—'}m</span>
+                <span className="text-slate-400">•</span>
+                <span className="text-slate-500">{new Date(postMortemData.generated_at).toLocaleString()}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleCopyPostMortem}
+                  className="text-xs flex items-center gap-1.5 h-8 border border-slate-300"
+                >
+                  {isCopiedPostMortem ? (
+                    <Check className="h-3.5 w-3.5 text-emerald-600" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                  {isCopiedPostMortem ? 'Copied!' : 'Copy Markdown'}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleDownloadPostMortem}
+                  className="bg-purple-600 hover:bg-purple-700 text-white text-xs flex items-center gap-1.5 h-8"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download .md
+                </Button>
+              </div>
+            </div>
+
+            {/* Executive Summary */}
+            <div className="p-3.5 bg-purple-50/60 border border-purple-100 rounded-xl">
+              <h4 className="font-bold text-purple-950 mb-1 flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-purple-600" />
+                1. Executive Summary
+              </h4>
+              <p className="text-purple-900/90 leading-relaxed">{postMortemData.executive_summary}</p>
+            </div>
+
+            {/* Root Cause & Impact Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="p-3.5 bg-rose-50/60 border border-rose-100 rounded-xl">
+                <h4 className="font-bold text-rose-950 mb-1 flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
+                  2. Root Cause Analysis
+                </h4>
+                <p className="text-rose-900/90 leading-relaxed">{postMortemData.root_cause}</p>
+              </div>
+              <div className="p-3.5 bg-amber-50/60 border border-amber-100 rounded-xl">
+                <h4 className="font-bold text-amber-950 mb-1 flex items-center gap-1.5">
+                  <Flame className="h-3.5 w-3.5 text-amber-600" />
+                  3. Impact Assessment
+                </h4>
+                <p className="text-amber-900/90 leading-relaxed">{postMortemData.impact_analysis}</p>
+              </div>
+            </div>
+
+            {/* Chronological Timeline */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
+              <h4 className="font-bold text-slate-900 mb-2.5 flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-slate-600" />
+                4. Chronological Outage Timeline
+              </h4>
+              <div className="space-y-2">
+                {postMortemData.timeline_summary.map((item, idx) => (
+                  <div key={idx} className="flex items-start gap-2 text-[11px] pb-1.5 border-b border-slate-100 last:border-0 last:pb-0">
+                    <span className="font-mono text-slate-500 shrink-0">{item.timestamp}</span>
+                    <span className="font-bold text-purple-700 shrink-0">[{item.event_type}]</span>
+                    <span className="text-slate-800">{item.description}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Corrective Action Items */}
+            <div className="p-3.5 bg-emerald-50/50 border border-emerald-100 rounded-xl">
+              <h4 className="font-bold text-emerald-950 mb-2 flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                5. Preventative & Corrective Action Items
+              </h4>
+              <div className="space-y-1.5">
+                {postMortemData.action_items.map((action, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 bg-white rounded-lg border border-emerald-200/60 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800">
+                        {action.priority}
+                      </span>
+                      <span className="font-medium text-slate-800">{action.task}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      Owner: <span className="font-semibold text-slate-700">{action.owner}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Lessons Learned */}
+            <div className="p-3.5 bg-indigo-50/50 border border-indigo-100 rounded-xl">
+              <h4 className="font-bold text-indigo-950 mb-1.5 flex items-center gap-1.5">
+                <FileText className="h-3.5 w-3.5 text-indigo-600" />
+                6. Key Lessons Learned
+              </h4>
+              <ul className="list-disc list-inside space-y-1 text-indigo-900/90 text-xs">
+                {postMortemData.lessons_learned.map((lesson, idx) => (
+                  <li key={idx}>{lesson}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

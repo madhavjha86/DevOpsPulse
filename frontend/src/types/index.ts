@@ -257,3 +257,57 @@ export interface InviteMemberPayload {
   email: string;
   role: OrganizationRoleType;
 }
+
+export interface AuditLogEntry {
+  id: number;
+  organization_id?: number | null;
+  user_id?: number | null;
+  user_email?: string | null;
+  user_name?: string | null;
+  action: string;
+  resource_type?: string | null;
+  resource_id?: number | null;
+  details?: Record<string, unknown> | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  created_at: string;
+}
+
+export interface PaginatedAuditLogs {
+  items: AuditLogEntry[];
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
+}
+
+export interface PostMortemActionItem {
+  task: string;
+  owner: string;
+  priority: string;
+  status: string;
+}
+
+export interface IncidentPostMortem {
+  incident_id: number;
+  title: string;
+  severity: string;
+  service: string;
+  status: string;
+  duration_minutes?: number | null;
+  generated_at: string;
+  executive_summary: string;
+  root_cause: string;
+  impact_analysis: string;
+  timeline_summary: Array<{
+    timestamp: string;
+    event_type: string;
+    author: string;
+    description: string;
+  }>;
+  detection_analysis: string;
+  resolution_summary: string;
+  action_items: PostMortemActionItem[];
+  lessons_learned: string[];
+  markdown_report: string;
+}

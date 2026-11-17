@@ -889,6 +889,34 @@ class OrganizationService:
         return member
 
     @classmethod
+    async def require_org_security_or_admin(
+        cls, db: AsyncSession, user: User, org_id: int
+    ) -> OrganizationMember:
+        """Enforce that the user is an ORGANIZATION_ADMIN, SUPER_ADMIN, or SECURITY_ENGINEER."""
+        if user.is_superuser:
+            return OrganizationMember(
+                organization_id=org_id,
+                user_id=user.id,
+                role=OrganizationRole.SUPER_ADMIN.value,
+            )
+
+        q = select(OrganizationMember).where(
+            OrganizationMember.organization_id == org_id,
+            OrganizationMember.user_id == user.id,
+        )
+        res = await db.execute(q)
+        member = res.scalar_one_or_none()
+        if not member or member.role not in (
+            OrganizationRole.ORGANIZATION_ADMIN.value,
+            OrganizationRole.SUPER_ADMIN.value,
+            OrganizationRole.SECURITY_ENGINEER.value,
+        ):
+            raise ForbiddenException(
+                detail="Security Engineer or Administrator privileges required to access audit logs."
+            )
+        return member
+
+    @classmethod
     async def resolve_tenant_context(
         cls, db: AsyncSession, user: User, requested_org_id: int | None = None
     ) -> tuple[Organization, str]:

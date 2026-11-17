@@ -1,7 +1,7 @@
 """Pydantic schemas for Multi-Tenant Organizations, Workspaces, and RBAC."""
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.organization import OrganizationRole, OrganizationType
@@ -150,3 +150,32 @@ class TenantContextInfo(BaseModel):
     is_admin: bool
     is_devops: bool
     is_security: bool
+
+
+class AuditLogResponse(BaseModel):
+    """Audit log record for security trails and compliance."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    organization_id: int | None = None
+    user_id: int | None = None
+    user_email: str | None = None
+    user_name: str | None = None
+    action: str
+    resource_type: str | None = None
+    resource_id: int | None = None
+    details: dict[str, Any] | None = None
+    ip_address: str | None = None
+    user_agent: str | None = None
+    created_at: datetime
+
+
+class PaginatedAuditLogsResponse(BaseModel):
+    """Paginated list of organization audit log records."""
+
+    items: list[AuditLogResponse]
+    total: int
+    page: int
+    per_page: int
+    pages: int
