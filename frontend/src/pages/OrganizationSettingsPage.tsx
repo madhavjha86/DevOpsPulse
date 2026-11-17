@@ -68,6 +68,14 @@ export const OrganizationSettingsPage: React.FC = () => {
     userRole === 'SECURITY_ENGINEER' ||
     Boolean(activeTenantInfo?.is_security);
 
+  const canManageWebhooks =
+    isOrgAdmin ||
+    isSuperAdmin ||
+    userRole === 'DEVOPS_ENGINEER' ||
+    userRole === 'SECURITY_ENGINEER' ||
+    Boolean(activeTenantInfo?.is_devops) ||
+    Boolean(activeTenantInfo?.is_security);
+
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [invitations, setInvitations] = useState<OrganizationInvitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -169,7 +177,7 @@ export const OrganizationSettingsPage: React.FC = () => {
   const [webhookFormError, setWebhookFormError] = useState<string | null>(null);
 
   const loadWebhooks = useCallback(async () => {
-    if (!activeOrg || !canViewAuditLogs) return;
+    if (!activeOrg) return;
     try {
       setIsWebhooksLoading(true);
       const data = await organizationService.listWebhooks(activeOrg.id);
@@ -179,7 +187,7 @@ export const OrganizationSettingsPage: React.FC = () => {
     } finally {
       setIsWebhooksLoading(false);
     }
-  }, [activeOrg, canViewAuditLogs]);
+  }, [activeOrg]);
 
   useEffect(() => {
     void loadWebhooks();
@@ -871,7 +879,7 @@ export const OrganizationSettingsPage: React.FC = () => {
       )}
 
       {/* Alert Channels & Outbound Webhooks */}
-      {canViewAuditLogs && (
+      {Boolean(activeOrg) && (
         <div className="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
           <div className="border-b border-slate-100 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-2.5">
@@ -891,20 +899,22 @@ export const OrganizationSettingsPage: React.FC = () => {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                setWebhookFormError(null);
-                setNewWebhookName('');
-                setNewWebhookUrl('');
-                setNewWebhookSecret('');
-                setIsAddWebhookModalOpen(true);
-              }}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-purple-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-purple-700 shadow-sm transition-all"
-            >
-              <Send className="h-3.5 w-3.5" />
-              Add Alert Channel
-            </button>
+            {canManageWebhooks && (
+              <button
+                type="button"
+                onClick={() => {
+                  setWebhookFormError(null);
+                  setNewWebhookName('');
+                  setNewWebhookUrl('');
+                  setNewWebhookSecret('');
+                  setIsAddWebhookModalOpen(true);
+                }}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-purple-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-purple-700 shadow-sm transition-all"
+              >
+                <Send className="h-3.5 w-3.5" />
+                Add Alert Channel
+              </button>
+            )}
           </div>
 
           {/* Test Result Toast/Banner */}
@@ -948,56 +958,62 @@ export const OrganizationSettingsPage: React.FC = () => {
               <p className="text-[11px] text-dark-400 max-w-sm mx-auto mt-1 mb-4">
                 Connect your engineering team's Slack, Discord, or Microsoft Teams channels to receive instant notifications when critical incidents occur.
               </p>
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNewWebhookTarget('SLACK');
-                    setNewWebhookName('#devops-alerts');
-                    setNewWebhookUrl('');
-                    setIsAddWebhookModalOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  <span className="font-bold text-[#4A154B]">#</span> Slack Channel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNewWebhookTarget('DISCORD');
-                    setNewWebhookName('Discord Alerts');
-                    setNewWebhookUrl('');
-                    setIsAddWebhookModalOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  <Radio className="h-3.5 w-3.5 text-[#5865F2]" /> Discord Server
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNewWebhookTarget('TEAMS');
-                    setNewWebhookName('MS Teams SRE');
-                    setNewWebhookUrl('');
-                    setIsAddWebhookModalOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  <Users className="h-3.5 w-3.5 text-[#6264A7]" /> MS Teams
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNewWebhookTarget('GENERIC');
-                    setNewWebhookName('Custom HTTPS Webhook');
-                    setNewWebhookUrl('');
-                    setIsAddWebhookModalOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  <Globe className="h-3.5 w-3.5 text-purple-600" /> Custom Webhook
-                </button>
-              </div>
+              {canManageWebhooks ? (
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewWebhookTarget('SLACK');
+                      setNewWebhookName('#devops-alerts');
+                      setNewWebhookUrl('');
+                      setIsAddWebhookModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <span className="font-bold text-[#4A154B]">#</span> Slack Channel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewWebhookTarget('DISCORD');
+                      setNewWebhookName('Discord Alerts');
+                      setNewWebhookUrl('');
+                      setIsAddWebhookModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <Radio className="h-3.5 w-3.5 text-[#5865F2]" /> Discord Server
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewWebhookTarget('TEAMS');
+                      setNewWebhookName('MS Teams SRE');
+                      setNewWebhookUrl('');
+                      setIsAddWebhookModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <Users className="h-3.5 w-3.5 text-[#6264A7]" /> MS Teams
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewWebhookTarget('GENERIC');
+                      setNewWebhookName('Custom HTTPS Webhook');
+                      setNewWebhookUrl('');
+                      setIsAddWebhookModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <Globe className="h-3.5 w-3.5 text-purple-600" /> Custom Webhook
+                  </button>
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-400">
+                  Contact an administrator or DevOps engineer to configure alert channels.
+                </p>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -1088,34 +1104,38 @@ export const OrganizationSettingsPage: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              void handleTestWebhook(wh.id);
-                            }}
-                            disabled={webhookTestingId === wh.id}
-                            className="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1 text-[11px] font-semibold text-purple-700 hover:bg-purple-100 transition-colors disabled:opacity-50"
-                            title="Send immediate test ping"
-                          >
-                            {webhookTestingId === wh.id ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <Activity className="h-3 w-3" />
-                            )}
-                            Test Ping
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              void handleDeleteWebhook(wh.id, wh.name);
-                            }}
-                            className="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50 transition-colors"
-                            title="Delete Webhook"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
+                        {canManageWebhooks ? (
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void handleTestWebhook(wh.id);
+                              }}
+                              disabled={webhookTestingId === wh.id}
+                              className="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1 text-[11px] font-semibold text-purple-700 hover:bg-purple-100 transition-colors disabled:opacity-50"
+                              title="Send immediate test ping"
+                            >
+                              {webhookTestingId === wh.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Activity className="h-3 w-3" />
+                              )}
+                              Test Ping
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void handleDeleteWebhook(wh.id, wh.name);
+                              }}
+                              className="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50 transition-colors"
+                              title="Delete Webhook"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 font-medium">Configured</span>
+                        )}
                       </td>
                     </tr>
                   ))}

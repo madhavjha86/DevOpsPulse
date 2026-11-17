@@ -355,7 +355,7 @@ async def list_organization_webhooks(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[WebhookResponse]:
     """List configured outbound webhooks for Slack, Teams, Discord, and alerting."""
-    await OrganizationService.require_org_security_or_admin(db, current_user, org_id)
+    await OrganizationService.require_org_member(db, current_user, org_id)
     webhooks = await WebhookDispatcher.list_webhooks(db, org_id)
     return [
         WebhookResponse(
@@ -390,7 +390,7 @@ async def create_organization_webhook(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> WebhookResponse:
     """Register a new outbound notification channel for Slack, Discord, Teams, or Custom Webhooks."""
-    await OrganizationService.require_org_security_or_admin(db, current_user, org_id)
+    await OrganizationService.require_org_devops_or_admin(db, current_user, org_id)
     webhook = await WebhookDispatcher.create_webhook(
         db=db,
         organization_id=org_id,
@@ -443,7 +443,7 @@ async def delete_organization_webhook(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     """Remove a configured outbound webhook."""
-    await OrganizationService.require_org_security_or_admin(db, current_user, org_id)
+    await OrganizationService.require_org_devops_or_admin(db, current_user, org_id)
     deleted = await WebhookDispatcher.delete_webhook(db, org_id, webhook_id)
     if not deleted:
         raise HTTPException(
@@ -473,7 +473,7 @@ async def test_organization_webhook(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> WebhookTestResponse:
     """Dispatch an immediate verification test alert to the webhook destination and report response status & latency."""
-    await OrganizationService.require_org_security_or_admin(db, current_user, org_id)
+    await OrganizationService.require_org_devops_or_admin(db, current_user, org_id)
     res = await WebhookDispatcher.send_test_ping(db, org_id, webhook_id)
     if not res.get("status_code") and res.get("message") == "Webhook not found":
         raise HTTPException(
