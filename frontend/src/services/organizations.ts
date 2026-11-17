@@ -10,6 +10,9 @@ import type {
   InviteMemberPayload,
   OrganizationRoleType,
   PaginatedAuditLogs,
+  CreateWebhookPayload,
+  OrganizationWebhook,
+  WebhookTestResult,
 } from '@/types';
 
 export interface ActiveTenantContextInfo {
@@ -150,5 +153,32 @@ export const organizationService = {
       responseType: 'blob',
     });
     return res.data as Blob;
+  },
+
+  async listWebhooks(orgId: number): Promise<OrganizationWebhook[]> {
+    const res = await api.get<OrganizationWebhook[]>(`/api/v1/organizations/${orgId}/webhooks`);
+    return res.data;
+  },
+
+  async createWebhook(
+    orgId: number,
+    payload: CreateWebhookPayload
+  ): Promise<OrganizationWebhook> {
+    const res = await api.post<OrganizationWebhook>(
+      `/api/v1/organizations/${orgId}/webhooks`,
+      payload
+    );
+    return res.data;
+  },
+
+  async deleteWebhook(orgId: number, webhookId: number): Promise<void> {
+    await api.delete(`/api/v1/organizations/${orgId}/webhooks/${webhookId}`);
+  },
+
+  async testWebhook(orgId: number, webhookId: number): Promise<WebhookTestResult> {
+    const res = await api.post<WebhookTestResult>(
+      `/api/v1/organizations/${orgId}/webhooks/${webhookId}/test`
+    );
+    return res.data;
   },
 };

@@ -179,3 +179,52 @@ class PaginatedAuditLogsResponse(BaseModel):
     page: int
     per_page: int
     pages: int
+
+
+class WebhookCreateRequest(BaseModel):
+    """Payload to configure an outbound alerting channel (Slack, Discord, Teams, Custom)."""
+
+    name: str = Field(..., min_length=2, max_length=100, description="Friendly channel name")
+    target_type: str = Field(
+        default="SLACK",
+        description="Destination type: SLACK, DISCORD, TEAMS, or GENERIC",
+    )
+    url: str = Field(..., min_length=10, max_length=500, description="HTTPS Webhook destination endpoint URL")
+    events: list[str] = Field(
+        default=["incident.created", "incident.resolved", "incident.critical"],
+        description="Subscribed alert event topics",
+    )
+    secret: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Optional shared secret for HMAC-SHA256 signature verification",
+    )
+
+
+class WebhookResponse(BaseModel):
+    """Outbound webhook alerting subscription."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    organization_id: int
+    name: str
+    target_type: str
+    url: str
+    events: list[str]
+    has_secret: bool = False
+    is_active: bool
+    last_status_code: int | None = None
+    last_delivery_status: str | None = None
+    last_error: str | None = None
+    last_dispatched_at: datetime | None = None
+    created_at: datetime
+
+
+class WebhookTestResponse(BaseModel):
+    """Result of dispatching a live test ping."""
+
+    success: bool
+    status_code: int | None = None
+    latency_ms: int = 0
+    message: str

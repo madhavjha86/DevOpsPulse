@@ -26,6 +26,10 @@ from app.models.organization import (
     OrganizationRole,
     OrganizationType,
 )
+from app.models.organization_webhook import (
+    OrganizationWebhook,
+    WebhookTargetType,
+)
 
 __all__ = [
     "User",
@@ -60,4 +64,6 @@ __all__ = [
     "OrganizationInvitation",
     "OrganizationRole",
     "OrganizationType",
+    "OrganizationWebhook",
+    "WebhookTargetType",
 ]

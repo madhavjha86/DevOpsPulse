@@ -26,6 +26,12 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  Bell,
+  Send,
+  Radio,
+  Globe,
+  Activity,
+  Check,
 } from 'lucide-react';
 import { useOrganization } from '@/context/OrganizationContext';
 import { useAuth } from '@/context/AuthContext';
@@ -35,6 +41,8 @@ import type {
   OrganizationInvitation,
   OrganizationRoleType,
   AuditLogEntry,
+  OrganizationWebhook,
+  WebhookTargetType,
 } from '@/types';
 
 export const OrganizationSettingsPage: React.FC = () => {
@@ -133,6 +141,114 @@ export const OrganizationSettingsPage: React.FC = () => {
       setError('Failed to export audit logs');
     } finally {
       setIsExportingCsv(false);
+    }
+  };
+
+  // Webhook Alert Channels state
+  const [webhooks, setWebhooks] = useState<OrganizationWebhook[]>([]);
+  const [isWebhooksLoading, setIsWebhooksLoading] = useState(false);
+  const [isAddWebhookModalOpen, setIsAddWebhookModalOpen] = useState(false);
+  const [webhookTestingId, setWebhookTestingId] = useState<number | null>(null);
+  const [testResultFeedback, setTestResultFeedback] = useState<{
+    id: number;
+    message: string;
+    success: boolean;
+  } | null>(null);
+
+  // New webhook form
+  const [newWebhookName, setNewWebhookName] = useState('');
+  const [newWebhookTarget, setNewWebhookTarget] = useState<WebhookTargetType>('SLACK');
+  const [newWebhookUrl, setNewWebhookUrl] = useState('');
+  const [newWebhookSecret, setNewWebhookSecret] = useState('');
+  const [selectedEvents, setSelectedEvents] = useState<string[]>([
+    'incident.created',
+    'incident.resolved',
+    'incident.critical',
+  ]);
+  const [isCreatingWebhook, setIsCreatingWebhook] = useState(false);
+  const [webhookFormError, setWebhookFormError] = useState<string | null>(null);
+
+  const loadWebhooks = useCallback(async () => {
+    if (!activeOrg || !canViewAuditLogs) return;
+    try {
+      setIsWebhooksLoading(true);
+      const data = await organizationService.listWebhooks(activeOrg.id);
+      setWebhooks(data);
+    } catch {
+      // Gracefully handle if webhooks fail
+    } finally {
+      setIsWebhooksLoading(false);
+    }
+  }, [activeOrg, canViewAuditLogs]);
+
+  useEffect(() => {
+    void loadWebhooks();
+  }, [loadWebhooks]);
+
+  const handleCreateWebhook = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeOrg) return;
+    try {
+      setIsCreatingWebhook(true);
+      setWebhookFormError(null);
+      await organizationService.createWebhook(activeOrg.id, {
+        name: newWebhookName,
+        target_type: newWebhookTarget,
+        url: newWebhookUrl,
+        events: selectedEvents,
+        secret: newWebhookSecret || undefined,
+      });
+      setIsAddWebhookModalOpen(false);
+      setNewWebhookName('');
+      setNewWebhookUrl('');
+      setNewWebhookSecret('');
+      setSelectedEvents(['incident.created', 'incident.resolved', 'incident.critical']);
+      await loadWebhooks();
+    } catch (err: unknown) {
+      const msg =
+        err &&
+        typeof err === 'object' &&
+        'response' in err &&
+        (err as { response?: { data?: { detail?: string } } }).response?.data?.detail;
+      setWebhookFormError(
+        typeof msg === 'string' ? msg : 'Failed to register webhook channel'
+      );
+    } finally {
+      setIsCreatingWebhook(false);
+    }
+  };
+
+  const handleTestWebhook = async (webhookId: number) => {
+    if (!activeOrg) return;
+    try {
+      setWebhookTestingId(webhookId);
+      const res = await organizationService.testWebhook(activeOrg.id, webhookId);
+      setTestResultFeedback({
+        id: webhookId,
+        message: res.message,
+        success: res.success,
+      });
+      await loadWebhooks();
+      setTimeout(() => setTestResultFeedback(null), 6000);
+    } catch {
+      setTestResultFeedback({
+        id: webhookId,
+        message: 'Network error sending test ping',
+        success: false,
+      });
+    } finally {
+      setWebhookTestingId(null);
+    }
+  };
+
+  const handleDeleteWebhook = async (webhookId: number, name: string) => {
+    if (!activeOrg || !window.confirm(`Are you sure you want to delete alert webhook "${name}"?`))
+      return;
+    try {
+      await organizationService.deleteWebhook(activeOrg.id, webhookId);
+      await loadWebhooks();
+    } catch {
+      setError('Failed to delete webhook');
     }
   };
 
@@ -754,6 +870,262 @@ export const OrganizationSettingsPage: React.FC = () => {
         </div>
       )}
 
+      {/* Alert Channels & Outbound Webhooks */}
+      {canViewAuditLogs && (
+        <div className="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
+          <div className="border-b border-slate-100 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
+                <Bell className="h-4 w-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-dark-100 flex items-center gap-2">
+                  <span>Alert Channels & Outbound Webhooks</span>
+                  <span className="rounded-full bg-purple-50 px-2 py-0.5 text-[10px] font-bold text-purple-700 border border-purple-200">
+                    {webhooks.length} Configured
+                  </span>
+                </h2>
+                <p className="text-[11px] text-dark-400">
+                  Deliver instant alerts to Slack, Discord, Microsoft Teams, or custom HTTP endpoints on critical incidents
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setWebhookFormError(null);
+                setNewWebhookName('');
+                setNewWebhookUrl('');
+                setNewWebhookSecret('');
+                setIsAddWebhookModalOpen(true);
+              }}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-purple-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-purple-700 shadow-sm transition-all"
+            >
+              <Send className="h-3.5 w-3.5" />
+              Add Alert Channel
+            </button>
+          </div>
+
+          {/* Test Result Toast/Banner */}
+          {testResultFeedback && (
+            <div
+              className={`mx-6 mt-4 p-3 rounded-xl border text-xs font-semibold flex items-center justify-between gap-2 ${
+                testResultFeedback.success
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-rose-50 border-rose-200 text-rose-800'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                {testResultFeedback.success ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
+                )}
+                <span>{testResultFeedback.message}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTestResultFeedback(null)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
+          {isWebhooksLoading ? (
+            <div className="p-8 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin text-purple-600" />
+              Loading configured channels...
+            </div>
+          ) : webhooks.length === 0 ? (
+            <div className="p-8 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-50 text-purple-600 mb-3">
+                <Bell className="h-6 w-6" />
+              </div>
+              <h3 className="text-xs font-bold text-dark-100">No alert webhooks configured</h3>
+              <p className="text-[11px] text-dark-400 max-w-sm mx-auto mt-1 mb-4">
+                Connect your engineering team's Slack, Discord, or Microsoft Teams channels to receive instant notifications when critical incidents occur.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewWebhookTarget('SLACK');
+                    setNewWebhookName('#devops-alerts');
+                    setNewWebhookUrl('');
+                    setIsAddWebhookModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <span className="font-bold text-[#4A154B]">#</span> Slack Channel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewWebhookTarget('DISCORD');
+                    setNewWebhookName('Discord Alerts');
+                    setNewWebhookUrl('');
+                    setIsAddWebhookModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <Radio className="h-3.5 w-3.5 text-[#5865F2]" /> Discord Server
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewWebhookTarget('TEAMS');
+                    setNewWebhookName('MS Teams SRE');
+                    setNewWebhookUrl('');
+                    setIsAddWebhookModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <Users className="h-3.5 w-3.5 text-[#6264A7]" /> MS Teams
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewWebhookTarget('GENERIC');
+                    setNewWebhookName('Custom HTTPS Webhook');
+                    setNewWebhookUrl('');
+                    setIsAddWebhookModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <Globe className="h-3.5 w-3.5 text-purple-600" /> Custom Webhook
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-dark-400 border-b border-slate-100">
+                  <tr>
+                    <th className="px-6 py-3.5">Target & Channel</th>
+                    <th className="px-6 py-3.5">Endpoint URL</th>
+                    <th className="px-6 py-3.5">Events</th>
+                    <th className="px-6 py-3.5">Last Delivery</th>
+                    <th className="px-6 py-3.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {webhooks.map((wh) => (
+                    <tr key={wh.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-3.5 font-medium text-dark-100">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`flex h-6 w-6 items-center justify-center rounded-lg text-[11px] font-bold ${
+                              wh.target_type === 'SLACK'
+                                ? 'bg-[#4A154B]/10 text-[#4A154B]'
+                                : wh.target_type === 'DISCORD'
+                                ? 'bg-[#5865F2]/10 text-[#5865F2]'
+                                : wh.target_type === 'TEAMS'
+                                ? 'bg-[#6264A7]/10 text-[#6264A7]'
+                                : 'bg-purple-100 text-purple-700'
+                            }`}
+                          >
+                            {wh.target_type === 'SLACK'
+                              ? '#'
+                              : wh.target_type === 'DISCORD'
+                              ? 'D'
+                              : wh.target_type === 'TEAMS'
+                              ? 'T'
+                              : 'W'}
+                          </span>
+                          <div>
+                            <div className="font-bold text-dark-100">{wh.name}</div>
+                            <div className="text-[10px] text-dark-400 uppercase tracking-wider font-semibold">
+                              {wh.target_type}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-3.5 font-mono text-[11px] text-dark-300">
+                        <span title={wh.url}>
+                          {wh.url.length > 40 ? `${wh.url.slice(0, 32)}...${wh.url.slice(-8)}` : wh.url}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3.5">
+                        <div className="flex flex-wrap gap-1">
+                          {wh.events.map((ev) => (
+                            <span
+                              key={ev}
+                              className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 border border-slate-200"
+                            >
+                              {ev}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-6 py-3.5">
+                        <div className="flex items-center gap-1.5">
+                          {wh.last_delivery_status === 'SUCCESS' ? (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
+                              <Check className="h-3 w-3" />
+                              {wh.last_status_code ? `HTTP ${wh.last_status_code}` : 'Delivered'}
+                            </span>
+                          ) : wh.last_delivery_status === 'FAILED' ? (
+                            <span
+                              className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700 border border-rose-200"
+                              title={wh.last_error || 'Delivery failed'}
+                            >
+                              <AlertCircle className="h-3 w-3" />
+                              Failed
+                            </span>
+                          ) : (
+                            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                              Untested
+                            </span>
+                          )}
+                          {wh.last_dispatched_at && (
+                            <span className="text-[10px] text-dark-400">
+                              {new Date(wh.last_dispatched_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void handleTestWebhook(wh.id);
+                            }}
+                            disabled={webhookTestingId === wh.id}
+                            className="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1 text-[11px] font-semibold text-purple-700 hover:bg-purple-100 transition-colors disabled:opacity-50"
+                            title="Send immediate test ping"
+                          >
+                            {webhookTestingId === wh.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Activity className="h-3 w-3" />
+                            )}
+                            Test Ping
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void handleDeleteWebhook(wh.id, wh.name);
+                            }}
+                            className="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50 transition-colors"
+                            title="Delete Webhook"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Security & Compliance Audit Trail */}
       {canViewAuditLogs && (
         <div className="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
@@ -1141,6 +1513,253 @@ export const OrganizationSettingsPage: React.FC = () => {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Add Alert Channel Modal */}
+      {isAddWebhookModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
+                  <Bell className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-dark-100">Add Alert Channel</h3>
+                  <p className="text-[11px] text-dark-400">
+                    Connect real-time notifications to your team chat or incident response
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddWebhookModalOpen(false)}
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {webhookFormError && (
+              <div className="mt-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{webhookFormError}</span>
+              </div>
+            )}
+
+            <form
+              onSubmit={(e) => {
+                void handleCreateWebhook(e);
+              }}
+              className="mt-4 space-y-4"
+            >
+              <div>
+                <span className="block text-xs font-semibold text-dark-200 mb-1.5">
+                  Platform Preset
+                </span>
+                <div className="grid grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewWebhookTarget('SLACK');
+                      if (!newWebhookName || newWebhookName.includes('Discord') || newWebhookName.includes('Teams')) {
+                        setNewWebhookName('#devops-alerts');
+                      }
+                    }}
+                    className={`flex flex-col items-center justify-center p-2 rounded-xl border text-xs font-bold transition-all ${
+                      newWebhookTarget === 'SLACK'
+                        ? 'border-purple-600 bg-purple-50 text-purple-700 ring-2 ring-purple-600/20'
+                        : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <span className="text-sm font-extrabold text-[#4A154B]">#</span>
+                    <span className="text-[11px] mt-0.5">Slack</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewWebhookTarget('DISCORD');
+                      if (!newWebhookName || newWebhookName.includes('#') || newWebhookName.includes('Teams')) {
+                        setNewWebhookName('Discord Alerts');
+                      }
+                    }}
+                    className={`flex flex-col items-center justify-center p-2 rounded-xl border text-xs font-bold transition-all ${
+                      newWebhookTarget === 'DISCORD'
+                        ? 'border-purple-600 bg-purple-50 text-purple-700 ring-2 ring-purple-600/20'
+                        : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <Radio className="h-4 w-4 text-[#5865F2]" />
+                    <span className="text-[11px] mt-0.5">Discord</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewWebhookTarget('TEAMS');
+                      if (!newWebhookName || newWebhookName.includes('#') || newWebhookName.includes('Discord')) {
+                        setNewWebhookName('MS Teams SRE');
+                      }
+                    }}
+                    className={`flex flex-col items-center justify-center p-2 rounded-xl border text-xs font-bold transition-all ${
+                      newWebhookTarget === 'TEAMS'
+                        ? 'border-purple-600 bg-purple-50 text-purple-700 ring-2 ring-purple-600/20'
+                        : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <Users className="h-4 w-4 text-[#6264A7]" />
+                    <span className="text-[11px] mt-0.5">Teams</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewWebhookTarget('GENERIC');
+                      if (!newWebhookName || newWebhookName.includes('#')) {
+                        setNewWebhookName('Custom Webhook');
+                      }
+                    }}
+                    className={`flex flex-col items-center justify-center p-2 rounded-xl border text-xs font-bold transition-all ${
+                      newWebhookTarget === 'GENERIC'
+                        ? 'border-purple-600 bg-purple-50 text-purple-700 ring-2 ring-purple-600/20'
+                        : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <Globe className="h-4 w-4 text-purple-600" />
+                    <span className="text-[11px] mt-0.5">Custom</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="webhook-name-input" className="block text-xs font-semibold text-dark-200 mb-1.5">
+                  Channel Name *
+                </label>
+                <input
+                  id="webhook-name-input"
+                  type="text"
+                  required
+                  value={newWebhookName}
+                  onChange={(e) => setNewWebhookName(e.target.value)}
+                  placeholder="e.g. #incident-war-room"
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-dark-100 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="webhook-url-input" className="block text-xs font-semibold text-dark-200 mb-1.5">
+                  Webhook Endpoint URL *
+                </label>
+                <input
+                  id="webhook-url-input"
+                  type="url"
+                  required
+                  value={newWebhookUrl}
+                  onChange={(e) => setNewWebhookUrl(e.target.value)}
+                  placeholder={
+                    newWebhookTarget === 'SLACK'
+                      ? 'https://hooks.slack.com/services/T.../B.../...'
+                      : newWebhookTarget === 'DISCORD'
+                      ? 'https://discord.com/api/webhooks/...'
+                      : newWebhookTarget === 'TEAMS'
+                      ? 'https://outlook.office.com/webhook/...'
+                      : 'https://api.yourdomain.com/webhooks/alerts'
+                  }
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs font-mono text-dark-100 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                />
+              </div>
+
+              <div>
+                <span className="block text-xs font-semibold text-dark-200 mb-1.5">
+                  Subscribed Alert Events
+                </span>
+                <div className="space-y-2 rounded-xl bg-slate-50 p-3 border border-slate-100">
+                  <label htmlFor="event-incident-created" className="flex items-center gap-2 cursor-pointer text-xs font-medium text-dark-200">
+                    <input
+                      id="event-incident-created"
+                      type="checkbox"
+                      checked={selectedEvents.includes('incident.created')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedEvents([...selectedEvents, 'incident.created']);
+                        } else {
+                          setSelectedEvents(selectedEvents.filter((ev) => ev !== 'incident.created'));
+                        }
+                      }}
+                      className="rounded text-purple-600 focus:ring-purple-500"
+                    />
+                    <span>Incident Created (Triggers on new incident reports)</span>
+                  </label>
+                  <label htmlFor="event-incident-critical" className="flex items-center gap-2 cursor-pointer text-xs font-medium text-dark-200">
+                    <input
+                      id="event-incident-critical"
+                      type="checkbox"
+                      checked={selectedEvents.includes('incident.critical')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedEvents([...selectedEvents, 'incident.critical']);
+                        } else {
+                          setSelectedEvents(selectedEvents.filter((ev) => ev !== 'incident.critical'));
+                        }
+                      }}
+                      className="rounded text-purple-600 focus:ring-purple-500"
+                    />
+                    <span>Critical Outage (High-priority alert for P1 / CRITICAL events)</span>
+                  </label>
+                  <label htmlFor="event-incident-resolved" className="flex items-center gap-2 cursor-pointer text-xs font-medium text-dark-200">
+                    <input
+                      id="event-incident-resolved"
+                      type="checkbox"
+                      checked={selectedEvents.includes('incident.resolved')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedEvents([...selectedEvents, 'incident.resolved']);
+                        } else {
+                          setSelectedEvents(selectedEvents.filter((ev) => ev !== 'incident.resolved'));
+                        }
+                      }}
+                      className="rounded text-purple-600 focus:ring-purple-500"
+                    />
+                    <span>Incident Resolved (Notifies team when mitigation completes)</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="webhook-secret-input" className="block text-xs font-semibold text-dark-200 mb-1.5">
+                  HMAC Secret Token (Optional)
+                </label>
+                <input
+                  id="webhook-secret-input"
+                  type="password"
+                  value={newWebhookSecret}
+                  onChange={(e) => setNewWebhookSecret(e.target.value)}
+                  placeholder="Optional shared secret for SHA-256 signatures"
+                  className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-dark-100 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                />
+                <p className="mt-1 text-[11px] text-slate-400">
+                  If set, requests will include an <code>X-DevOpsPulse-Signature</code> header.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAddWebhookModalOpen(false)}
+                  className="rounded-xl px-4 py-2 text-xs font-medium text-dark-300 hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingWebhook || !newWebhookName.trim() || !newWebhookUrl.trim()}
+                  className="flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-2 text-xs font-bold text-white hover:bg-purple-700 disabled:opacity-50 transition-all shadow-md shadow-purple-500/25"
+                >
+                  {isCreatingWebhook && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  Register Alert Channel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

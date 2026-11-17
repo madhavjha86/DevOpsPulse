@@ -12,6 +12,7 @@ from app.db.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.user import User
+    from app.models.organization_webhook import OrganizationWebhook
 
 
 class OrganizationType(str, Enum):
@@ -59,6 +60,11 @@ class Organization(Base, TimestampMixin):
     )
     invitations: Mapped[list["OrganizationInvitation"]] = relationship(
         "OrganizationInvitation",
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
+    webhooks: Mapped[list["OrganizationWebhook"]] = relationship(
+        "OrganizationWebhook",
         back_populates="organization",
         cascade="all, delete-orphan",
     )

@@ -26,9 +26,13 @@ from app.schemas.organization import (
     OrganizationUpdate,
     PaginatedAuditLogsResponse,
     TenantContextInfo,
+    WebhookCreateRequest,
+    WebhookResponse,
+    WebhookTestResponse,
 )
 from app.services.audit_service import AuditService
 from app.services.organization_service import OrganizationService
+from app.services.webhook_dispatcher import WebhookDispatcher
 
 router = APIRouter(prefix="/organizations", tags=["Multi-Tenant Organizations"])
 
@@ -338,3 +342,142 @@ async def export_organization_audit_logs(
             "Content-Disposition": f'attachment; filename="devopspulse_audit_logs_org_{org_id}.csv"'
         },
     )
+
+
+@router.get(
+    "/{org_id}/webhooks",
+    response_model=list[WebhookResponse],
+    summary="List outbound alert webhooks",
+)
+async def list_organization_webhooks(
+    org_id: int,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[WebhookResponse]:
+    """List configured outbound webhooks for Slack, Teams, Discord, and alerting."""
+    await OrganizationService.require_org_security_or_admin(db, current_user, org_id)
+    webhooks = await WebhookDispatcher.list_webhooks(db, org_id)
+    return [
+        WebhookResponse(
+            id=w.id,
+            organization_id=w.organization_id,
+            name=w.name,
+            target_type=w.target_type,
+            url=w.url,
+            events=[e.strip() for e in w.events.split(",") if e.strip()],
+            has_secret=bool(w.secret),
+            is_active=w.is_active,
+            last_status_code=w.last_status_code,
+            last_delivery_status=w.last_delivery_status,
+            last_error=w.last_error,
+            last_dispatched_at=w.last_dispatched_at,
+            created_at=w.created_at,
+        )
+        for w in webhooks
+    ]
+
+
+@router.post(
+    "/{org_id}/webhooks",
+    response_model=WebhookResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create outbound alert webhook",
+)
+async def create_organization_webhook(
+    org_id: int,
+    payload: WebhookCreateRequest,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> WebhookResponse:
+    """Register a new outbound notification channel for Slack, Discord, Teams, or Custom Webhooks."""
+    await OrganizationService.require_org_security_or_admin(db, current_user, org_id)
+    webhook = await WebhookDispatcher.create_webhook(
+        db=db,
+        organization_id=org_id,
+        name=payload.name,
+        target_type=payload.target_type,
+        url=payload.url,
+        events=payload.events,
+        secret=payload.secret,
+    )
+    # Log audit action
+    await AuditService.log_action(
+        db=db,
+        action="webhook.created",
+        organization_id=org_id,
+        user_id=current_user.id,
+        resource_type="webhook",
+        resource_id=webhook.id,
+        details={
+            "name": webhook.name,
+            "target_type": webhook.target_type,
+            "events": webhook.events,
+        },
+    )
+    return WebhookResponse(
+        id=webhook.id,
+        organization_id=webhook.organization_id,
+        name=webhook.name,
+        target_type=webhook.target_type,
+        url=webhook.url,
+        events=[e.strip() for e in webhook.events.split(",") if e.strip()],
+        has_secret=bool(webhook.secret),
+        is_active=webhook.is_active,
+        last_status_code=webhook.last_status_code,
+        last_delivery_status=webhook.last_delivery_status,
+        last_error=webhook.last_error,
+        last_dispatched_at=webhook.last_dispatched_at,
+        created_at=webhook.created_at,
+    )
+
+
+@router.delete(
+    "/{org_id}/webhooks/{webhook_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete outbound alert webhook",
+)
+async def delete_organization_webhook(
+    org_id: int,
+    webhook_id: int,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> None:
+    """Remove a configured outbound webhook."""
+    await OrganizationService.require_org_security_or_admin(db, current_user, org_id)
+    deleted = await WebhookDispatcher.delete_webhook(db, org_id, webhook_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Webhook {webhook_id} not found in this organization.",
+        )
+    await AuditService.log_action(
+        db=db,
+        action="webhook.deleted",
+        organization_id=org_id,
+        user_id=current_user.id,
+        resource_type="webhook",
+        resource_id=webhook_id,
+        details={"webhook_id": webhook_id},
+    )
+
+
+@router.post(
+    "/{org_id}/webhooks/{webhook_id}/test",
+    response_model=WebhookTestResponse,
+    summary="Send test ping to webhook",
+)
+async def test_organization_webhook(
+    org_id: int,
+    webhook_id: int,
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> WebhookTestResponse:
+    """Dispatch an immediate verification test alert to the webhook destination and report response status & latency."""
+    await OrganizationService.require_org_security_or_admin(db, current_user, org_id)
+    res = await WebhookDispatcher.send_test_ping(db, org_id, webhook_id)
+    if not res.get("status_code") and res.get("message") == "Webhook not found":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Webhook {webhook_id} not found.",
+        )
+    return WebhookTestResponse(**res)

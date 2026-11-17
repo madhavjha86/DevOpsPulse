@@ -23,6 +23,7 @@ from app.schemas.incident import (
     IncidentUpdate,
 )
 from app.services.audit_service import AuditService
+from app.services.webhook_dispatcher import WebhookDispatcher
 
 
 class IncidentService:
@@ -110,6 +111,36 @@ class IncidentService:
                     "priority": incident.priority,
                 },
             )
+            # Dispatch outbound alert to Slack/Teams/Discord/Webhooks
+            await WebhookDispatcher.dispatch_event(
+                db=db,
+                organization_id=organization_id,
+                event_type="incident.created",
+                title=f"Incident Alert [{incident.priority}]: {incident.title}",
+                details={
+                    "incident_id": incident.id,
+                    "title": incident.title,
+                    "severity": incident.severity,
+                    "service": incident.service,
+                    "environment": incident.environment,
+                    "priority": incident.priority,
+                    "description": incident.description,
+                },
+            )
+            if incident.severity == "CRITICAL":
+                await WebhookDispatcher.dispatch_event(
+                    db=db,
+                    organization_id=organization_id,
+                    event_type="incident.critical",
+                    title=f"🚨 CRITICAL INCIDENT: {incident.title}",
+                    details={
+                        "incident_id": incident.id,
+                        "title": incident.title,
+                        "service": incident.service,
+                        "environment": incident.environment,
+                        "description": incident.description,
+                    },
+                )
 
         await db.commit()
         await db.refresh(incident)
@@ -280,6 +311,22 @@ class IncidentService:
                     "resolution_notes": payload.resolution_notes,
                 },
             )
+            if payload.status == "RESOLVED":
+                await WebhookDispatcher.dispatch_event(
+                    db=db,
+                    organization_id=organization_id,
+                    event_type="incident.resolved",
+                    title=f"✅ Incident Resolved: {incident.title}",
+                    details={
+                        "incident_id": incident.id,
+                        "title": incident.title,
+                        "service": incident.service,
+                        "environment": incident.environment,
+                        "previous_status": old_status,
+                        "new_status": payload.status,
+                        "resolution_notes": payload.resolution_notes,
+                    },
+                )
 
         await db.commit()
         return await cls.get_incident(db, user_id, incident_id, organization_id=organization_id)

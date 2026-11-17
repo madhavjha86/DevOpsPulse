@@ -311,3 +311,36 @@ export interface IncidentPostMortem {
   lessons_learned: string[];
   markdown_report: string;
 }
+
+export type WebhookTargetType = 'SLACK' | 'DISCORD' | 'TEAMS' | 'GENERIC';
+
+export interface OrganizationWebhook {
+  id: number;
+  organization_id: number;
+  name: string;
+  target_type: WebhookTargetType;
+  url: string;
+  events: string[];
+  has_secret: boolean;
+  is_active: boolean;
+  last_status_code?: number | null;
+  last_delivery_status?: string | null;
+  last_error?: string | null;
+  last_dispatched_at?: string | null;
+  created_at: string;
+}
+
+export interface CreateWebhookPayload {
+  name: string;
+  target_type: WebhookTargetType;
+  url: string;
+  events: string[];
+  secret?: string;
+}
+
+export interface WebhookTestResult {
+  success: boolean;
+  status_code?: number | null;
+  latency_ms: number;
+  message: string;
+}
