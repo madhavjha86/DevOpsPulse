@@ -173,6 +173,15 @@ async def require_tenant_security(
     return tenant
 
 
+async def require_tenant_security_or_developer(
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
+) -> TenantContext:
+    """Allow Security Engineer, Developer, DevOps, or Admin permissions."""
+    if not (tenant.is_security or tenant.is_developer):
+        raise ForbiddenException(detail="Security Engineer, Developer, or Administrator permissions required.")
+    return tenant
+
+
 async def require_tenant_writer(
     tenant: Annotated[TenantContext, Depends(get_tenant_context)],
 ) -> TenantContext:

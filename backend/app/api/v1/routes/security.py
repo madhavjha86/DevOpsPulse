@@ -10,6 +10,7 @@ from app.api.deps import (
     get_tenant_context,
     require_tenant_developer,
     require_tenant_security,
+    require_tenant_security_or_developer,
 )
 from app.schemas.security_hub import (
     SbomDocumentResponse,
@@ -56,7 +57,7 @@ async def get_security_overview(
 )
 async def trigger_security_scan(
     payload: SecurityScanCreate,
-    tenant: Annotated[TenantContext, Depends(require_tenant_developer)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_security_or_developer)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> SecurityScanResponse:
     """Run an on-demand SAST, SCA, Secret, Container, or IaC security scan."""
@@ -148,7 +149,7 @@ async def list_security_findings(
 async def remediate_security_finding(
     finding_id: int,
     payload: SecurityFindingRemediate,
-    tenant: Annotated[TenantContext, Depends(require_tenant_developer)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_security_or_developer)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> SecurityFindingResponse:
     """Mark finding as FIXED, FALSE_POSITIVE, or SUPPRESSED."""
@@ -179,7 +180,7 @@ async def remediate_security_finding(
 )
 async def generate_sbom(
     payload: SbomGenerateRequest,
-    tenant: Annotated[TenantContext, Depends(require_tenant_developer)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_security_or_developer)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> SbomDocumentResponse:
     """Analyze dependency inventory and generate CycloneDX 1.5 or SPDX 2.3 SBOM."""
@@ -254,7 +255,7 @@ async def export_raw_sbom(
     summary="Trigger immediate security audit",
 )
 async def trigger_scan_legacy(
-    tenant: Annotated[TenantContext, Depends(require_tenant_developer)],
+    tenant: Annotated[TenantContext, Depends(require_tenant_security_or_developer)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, str]:
     """Trigger an on-demand vulnerability and secret audit across all repositories."""
