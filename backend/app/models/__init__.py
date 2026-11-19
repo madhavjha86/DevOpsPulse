@@ -36,6 +36,11 @@ from app.models.security_scan import (
     SbomDocument,
     SbomPackage,
 )
+from app.models.sre_reliability import (
+    ServiceLevelObjective,
+    OnCallSchedule,
+    ObservabilityAlertRule,
+)
 
 __all__ = [
     "User",
@@ -77,4 +82,7 @@ __all__ = [
     "SecurityFinding",
     "SbomDocument",
     "SbomPackage",
+    "ServiceLevelObjective",
+    "OnCallSchedule",
+    "ObservabilityAlertRule",
 ]
