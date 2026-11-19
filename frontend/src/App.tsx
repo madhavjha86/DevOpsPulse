@@ -28,11 +28,13 @@ import { OrganizationSettingsPage } from '@/pages/OrganizationSettingsPage';
 import { AcceptInvitationPage } from '@/pages/AcceptInvitationPage';
 import { DeveloperPortalPage } from '@/pages/DeveloperPortalPage';
 import { DisasterRecoveryPage } from '@/pages/DisasterRecoveryPage';
+import { LandingPage } from '@/pages/LandingPage';
 
 export const App: React.FC = () => {
   return (
     <Routes>
-      {/* Public Authentication routes */}
+      {/* Public Marketing & Authentication routes */}
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/auth/github/callback" element={<GitHubCallbackPage />} />
@@ -40,7 +42,6 @@ export const App: React.FC = () => {
 
       {/* Protected routes wrapped in Layout */}
       <Route element={<Layout />}>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/repositories" element={<RepositoriesPage />} />
         <Route path="/repositories/:id" element={<RepositoryDetailPage />} />
