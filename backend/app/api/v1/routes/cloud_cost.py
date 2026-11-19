@@ -15,6 +15,8 @@ from app.schemas.cloud_cost import (
     BudgetCreate,
     BudgetResponse,
     CloudCostOverviewResponse,
+    CostAnomalyItem,
+    CostAnomalyStatusUpdate,
     CostOptimizationItem,
 )
 from app.services.cloud_cost_service import CloudCostService
@@ -150,3 +152,73 @@ async def dismiss_optimization(
             detail=f"Optimization {optimization_id} not found.",
         )
     return {"ok": True}
+
+
+@router.get(
+    "/anomalies",
+    response_model=list[CostAnomalyItem],
+    summary="List detected cloud cost anomalies and spend spikes",
+)
+async def list_anomalies(
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    status: str | None = Query(default=None, description="Filter by status (ACTIVE, ACKNOWLEDGED, RESOLVED)"),
+) -> list[CostAnomalyItem]:
+    """Retrieve cost anomaly alerts and detected surge events."""
+    return await CloudCostService.list_anomalies(
+        db=db,
+        user_id=tenant.user.id,
+        status=status,
+        organization_id=tenant.organization_id,
+    )
+
+
+@router.post(
+    "/anomalies/{anomaly_id}/status",
+    response_model=CostAnomalyItem,
+    summary="Update status of a cost anomaly (acknowledge or resolve)",
+)
+@router.put(
+    "/anomalies/{anomaly_id}/status",
+    response_model=CostAnomalyItem,
+    summary="Update status of a cost anomaly (acknowledge or resolve)",
+)
+async def update_anomaly_status(
+    anomaly_id: int,
+    payload: CostAnomalyStatusUpdate,
+    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> CostAnomalyItem:
+    """Acknowledge or resolve an active cost surge alert."""
+    anomaly = await CloudCostService.update_anomaly_status(
+        db=db,
+        user_id=tenant.user.id,
+        anomaly_id=anomaly_id,
+        new_status=payload.status,
+        organization_id=tenant.organization_id,
+    )
+    if not anomaly:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Anomaly {anomaly_id} not found.",
+        )
+    return anomaly
+
+
+@router.post(
+    "/anomalies/simulate",
+    response_model=CostAnomalyItem,
+    status_code=status.HTTP_201_CREATED,
+    summary="Simulate a cost spike and dispatch alert to configured webhooks",
+)
+async def simulate_cost_spike(
+    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> CostAnomalyItem:
+    """Trigger a simulated compute spike and notify Slack/Discord/Teams alert channels."""
+    return await CloudCostService.simulate_cost_spike(
+        db=db,
+        user_id=tenant.user.id,
+        organization_id=tenant.organization_id,
+    )
+

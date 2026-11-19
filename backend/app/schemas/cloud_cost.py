@@ -1,6 +1,6 @@
 """Pydantic schemas for Cloud Cost Intelligence."""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -86,6 +86,31 @@ class CostOptimizationItem(BaseModel):
     created_at: datetime
 
 
+class CostAnomalyItem(BaseModel):
+    """Detected cloud spend anomaly or surge event."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    provider: str
+    service_name: str
+    anomaly_date: date
+    actual_amount: float
+    expected_amount: float
+    spike_percentage: float
+    severity: Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+    root_cause: str
+    status: Literal["ACTIVE", "ACKNOWLEDGED", "RESOLVED"]
+    created_at: datetime
+    resolved_at: datetime | None = None
+
+
+class CostAnomalyStatusUpdate(BaseModel):
+    """Payload to acknowledge or resolve an anomaly."""
+
+    status: Literal["ACKNOWLEDGED", "RESOLVED"]
+
+
 class CloudCostOverviewResponse(BaseModel):
     """High-level multi-cloud cost intelligence dashboard."""
 
@@ -99,4 +124,6 @@ class CloudCostOverviewResponse(BaseModel):
     active_budgets: list[BudgetResponse]
     total_potential_savings: float
     optimizations_count: int
+    anomalies: list[CostAnomalyItem] = []
+    active_anomalies_count: int = 0
     is_demo_mode: bool = False

@@ -53,6 +53,21 @@ export interface CostOptimization {
   created_at: string;
 }
 
+export interface CostAnomaly {
+  id: number;
+  provider: string;
+  service_name: string;
+  anomaly_date: string;
+  actual_amount: number;
+  expected_amount: number;
+  spike_percentage: number;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  root_cause: string;
+  status: 'ACTIVE' | 'ACKNOWLEDGED' | 'RESOLVED';
+  created_at: string;
+  resolved_at?: string | null;
+}
+
 export interface CloudCostOverview {
   total_monthly_spend: number;
   projected_month_end: number;
@@ -64,6 +79,8 @@ export interface CloudCostOverview {
   active_budgets: Budget[];
   total_potential_savings: number;
   optimizations_count: number;
+  anomalies?: CostAnomaly[];
+  active_anomalies_count?: number;
   is_demo_mode: boolean;
 }
 
@@ -112,5 +129,22 @@ export const cloudCostService = {
 
   dismissOptimization: async (id: number): Promise<void> => {
     await api.put(`/api/v1/cloud/cost/optimizations/${id}/dismiss`);
+  },
+
+  listAnomalies: async (status?: string): Promise<CostAnomaly[]> => {
+    const res = await api.get<CostAnomaly[]>('/api/v1/cloud/cost/anomalies', {
+      params: status ? { status } : {},
+    });
+    return res.data;
+  },
+
+  updateAnomalyStatus: async (id: number, status: 'ACKNOWLEDGED' | 'RESOLVED'): Promise<CostAnomaly> => {
+    const res = await api.post<CostAnomaly>(`/api/v1/cloud/cost/anomalies/${id}/status`, { status });
+    return res.data;
+  },
+
+  simulateSpike: async (): Promise<CostAnomaly> => {
+    const res = await api.post<CostAnomaly>('/api/v1/cloud/cost/anomalies/simulate');
+    return res.data;
   },
 };

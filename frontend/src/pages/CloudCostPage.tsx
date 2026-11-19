@@ -11,12 +11,17 @@ import {
   Check,
   X,
   Info,
+  AlertTriangle,
+  Zap,
+  CheckCircle2,
+  Bell,
 } from 'lucide-react';
 import {
   cloudCostService,
   CloudCostOverview,
   Budget,
   CostOptimization,
+  CostAnomaly,
 } from '@/services/cloudCost';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -26,8 +31,11 @@ export const CloudCostPage: React.FC = () => {
   const [overview, setOverview] = useState<CloudCostOverview | null>(null);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [optimizations, setOptimizations] = useState<CostOptimization[]>([]);
+  const [anomalies, setAnomalies] = useState<CostAnomaly[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<string>('ALL');
   const [error, setError] = useState<string | null>(null);
+  const [isSimulatingSpike, setIsSimulatingSpike] = useState<boolean>(false);
+  const [simulateToast, setSimulateToast] = useState<string | null>(null);
 
   // Budget Modal
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState<boolean>(false);
@@ -41,14 +49,16 @@ export const CloudCostPage: React.FC = () => {
   const fetchData = async () => {
     setError(null);
     try {
-      const [overviewData, budgetData, optData] = await Promise.all([
+      const [overviewData, budgetData, optData, anomalyData] = await Promise.all([
         cloudCostService.getOverview(selectedProvider),
         cloudCostService.listBudgets(),
         cloudCostService.listOptimizations('OPEN'),
+        cloudCostService.listAnomalies(),
       ]);
       setOverview(overviewData);
       setBudgets(budgetData);
       setOptimizations(optData);
+      setAnomalies(anomalyData);
     } catch {
       setError('Failed to load cloud cost intelligence data.');
     }
@@ -57,6 +67,33 @@ export const CloudCostPage: React.FC = () => {
   useEffect(() => {
     void fetchData();
   }, [selectedProvider]);
+
+  const handleSimulateSpike = async () => {
+    setIsSimulatingSpike(true);
+    setSimulateToast(null);
+    try {
+      const simulated = await cloudCostService.simulateSpike();
+      setAnomalies((prev) => [simulated, ...prev]);
+      setSimulateToast(
+        `⚡ Simulated compute cost surge (+${simulated.spike_percentage}% on ${simulated.service_name})! Alert dispatched to configured Slack / Discord / Webhook channels.`
+      );
+      setTimeout(() => setSimulateToast(null), 7000);
+      void fetchData();
+    } catch {
+      alert('Failed to simulate cost anomaly spike.');
+    } finally {
+      setIsSimulatingSpike(false);
+    }
+  };
+
+  const handleUpdateAnomalyStatus = async (id: number, status: 'ACKNOWLEDGED' | 'RESOLVED') => {
+    try {
+      const updated = await cloudCostService.updateAnomalyStatus(id, status);
+      setAnomalies((prev) => prev.map((a) => (a.id === id ? updated : a)));
+    } catch {
+      alert(`Failed to mark anomaly as ${status.toLowerCase()}.`);
+    }
+  };
 
   const handleCreateBudget = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -263,6 +300,162 @@ export const CloudCostPage: React.FC = () => {
             {budgets.filter((b) => b.status !== 'OK').length} near limit
           </div>
         </div>
+      </div>
+
+      {/* Toast message if simulation triggered */}
+      {simulateToast && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-900 shadow-sm animate-fade-in">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+            <span className="font-semibold">{simulateToast}</span>
+          </div>
+          <button
+            onClick={() => setSimulateToast(null)}
+            className="text-emerald-700 hover:text-emerald-900 p-1"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Cloud Cost Anomaly Detection & Live Spike Monitoring */}
+      <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 shadow-subtle space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900">
+                  Cloud Spend Anomalies & Cost Surges
+                </h3>
+                {anomalies.filter((a) => a.status === 'ACTIVE').length > 0 && (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-700 border border-rose-200 animate-pulse">
+                    <span className="h-1.5 w-1.5 rounded-full bg-rose-600" />
+                    {anomalies.filter((a) => a.status === 'ACTIVE').length} Active Spikes
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Automated ML anomaly detection flags sudden spend velocity spikes and dispatches webhook alerts
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              onClick={handleSimulateSpike}
+              disabled={isSimulatingSpike}
+              className="flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs shadow-sm"
+              title="Trigger a simulated compute spike to test outbound alerting"
+            >
+              <Zap className="h-3.5 w-3.5" />
+              <span>{isSimulatingSpike ? 'Simulating Spike...' : 'Simulate Cost Spike & Alert'}</span>
+            </Button>
+          </div>
+        </div>
+
+        {anomalies.length === 0 ? (
+          <div className="text-center py-6 text-xs text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            No cost anomalies detected. Daily cloud spend velocity is operating within baseline variance.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {anomalies.map((item) => {
+              const isActive = item.status === 'ACTIVE';
+              const isAck = item.status === 'ACKNOWLEDGED';
+              const isResolved = item.status === 'RESOLVED';
+              return (
+                <div
+                  key={item.id}
+                  className={`p-4 rounded-xl border transition-all flex flex-col md:flex-row md:items-center md:justify-between gap-4 ${
+                    isActive
+                      ? 'border-rose-200 bg-rose-50/30 shadow-sm'
+                      : isAck
+                      ? 'border-amber-200 bg-amber-50/20'
+                      : 'border-slate-200 bg-slate-50/40 opacity-75'
+                  }`}
+                >
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-bold font-mono text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                        {item.provider}
+                      </span>
+                      <span
+                        className={`text-[11px] font-bold px-2 py-0.5 rounded border ${
+                          item.severity === 'CRITICAL'
+                            ? 'bg-rose-100 text-rose-800 border-rose-300'
+                            : 'bg-amber-100 text-amber-800 border-amber-300'
+                        }`}
+                      >
+                        {item.severity}
+                      </span>
+                      <span className="text-xs font-bold text-rose-600 bg-white px-2 py-0.5 rounded border border-rose-200">
+                        +{item.spike_percentage.toFixed(1)}% Surge
+                      </span>
+                      <span className="text-[11px] font-semibold text-slate-500 font-mono">
+                        Detected: {item.anomaly_date}
+                      </span>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          isActive
+                            ? 'bg-rose-600 text-white'
+                            : isAck
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-emerald-600 text-white'
+                        }`}
+                      >
+                        {item.status}
+                      </span>
+                    </div>
+
+                    <h4 className="text-sm font-bold text-slate-900">{item.service_name}</h4>
+                    <p className="text-xs text-slate-600 font-medium">{item.root_cause}</p>
+
+                    <div className="flex items-center gap-4 text-xs font-semibold pt-1 text-slate-500">
+                      <span>
+                        Normal baseline: <strong className="text-slate-800">${item.expected_amount.toFixed(2)}/day</strong>
+                      </span>
+                      <span>
+                        Surged spend: <strong className="text-rose-600">${item.actual_amount.toFixed(2)}/day</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 md:border-l md:border-slate-200 md:pl-4">
+                    {isActive && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleUpdateAnomalyStatus(item.id, 'ACKNOWLEDGED')}
+                        className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs"
+                      >
+                        Acknowledge
+                      </Button>
+                    )}
+                    {!isResolved && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleUpdateAnomalyStatus(item.id, 'RESOLVED')}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                      >
+                        <Check className="h-3.5 w-3.5 mr-1" />
+                        <span>Resolve</span>
+                      </Button>
+                    )}
+                    {isResolved && (
+                      <span className="flex items-center gap-1 text-xs text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                        <Check className="h-3.5 w-3.5" />
+                        <span>Resolved</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Main Grid: Left Service Breakdown / Right Daily Trend */}

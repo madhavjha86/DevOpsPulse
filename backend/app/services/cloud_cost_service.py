@@ -5,12 +5,19 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.cloud_account import CloudAccount
-from app.models.cloud_cost import CloudBudget, CloudCostItem, CloudCostOptimization
+from app.models.cloud_cost import (
+    CloudBudget,
+    CloudCostAnomaly,
+    CloudCostItem,
+    CloudCostOptimization,
+)
 from app.models.notification import Notification
 from app.schemas.cloud_cost import (
     BudgetCreate,
     BudgetResponse,
     CloudCostOverviewResponse,
+    CostAnomalyItem,
+    CostAnomalyStatusUpdate,
     CostOptimizationItem,
     DailyCostPoint,
     ProviderCostStatus,
@@ -159,9 +166,13 @@ class CloudCostService:
         budgets_resp = await cls.list_budgets(db, user_id)
 
         # 5. Cost Optimizations
-        opts_resp = await cls.list_optimizations(db, user_id)
+        opts_resp = await cls.list_optimizations(db, user_id, organization_id=organization_id)
         open_opts = [o for o in opts_resp if o.status == "OPEN"]
         total_savings = round(sum(o.estimated_monthly_savings for o in open_opts), 2)
+
+        # 6. Cost Anomalies
+        anomalies_resp = await cls.list_anomalies(db, user_id, organization_id=organization_id)
+        active_anomalies = [a for a in anomalies_resp if a.status == "ACTIVE"]
 
         return CloudCostOverviewResponse(
             total_monthly_spend=monthly_spend,
@@ -174,6 +185,8 @@ class CloudCostService:
             active_budgets=budgets_resp,
             total_potential_savings=total_savings,
             optimizations_count=len(open_opts),
+            anomalies=anomalies_resp,
+            active_anomalies_count=len(active_anomalies),
             is_demo_mode=is_demo,
         )
 
@@ -358,6 +371,154 @@ class CloudCostService:
         )
 
     @classmethod
+    async def list_anomalies(
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        status: str | None = None,
+        organization_id: int | None = None,
+    ) -> list[CostAnomalyItem]:
+        """Fetch detected cloud cost anomalies filtered by status."""
+        q = select(CloudCostAnomaly)
+        if organization_id is not None:
+            q = q.where(CloudCostAnomaly.organization_id == organization_id)
+        else:
+            q = q.where(CloudCostAnomaly.user_id == user_id)
+        if status:
+            q = q.where(CloudCostAnomaly.status == status)
+        q = q.order_by(CloudCostAnomaly.anomaly_date.desc(), CloudCostAnomaly.spike_percentage.desc())
+        res = await db.execute(q)
+        items = res.scalars().all()
+        return [
+            CostAnomalyItem(
+                id=a.id,
+                provider=a.provider,
+                service_name=a.service_name,
+                anomaly_date=a.anomaly_date,
+                actual_amount=a.actual_amount,
+                expected_amount=a.expected_amount,
+                spike_percentage=a.spike_percentage,
+                severity=a.severity,  # type: ignore[arg-type]
+                root_cause=a.root_cause,
+                status=a.status,  # type: ignore[arg-type]
+                created_at=a.created_at,
+                resolved_at=a.resolved_at,
+            )
+            for a in items
+        ]
+
+    @classmethod
+    async def update_anomaly_status(
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        anomaly_id: int,
+        new_status: str,
+        organization_id: int | None = None,
+    ) -> CostAnomalyItem | None:
+        """Acknowledge or resolve an active cost anomaly."""
+        q = select(CloudCostAnomaly).where(CloudCostAnomaly.id == anomaly_id)
+        if organization_id is not None:
+            q = q.where(CloudCostAnomaly.organization_id == organization_id)
+        else:
+            q = q.where(CloudCostAnomaly.user_id == user_id)
+
+        res = await db.execute(q)
+        anomaly = res.scalar_one_or_none()
+        if not anomaly:
+            return None
+
+        anomaly.status = new_status
+        if new_status == "RESOLVED":
+            anomaly.resolved_at = datetime.now(timezone.utc)
+        await db.commit()
+        await db.refresh(anomaly)
+
+        return CostAnomalyItem(
+            id=anomaly.id,
+            provider=anomaly.provider,
+            service_name=anomaly.service_name,
+            anomaly_date=anomaly.anomaly_date,
+            actual_amount=anomaly.actual_amount,
+            expected_amount=anomaly.expected_amount,
+            spike_percentage=anomaly.spike_percentage,
+            severity=anomaly.severity,  # type: ignore[arg-type]
+            root_cause=anomaly.root_cause,
+            status=anomaly.status,  # type: ignore[arg-type]
+            created_at=anomaly.created_at,
+            resolved_at=anomaly.resolved_at,
+        )
+
+    @classmethod
+    async def simulate_cost_spike(
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        organization_id: int | None = None,
+    ) -> CostAnomalyItem:
+        """Simulate an unexpected cloud cost surge and dispatch an alert to configured webhooks."""
+        today = date.today()
+        expected = 42.50
+        actual = 168.20
+        spike_pct = round(((actual - expected) / expected) * 100.0, 1)
+
+        anomaly = CloudCostAnomaly(
+            user_id=user_id,
+            organization_id=organization_id,
+            provider="AWS",
+            service_name="Amazon Elastic Compute Cloud (EC2)",
+            anomaly_date=today,
+            actual_amount=actual,
+            expected_amount=expected,
+            spike_percentage=spike_pct,
+            severity="CRITICAL",
+            root_cause="Runaway compute: 14 on-demand m5.2xlarge instances launched in us-east-1 without auto-termination policy.",
+            status="ACTIVE",
+        )
+        db.add(anomaly)
+        await db.commit()
+        await db.refresh(anomaly)
+
+        # Dispatch outbound alert webhook if organization is set
+        if organization_id:
+            try:
+                from app.services.webhook_dispatcher import WebhookDispatcher
+                await WebhookDispatcher.dispatch_event(
+                    db=db,
+                    organization_id=organization_id,
+                    event_type="cost.anomaly_detected",
+                    title="🚨 Cloud Cost Spike Detected: AWS EC2 (+295.8% Surge)",
+                    details={
+                        "anomaly_id": anomaly.id,
+                        "provider": anomaly.provider,
+                        "service_name": anomaly.service_name,
+                        "spike_percentage": f"+{anomaly.spike_percentage}%",
+                        "actual_amount": f"${anomaly.actual_amount:.2f}",
+                        "expected_amount": f"${anomaly.expected_amount:.2f}",
+                        "severity": anomaly.severity,
+                        "root_cause": anomaly.root_cause,
+                        "anomaly_date": str(anomaly.anomaly_date),
+                    },
+                )
+            except Exception:
+                pass
+
+        return CostAnomalyItem(
+            id=anomaly.id,
+            provider=anomaly.provider,
+            service_name=anomaly.service_name,
+            anomaly_date=anomaly.anomaly_date,
+            actual_amount=anomaly.actual_amount,
+            expected_amount=anomaly.expected_amount,
+            spike_percentage=anomaly.spike_percentage,
+            severity=anomaly.severity,  # type: ignore[arg-type]
+            root_cause=anomaly.root_cause,
+            status=anomaly.status,  # type: ignore[arg-type]
+            created_at=anomaly.created_at,
+            resolved_at=anomaly.resolved_at,
+        )
+
+    @classmethod
     async def _seed_default_cost_data(cls, db: AsyncSession, user_id: int, organization_id: int | None = None) -> None:
         """Seed authentic multi-cloud cost records and optimization recommendations."""
         today = date.today()
@@ -477,6 +638,23 @@ class CloudCostService:
                 difficulty="EASY",
                 recommendation="120 GB SSD volume detached from terminated staging node has incurred storage charges for 45 days.",
                 status="OPEN",
+            )
+        )
+
+        # Seed initial cost anomaly
+        db.add(
+            CloudCostAnomaly(
+                user_id=user_id,
+                organization_id=organization_id,
+                provider="AWS",
+                service_name="Amazon Elastic Compute Cloud (EC2)",
+                anomaly_date=today,
+                actual_amount=154.50,
+                expected_amount=42.50,
+                spike_percentage=263.5,
+                severity="CRITICAL",
+                root_cause="Sudden +263% surge in EC2 compute charges detected. 12 spot instances were interrupted and replaced by on-demand m5.xlarge instances without savings plan coverage.",
+                status="ACTIVE",
             )
         )
 

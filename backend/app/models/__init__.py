@@ -17,7 +17,7 @@ from app.models.telemetry import TelemetryLog, TelemetrySpan
 from app.models.ai_copilot import AIConversation, AIMessage, AIRootCauseAnalysis
 from app.models.ai_code_intelligence import AIPullRequestReview, AIFailurePrediction
 from app.models.incident import Incident, IncidentTimelineEvent
-from app.models.cloud_cost import CloudBudget, CloudCostItem, CloudCostOptimization
+from app.models.cloud_cost import CloudBudget, CloudCostItem, CloudCostOptimization, CloudCostAnomaly
 from app.models.team_productivity import EngineeringTeam, TeamRepository
 from app.models.organization import (
     Organization,
@@ -57,6 +57,7 @@ __all__ = [
     "CloudBudget",
     "CloudCostItem",
     "CloudCostOptimization",
+    "CloudCostAnomaly",
     "EngineeringTeam",
     "TeamRepository",
     "Organization",

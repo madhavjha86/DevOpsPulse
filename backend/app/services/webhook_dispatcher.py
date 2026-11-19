@@ -283,7 +283,14 @@ class WebhookDispatcher:
         dispatched_count = 0
         for wh in webhooks:
             subscribed_events = [ev.strip() for ev in wh.events.split(",") if ev.strip()]
-            if event_type not in subscribed_events and "*" not in subscribed_events:
+            # Match exact event, wildcard, or map critical cost anomalies to incident.critical subscribers
+            matches_event = (
+                event_type in subscribed_events
+                or "*" in subscribed_events
+                or "all" in subscribed_events
+                or (event_type.startswith("cost.") and ("incident.critical" in subscribed_events or "cost.*" in subscribed_events))
+            )
+            if not matches_event:
                 continue
 
             try:

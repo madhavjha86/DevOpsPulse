@@ -121,3 +121,44 @@ class CloudCostOptimization(Base, TimestampMixin):
         Index("ix_cost_opt_category", "category"),
         Index("ix_cost_opt_status", "status"),
     )
+
+
+class CloudCostAnomaly(Base, TimestampMixin):
+    """Spike or unexpected surge in cloud resource spend."""
+
+    __tablename__ = "cloud_cost_anomalies"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    organization_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    cloud_account_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("cloud_accounts.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    provider: Mapped[str] = mapped_column(String(50), nullable=False, index=True)  # AWS, AZURE, GCP
+    service_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    anomaly_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    actual_amount: Mapped[float] = mapped_column(Float, nullable=False)
+    expected_amount: Mapped[float] = mapped_column(Float, nullable=False)
+    spike_percentage: Mapped[float] = mapped_column(Float, nullable=False)
+    severity: Mapped[str] = mapped_column(
+        String(50), default="HIGH", nullable=False
+    )  # LOW, MEDIUM, HIGH, CRITICAL
+    root_cause: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(50), default="ACTIVE", nullable=False
+    )  # ACTIVE, ACKNOWLEDGED, RESOLVED
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Relationships
+    user: Mapped["User"] = relationship("User")
+    cloud_account: Mapped["CloudAccount | None"] = relationship("CloudAccount")
+
+    __table_args__ = (
+        Index("ix_cost_anomaly_status", "status"),
+        Index("ix_cost_anomaly_provider", "provider"),
+    )
+
