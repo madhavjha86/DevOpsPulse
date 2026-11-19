@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -10,6 +10,11 @@ import {
   GitBranch,
   Star,
   GitFork,
+  Radio,
+  Clock,
+  PlayCircle,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import { repositoryService } from '@/services/repositories';
 import { workflowService } from '@/services/workflows';
@@ -30,12 +35,22 @@ export const RepositoryDetailPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('workflows');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [isAutoSyncing, setIsAutoSyncing] = useState<boolean>(false);
+  const [lastSyncedTime, setLastSyncedTime] = useState<Date>(new Date());
 
   // Tab data
   const [workflows, setWorkflows] = useState<WorkflowRun[]>([]);
   const [commits, setCommits] = useState<Commit[]>([]);
   const [prs, setPrs] = useState<PullRequest[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
+
+  // Check if any workflow run is currently running or queued
+  const hasActiveWorkflows = workflows.some(
+    (w) =>
+      w.status === 'in_progress' ||
+      w.status === 'queued' ||
+      (!w.conclusion && w.status !== 'completed')
+  );
 
   const fetchRepoData = async () => {
     if (!repoId) return;
@@ -56,6 +71,7 @@ export const RepositoryDetailPage: React.FC = () => {
       setCommits(cmRes.data || []);
       setPrs(prRes.data || []);
       setIssues(isRes.data || []);
+      setLastSyncedTime(new Date());
     } catch (err) {
       console.error('Failed to load repo detail', err);
     } finally {
@@ -63,9 +79,43 @@ export const RepositoryDetailPage: React.FC = () => {
     }
   };
 
+  // Background silent synchronization with GitHub API
+  const syncWorkflowsSilently = async () => {
+    if (!repoId) return;
+    setIsAutoSyncing(true);
+    try {
+      await workflowService.syncByRepository(repoId);
+      const { data } = await workflowService.getByRepository(repoId, 1);
+      if (data && data.workflow_runs) {
+        setWorkflows(data.workflow_runs);
+      }
+      setLastSyncedTime(new Date());
+    } catch (err) {
+      console.warn('Silent live-sync error:', err);
+    } finally {
+      setIsAutoSyncing(false);
+    }
+  };
+
   useEffect(() => {
     fetchRepoData();
+    // Trigger an immediate background sync on load so any new runs (#12, #13, #14) reflect right away
+    syncWorkflowsSilently();
   }, [repoId]);
+
+  // Real-time telemetry polling: 6 seconds if runs are in-progress; 18 seconds if viewing workflows tab
+  useEffect(() => {
+    if (!repoId) return;
+
+    const pollInterval = hasActiveWorkflows ? 6000 : activeTab === 'workflows' ? 18000 : null;
+    if (!pollInterval) return;
+
+    const timer = setInterval(() => {
+      syncWorkflowsSilently();
+    }, pollInterval);
+
+    return () => clearInterval(timer);
+  }, [repoId, hasActiveWorkflows, activeTab]);
 
   const handleManualSync = async () => {
     if (!repoId) return;
@@ -84,7 +134,7 @@ export const RepositoryDetailPage: React.FC = () => {
   if (isLoading && !repo) {
     return (
       <div className="py-24 flex justify-center">
-        <LoadingSpinner size="lg" message="Loading repository data..." />
+        <LoadingSpinner size="lg" message="Loading repository telemetry..." />
       </div>
     );
   }
@@ -103,16 +153,34 @@ export const RepositoryDetailPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Back Button & Top Action */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <button
           onClick={() => navigate('/repositories')}
-          className="flex items-center gap-2 text-xs font-semibold text-dark-400 hover:text-dark-100 transition-colors"
+          className="flex items-center gap-2 text-xs font-semibold text-dark-400 hover:text-dark-100 transition-colors w-fit"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Back to Repositories</span>
         </button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Live Telemetry Real-Time Indicator */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-emerald-200/90 bg-emerald-50/90 text-emerald-800 text-xs font-semibold shadow-2xs">
+            <span className="relative flex h-2 w-2">
+              {hasActiveWorkflows ? (
+                <>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </>
+              ) : (
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
+              )}
+            </span>
+            <span>{hasActiveWorkflows ? 'Live Sync Active (6s)' : 'Live Telemetry Active'}</span>
+            {isAutoSyncing && (
+              <RefreshCw className="h-3 w-3 animate-spin text-emerald-700 ml-1" />
+            )}
+          </div>
+
           <Button
             variant="secondary"
             size="sm"
@@ -190,6 +258,21 @@ export const RepositoryDetailPage: React.FC = () => {
       {/* Tab Contents */}
       {activeTab === 'workflows' && (
         <div className="rounded-2xl border border-[#E5E7EB] bg-white shadow-subtle overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-3.5 bg-slate-50/70 border-b border-[#E5E7EB] text-xs">
+            <div className="flex items-center gap-2 text-dark-300 font-semibold">
+              <Radio className="h-4 w-4 text-primary-600 animate-pulse" />
+              <span>CI/CD Pipeline Telemetry Stream</span>
+              {hasActiveWorkflows && (
+                <span className="ml-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-[10px] font-bold">
+                  Active Run In Progress
+                </span>
+              )}
+            </div>
+            <div className="text-dark-400 text-[11px] font-medium flex items-center gap-1.5">
+              <Clock className="h-3 w-3" />
+              <span>Synced {lastSyncedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+            </div>
+          </div>
           <Table<WorkflowRun>
             columns={[
               {
@@ -207,13 +290,36 @@ export const RepositoryDetailPage: React.FC = () => {
                 key: 'conclusion',
                 render: (r) => {
                   const state = r.conclusion || r.status;
-                  const variant =
-                    state === 'success'
-                      ? 'success'
-                      : state === 'failure'
-                      ? 'danger'
-                      : 'warning';
-                  return <Badge variant={variant}>{state}</Badge>;
+                  if (state === 'success') {
+                    return (
+                      <Badge variant="success" dot className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                        Success
+                      </Badge>
+                    );
+                  }
+                  if (state === 'failure') {
+                    return (
+                      <Badge variant="danger" dot className="bg-rose-50 text-rose-700 border-rose-200">
+                        Failure
+                      </Badge>
+                    );
+                  }
+                  if (state === 'in_progress') {
+                    return (
+                      <Badge variant="warning" className="flex items-center gap-1.5 bg-amber-50 text-amber-700 border-amber-200 animate-pulse font-bold">
+                        <RefreshCw className="h-3 w-3 animate-spin text-amber-600" />
+                        In Progress
+                      </Badge>
+                    );
+                  }
+                  if (state === 'queued') {
+                    return (
+                      <Badge variant="warning" className="bg-amber-50 text-amber-700 border-amber-200 font-medium">
+                        Queued
+                      </Badge>
+                    );
+                  }
+                  return <Badge variant="warning">{state}</Badge>;
                 },
               },
               {
@@ -226,20 +332,41 @@ export const RepositoryDetailPage: React.FC = () => {
               {
                 header: 'Duration',
                 key: 'duration_seconds',
-                render: (r) => (
-                  <span className="text-xs font-medium text-dark-400">
-                    {r.duration_seconds ? `${r.duration_seconds}s` : '—'}
-                  </span>
-                ),
+                render: (r) => {
+                  if (r.status === 'in_progress') {
+                    return (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-ping" />
+                        Running now...
+                      </span>
+                    );
+                  }
+                  return (
+                    <span className="text-xs font-medium text-dark-400">
+                      {r.duration_seconds ? `${r.duration_seconds}s` : '—'}
+                    </span>
+                  );
+                },
               },
               {
                 header: 'Completed',
                 key: 'completed_at',
-                render: (r) => (
-                  <span className="text-xs font-medium text-dark-400">
-                    {r.completed_at ? new Date(r.completed_at).toLocaleDateString() : '—'}
-                  </span>
-                ),
+                render: (r) => {
+                  if (r.status === 'in_progress') {
+                    return (
+                      <span className="text-xs font-medium text-amber-600 italic">
+                        In progress
+                      </span>
+                    );
+                  }
+                  return (
+                    <span className="text-xs font-medium text-dark-400">
+                      {r.completed_at
+                        ? `${new Date(r.completed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}, ${new Date(r.completed_at).toLocaleDateString()}`
+                        : '—'}
+                    </span>
+                  );
+                },
               },
             ]}
             data={workflows}

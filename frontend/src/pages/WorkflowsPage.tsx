@@ -23,6 +23,8 @@ export const WorkflowsPage: React.FC = () => {
   const [page, setPage] = useState<number>(1);
   const [filterConclusion, setFilterConclusion] = useState<string>('all');
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isAutoPolling, setIsAutoPolling] = useState<boolean>(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date>(new Date());
 
   // Dispatch modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,6 +34,14 @@ export const WorkflowsPage: React.FC = () => {
   const [isDispatching, setIsDispatching] = useState(false);
   const [dispatchSuccess, setDispatchSuccess] = useState<string | null>(null);
 
+  // Check if any workflow is currently running or queued
+  const hasActiveRuns = runs.some(
+    (r) =>
+      r.status === 'in_progress' ||
+      r.status === 'queued' ||
+      (!r.conclusion && r.status !== 'completed')
+  );
+
   const fetchWorkflows = async (pageNum: number = 1, conclusion: string = 'all') => {
     setIsLoading(true);
     try {
@@ -40,10 +50,28 @@ export const WorkflowsPage: React.FC = () => {
       setRuns(data.workflow_runs || []);
       setTotal(data.total || 0);
       setPage(pageNum);
+      setLastSyncedAt(new Date());
     } catch (err) {
       console.error('Failed to load workflows', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const silentPollWorkflows = async () => {
+    try {
+      setIsAutoPolling(true);
+      const concParam = filterConclusion === 'all' ? undefined : filterConclusion;
+      const { data } = await workflowService.getAll(page, undefined, concParam);
+      if (data?.workflow_runs) {
+        setRuns(data.workflow_runs);
+        setTotal(data.total || 0);
+        setLastSyncedAt(new Date());
+      }
+    } catch (err) {
+      console.warn('Silent workflows poll failed:', err);
+    } finally {
+      setIsAutoPolling(false);
     }
   };
 
@@ -60,6 +88,15 @@ export const WorkflowsPage: React.FC = () => {
       })
       .catch(() => {});
   }, [filterConclusion]);
+
+  // Real-time polling: 6 seconds if running jobs exist; 20 seconds otherwise
+  useEffect(() => {
+    const intervalMs = hasActiveRuns ? 6000 : 20000;
+    const timer = setInterval(() => {
+      silentPollWorkflows();
+    }, intervalMs);
+    return () => clearInterval(timer);
+  }, [page, filterConclusion, hasActiveRuns]);
 
   const handleDispatch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,22 +123,30 @@ export const WorkflowsPage: React.FC = () => {
     const outcome = run.conclusion || run.status;
     if (outcome === 'success') {
       return (
-        <Badge variant="success" dot>
+        <Badge variant="success" dot className="bg-emerald-50 text-emerald-700 border-emerald-200">
           Success
         </Badge>
       );
     }
     if (outcome === 'failure') {
       return (
-        <Badge variant="danger" dot>
+        <Badge variant="danger" dot className="bg-rose-50 text-rose-700 border-rose-200">
           Failed
         </Badge>
       );
     }
     if (outcome === 'in_progress') {
       return (
-        <Badge variant="warning" dot>
+        <Badge variant="warning" className="flex items-center gap-1.5 bg-amber-50 text-amber-700 border-amber-200 animate-pulse font-bold">
+          <RefreshCw className="h-3 w-3 animate-spin text-amber-600" />
           Running
+        </Badge>
+      );
+    }
+    if (outcome === 'queued') {
+      return (
+        <Badge variant="warning" className="bg-amber-50 text-amber-700 border-amber-200 font-medium">
+          Queued
         </Badge>
       );
     }
@@ -118,7 +163,25 @@ export const WorkflowsPage: React.FC = () => {
             Real-time GitHub Actions workflow run monitoring ({total} total runs)
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Live Telemetry Indicator */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-emerald-200/90 bg-emerald-50/90 text-emerald-800 text-xs font-semibold shadow-2xs">
+            <span className="relative flex h-2 w-2">
+              {hasActiveRuns ? (
+                <>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </>
+              ) : (
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
+              )}
+            </span>
+            <span>{hasActiveRuns ? 'Live Auto-Sync (6s)' : 'Live Telemetry Active'}</span>
+            {isAutoPolling && (
+              <RefreshCw className="h-3 w-3 animate-spin text-emerald-700 ml-1" />
+            )}
+          </div>
+
           <Button
             variant="secondary"
             size="sm"
