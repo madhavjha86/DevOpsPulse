@@ -30,6 +30,12 @@ from app.models.organization_webhook import (
     OrganizationWebhook,
     WebhookTargetType,
 )
+from app.models.security_scan import (
+    SecurityScan,
+    SecurityFinding,
+    SbomDocument,
+    SbomPackage,
+)
 
 __all__ = [
     "User",
@@ -67,4 +73,8 @@ __all__ = [
     "OrganizationType",
     "OrganizationWebhook",
     "WebhookTargetType",
+    "SecurityScan",
+    "SecurityFinding",
+    "SbomDocument",
+    "SbomPackage",
 ]
