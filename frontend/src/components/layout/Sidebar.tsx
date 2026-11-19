@@ -22,6 +22,8 @@ import {
   Terminal,
   Building2,
   Compass,
+  ShieldCheck,
+  RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -53,6 +55,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const secondaryNavItems = [
     { name: 'Observability', path: '/observability/telemetry', icon: Activity },
     { name: 'Uptime & Monitors', path: '/uptime', icon: AlertTriangle },
+    { name: 'Security & SBOM', path: '/security', icon: ShieldCheck },
+    { name: 'Disaster Recovery', path: '/disaster-recovery', icon: RefreshCw },
     { name: 'Reports', path: '/deployments', icon: FileText },
     { name: 'Organization', path: '/settings/organization', icon: Building2 },
     { name: 'Settings', path: '/settings', icon: Settings },

@@ -47,6 +47,11 @@ from app.models.iac_and_catalog import (
     ServiceCatalogItem,
     GoldenPathTemplate,
 )
+from app.models.disaster_recovery_and_keys import (
+    DisasterRecoveryDrill,
+    BackupRecord,
+    OrganizationApiKey,
+)
 
 __all__ = [
     "User",
@@ -95,4 +100,7 @@ __all__ = [
     "TerraformRun",
     "ServiceCatalogItem",
     "GoldenPathTemplate",
+    "DisasterRecoveryDrill",
+    "BackupRecord",
+    "OrganizationApiKey",
 ]
