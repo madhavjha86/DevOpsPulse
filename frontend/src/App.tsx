@@ -26,6 +26,7 @@ import { NotificationsPage } from '@/pages/NotificationsPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { OrganizationSettingsPage } from '@/pages/OrganizationSettingsPage';
 import { AcceptInvitationPage } from '@/pages/AcceptInvitationPage';
+import { DeveloperPortalPage } from '@/pages/DeveloperPortalPage';
 
 export const App: React.FC = () => {
   return (
@@ -49,6 +50,7 @@ export const App: React.FC = () => {
         <Route path="/incidents" element={<IncidentsPage />} />
         <Route path="/uptime" element={<UptimePage />} />
         <Route path="/security" element={<SecurityPage />} />
+        <Route path="/developer-portal" element={<DeveloperPortalPage />} />
         <Route path="/infrastructure/docker" element={<DockerContainersPage />} />
         <Route path="/infrastructure/kubernetes" element={<KubernetesPage />} />
         <Route path="/infrastructure/cloud" element={<CloudMonitoringPage />} />

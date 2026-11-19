@@ -21,6 +21,7 @@ import {
   ShieldAlert,
   Terminal,
   Building2,
+  Compass,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -45,6 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { name: 'AI Root Cause', path: '/ai/rca', icon: Terminal },
     { name: 'AI Copilot', path: '/ai/copilot', icon: Sparkles },
     { name: 'Repositories', path: '/repositories', icon: FolderGit2 },
+    { name: 'Developer Portal', path: '/developer-portal', icon: Compass },
     { name: 'CI/CD Pipelines', path: '/workflows', icon: GitBranch },
   ];
 

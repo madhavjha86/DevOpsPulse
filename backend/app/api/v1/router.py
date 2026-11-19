@@ -24,6 +24,7 @@ from app.api.v1.routes.incidents import router as incidents_router
 from app.api.v1.routes.team_productivity import router as team_productivity_router
 from app.api.v1.routes.organizations import router as organizations_router
 from app.api.v1.routes.sre import router as sre_router
+from app.api.v1.routes.developer_portal import router as developer_portal_router
 
 api_router = APIRouter()
 
@@ -48,3 +49,4 @@ api_router.include_router(ai_intelligence_router)
 api_router.include_router(incidents_router)
 api_router.include_router(team_productivity_router)
 api_router.include_router(sre_router)
+api_router.include_router(developer_portal_router)

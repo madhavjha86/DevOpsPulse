@@ -41,6 +41,12 @@ from app.models.sre_reliability import (
     OnCallSchedule,
     ObservabilityAlertRule,
 )
+from app.models.iac_and_catalog import (
+    TerraformWorkspace,
+    TerraformRun,
+    ServiceCatalogItem,
+    GoldenPathTemplate,
+)
 
 __all__ = [
     "User",
@@ -85,4 +91,8 @@ __all__ = [
     "ServiceLevelObjective",
     "OnCallSchedule",
     "ObservabilityAlertRule",
+    "TerraformWorkspace",
+    "TerraformRun",
+    "ServiceCatalogItem",
+    "GoldenPathTemplate",
 ]
