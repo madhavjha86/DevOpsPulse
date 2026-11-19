@@ -88,7 +88,7 @@ export const DashboardPage: React.FC = () => {
       setWorkflowPerf(perfRes.data.chart_data);
       setRepoActivity(activityRes.data.chart_data);
       setActivities(recentRes.data.activities);
-      if (execRes) {
+      if (execRes && execRes.security) {
         setExecSummary(execRes);
       }
       setLastSyncedAt(new Date());
@@ -270,15 +270,15 @@ export const DashboardPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-dark-400 uppercase tracking-wider">DevSecOps Posture</span>
                 <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-black text-emerald-600">
-                  Grade {execSummary?.security.posture_grade || 'A'}
+                  Grade {execSummary?.security?.posture_grade || 'A'}
                 </span>
               </div>
               <div className="mt-2 text-2xl font-black text-dark-100">
-                {execSummary ? execSummary.security.critical_findings : 0}
+                {execSummary?.security?.critical_findings ?? 0}
                 <span className="text-xs font-semibold text-rose-500 ml-1">Critical</span>
               </div>
               <p className="mt-1 text-[11px] font-medium text-dark-400">
-                {execSummary?.security.sbom_components_count || 18} SBOM packages verified
+                {execSummary?.security?.sbom_components_count ?? 18} SBOM packages verified
               </p>
             </div>
 
@@ -290,15 +290,15 @@ export const DashboardPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-dark-400 uppercase tracking-wider">SRE Reliability</span>
                 <span className="rounded-full bg-purple-50 px-2 py-0.5 text-xs font-bold text-[#7C3AED]">
-                  {execSummary ? `${execSummary.reliability.compliance_percentage}%` : '100%'}
+                  {execSummary?.reliability?.compliance_percentage ?? 100}%
                 </span>
               </div>
               <div className="mt-2 text-2xl font-black text-dark-100">
-                {execSummary?.reliability.slos_meeting_target || 3}
-                <span className="text-xs font-normal text-dark-400 ml-1">/ {execSummary?.reliability.slos_monitored || 3} SLOs</span>
+                {execSummary?.reliability?.slos_meeting_target ?? 3}
+                <span className="text-xs font-normal text-dark-400 ml-1">/ {execSummary?.reliability?.slos_monitored ?? 3} SLOs</span>
               </div>
               <p className="mt-1 text-[11px] font-medium text-dark-400">
-                MTTR: {execSummary?.reliability.average_mttr_minutes || 14.5}m • MTTD: {execSummary?.reliability.average_mttd_minutes || 3.2}m
+                MTTR: {execSummary?.reliability?.average_mttr_minutes ?? 14.5}m • MTTD: {execSummary?.reliability?.average_mttd_minutes ?? 3.2}m
               </p>
             </div>
 
@@ -310,14 +310,14 @@ export const DashboardPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-dark-400 uppercase tracking-wider">Cloud FinOps</span>
                 <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-600">
-                  {execSummary?.finops.active_optimizations || 0} Opts
+                  {execSummary?.finops?.active_optimizations ?? 0} Opts
                 </span>
               </div>
               <div className="mt-2 text-2xl font-black text-dark-100">
-                ${execSummary ? execSummary.finops.total_spend_usd.toLocaleString() : '1,280'}
+                ${(execSummary?.finops?.total_spend_usd ?? 1280).toLocaleString()}
               </div>
               <p className="mt-1 text-[11px] font-medium text-emerald-600">
-                Save ${execSummary?.finops.potential_monthly_savings_usd || 180}/mo
+                Save ${execSummary?.finops?.potential_monthly_savings_usd ?? 180}/mo
               </p>
             </div>
 
@@ -329,15 +329,15 @@ export const DashboardPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-dark-400 uppercase tracking-wider">DR Readiness</span>
                 <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-600">
-                  {execSummary?.disaster_recovery.dr_readiness_pct || 100}%
+                  {execSummary?.disaster_recovery?.dr_readiness_pct ?? 100}%
                 </span>
               </div>
               <div className="mt-2 text-2xl font-black text-dark-100">
-                {execSummary?.disaster_recovery.latest_rpo_minutes || 0.0}m
+                {execSummary?.disaster_recovery?.latest_rpo_minutes ?? 0.0}m
                 <span className="text-xs font-normal text-dark-400 ml-1">RPO</span>
               </div>
               <p className="mt-1 text-[11px] font-medium text-dark-400">
-                {execSummary?.disaster_recovery.backup_records_count || 3} backups • 0B loss
+                {execSummary?.disaster_recovery?.backup_records_count ?? 3} backups • 0B loss
               </p>
             </div>
 
@@ -368,18 +368,18 @@ export const DashboardPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-dark-400 uppercase tracking-wider">Active Incidents</span>
                 <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-                  (execSummary?.incidents.p1_critical_active || 0) > 0
+                  (execSummary?.incidents?.p1_critical_active ?? 0) > 0
                     ? 'bg-rose-50 text-rose-600'
                     : 'bg-emerald-50 text-emerald-600'
                 }`}>
-                  {execSummary?.incidents.p1_critical_active || 0} P1 Critical
+                  {execSummary?.incidents?.p1_critical_active ?? 0} P1 Critical
                 </span>
               </div>
               <div className="mt-2 text-2xl font-black text-dark-100">
-                {execSummary?.incidents.active_incidents || 0} Open
+                {execSummary?.incidents?.active_incidents ?? 0} Open
               </div>
               <p className="mt-1 text-[11px] font-medium text-dark-400">
-                {execSummary?.incidents.resolved_incidents || 12} resolved this month
+                {execSummary?.incidents?.resolved_incidents ?? 12} resolved this month
               </p>
             </div>
           </div>
@@ -624,15 +624,15 @@ export const DashboardPage: React.FC = () => {
                   <h4 className="text-xs font-black uppercase tracking-wider text-dark-400">DevSecOps & Supply Chain</h4>
                   <div className="flex justify-between text-xs py-1 border-b border-slate-200/60">
                     <span className="text-dark-300">Security Grade</span>
-                    <span className="font-black text-emerald-600">{execSummary?.security.posture_grade || 'A'}</span>
+                    <span className="font-black text-emerald-600">{execSummary?.security?.posture_grade || 'A'}</span>
                   </div>
                   <div className="flex justify-between text-xs py-1 border-b border-slate-200/60">
                     <span className="text-dark-300">Critical / High CVEs</span>
-                    <span className="font-bold text-rose-600">{execSummary?.security.critical_findings || 0} / {execSummary?.security.high_findings || 0}</span>
+                    <span className="font-bold text-rose-600">{execSummary?.security?.critical_findings ?? 0} / {execSummary?.security?.high_findings ?? 0}</span>
                   </div>
                   <div className="flex justify-between text-xs py-1">
                     <span className="text-dark-300">Cataloged SBOM Packages</span>
-                    <span className="font-bold text-dark-100">{execSummary?.security.sbom_components_count || 18}</span>
+                    <span className="font-bold text-dark-100">{execSummary?.security?.sbom_components_count ?? 18}</span>
                   </div>
                 </div>
 
@@ -640,15 +640,15 @@ export const DashboardPage: React.FC = () => {
                   <h4 className="text-xs font-black uppercase tracking-wider text-dark-400">SRE & Resiliency</h4>
                   <div className="flex justify-between text-xs py-1 border-b border-slate-200/60">
                     <span className="text-dark-300">SLO Compliance Rate</span>
-                    <span className="font-black text-emerald-600">{execSummary?.reliability.compliance_percentage || 100}%</span>
+                    <span className="font-black text-emerald-600">{execSummary?.reliability?.compliance_percentage ?? 100}%</span>
                   </div>
                   <div className="flex justify-between text-xs py-1 border-b border-slate-200/60">
                     <span className="text-dark-300">Mean Time to Resolve (MTTR)</span>
-                    <span className="font-bold text-dark-100">{execSummary?.reliability.average_mttr_minutes || 14.5} mins</span>
+                    <span className="font-bold text-dark-100">{execSummary?.reliability?.average_mttr_minutes ?? 14.5} mins</span>
                   </div>
                   <div className="flex justify-between text-xs py-1">
                     <span className="text-dark-300">Disaster Recovery Readiness</span>
-                    <span className="font-bold text-[#7C3AED]">{execSummary?.disaster_recovery.dr_readiness_pct || 100}%</span>
+                    <span className="font-bold text-[#7C3AED]">{execSummary?.disaster_recovery?.dr_readiness_pct ?? 100}%</span>
                   </div>
                 </div>
 
@@ -656,15 +656,15 @@ export const DashboardPage: React.FC = () => {
                   <h4 className="text-xs font-black uppercase tracking-wider text-dark-400">Cloud FinOps</h4>
                   <div className="flex justify-between text-xs py-1 border-b border-slate-200/60">
                     <span className="text-dark-300">Monthly Cloud Spend</span>
-                    <span className="font-black text-dark-100">${execSummary?.finops.total_spend_usd.toLocaleString() || '1,280.00'}</span>
+                    <span className="font-black text-dark-100">${(execSummary?.finops?.total_spend_usd ?? 1280).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-xs py-1 border-b border-slate-200/60">
                     <span className="text-dark-300">Forecasted Run-rate</span>
-                    <span className="font-bold text-dark-100">${execSummary?.finops.forecasted_run_rate_usd.toLocaleString() || '1,382.40'}</span>
+                    <span className="font-bold text-dark-100">${(execSummary?.finops?.forecasted_run_rate_usd ?? 1382.4).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-xs py-1">
                     <span className="text-dark-300">Actionable Savings</span>
-                    <span className="font-bold text-emerald-600">${execSummary?.finops.potential_monthly_savings_usd || 180.00}/mo</span>
+                    <span className="font-bold text-emerald-600">${execSummary?.finops?.potential_monthly_savings_usd ?? 180}/mo</span>
                   </div>
                 </div>
 
@@ -672,15 +672,15 @@ export const DashboardPage: React.FC = () => {
                   <h4 className="text-xs font-black uppercase tracking-wider text-dark-400">Delivery Velocity</h4>
                   <div className="flex justify-between text-xs py-1 border-b border-slate-200/60">
                     <span className="text-dark-300">Deployment Success Rate</span>
-                    <span className="font-black text-emerald-600">{execSummary?.cicd.deployment_success_rate_pct || 98.4}%</span>
+                    <span className="font-black text-emerald-600">{execSummary?.cicd?.deployment_success_rate_pct ?? 98.4}%</span>
                   </div>
                   <div className="flex justify-between text-xs py-1 border-b border-slate-200/60">
                     <span className="text-dark-300">Total Deployments</span>
-                    <span className="font-bold text-dark-100">{execSummary?.cicd.total_deployments || 142}</span>
+                    <span className="font-bold text-dark-100">{execSummary?.cicd?.total_deployments ?? 142}</span>
                   </div>
                   <div className="flex justify-between text-xs py-1">
                     <span className="text-dark-300">Lead Time for Changes</span>
-                    <span className="font-bold text-dark-100">{execSummary?.cicd.average_lead_time_hours || 2.4} hours</span>
+                    <span className="font-bold text-dark-100">{execSummary?.cicd?.average_lead_time_hours ?? 2.4} hours</span>
                   </div>
                 </div>
               </div>

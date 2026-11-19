@@ -89,22 +89,22 @@ class ReportingService:
         slos_res = await db.execute(select(ServiceLevelObjective))
         slos = slos_res.scalars().all()
         slos_count = len(slos)
-        slos_meeting_target = sum(1 for s in slos if s.current_percentage >= s.target_percentage)
+        slos_meeting_target = sum(1 for s in slos if s.current_sli >= s.target_percentage)
         compliance_pct = (slos_meeting_target / slos_count * 100.0) if slos_count > 0 else 100.0
 
         # Incidents & MTTD/MTTR
         incidents_res = await db.execute(select(Incident))
         incidents = incidents_res.scalars().all()
         total_incidents = len(incidents)
-        active_incidents = sum(1 for inc in incidents if inc.status in ["INVESTIGATING", "IDENTIFIED", "MONITORING"])
-        p1_active = sum(1 for inc in incidents if inc.severity == "P1_CRITICAL" and inc.status != "RESOLVED")
-        p2_active = sum(1 for inc in incidents if inc.severity == "P2_HIGH" and inc.status != "RESOLVED")
+        active_incidents = sum(1 for inc in incidents if inc.status in ["OPEN", "ACKNOWLEDGED", "INVESTIGATING", "MONITORING"])
+        p1_active = sum(1 for inc in incidents if (inc.priority == "P1" or inc.severity == "CRITICAL") and inc.status != "RESOLVED")
+        p2_active = sum(1 for inc in incidents if (inc.priority == "P2" or inc.severity == "HIGH") and inc.status != "RESOLVED")
         resolved_incidents = sum(1 for inc in incidents if inc.status == "RESOLVED")
 
         # Live MTTD & MTTR (minutes)
-        resolved_list = [inc for inc in incidents if inc.status == "RESOLVED" and inc.resolved_at and inc.started_at]
+        resolved_list = [inc for inc in incidents if inc.status == "RESOLVED" and inc.resolved_at and inc.created_at]
         avg_mttr = (
-            sum((inc.resolved_at - inc.started_at).total_seconds() / 60.0 for inc in resolved_list) / len(resolved_list)
+            sum((inc.resolved_at - inc.created_at).total_seconds() / 60.0 for inc in resolved_list) / len(resolved_list)
             if resolved_list
             else 18.5
         )
@@ -165,8 +165,8 @@ class ReportingService:
         dr_drills_count_res = await db.execute(select(func.count(DisasterRecoveryDrill.id)))
         dr_drills_count = dr_drills_count_res.scalar() or 0
 
-        latest_rpo = float(latest_drill.measured_rpo_minutes) if latest_drill else 0.0
-        latest_rto = float(latest_drill.measured_rto_minutes) if latest_drill else 0.0
+        latest_rpo = float(latest_drill.rpo_actual_minutes) if latest_drill else 0.0
+        latest_rto = float(latest_drill.rto_actual_minutes) if latest_drill else 0.0
         dr_readiness = 100.0 if (latest_drill and latest_drill.status == "PASSED") else (95.0 if backups_count > 0 else 80.0)
 
         dr_summary = DisasterRecoveryReportSummary(
