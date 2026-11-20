@@ -101,12 +101,12 @@ export default function DockerContainersPage() {
   };
 
   useEffect(() => {
-    fetchHosts();
+    void fetchHosts();
   }, []);
 
   useEffect(() => {
     if (selectedHostId) {
-      fetchContainers(selectedHostId);
+      void fetchContainers(selectedHostId);
     }
   }, [selectedHostId]);
 
@@ -172,7 +172,7 @@ export default function DockerContainersPage() {
         );
       }
       setTimeout(() => {
-        if (selectedHostId) fetchContainers(selectedHostId);
+        if (selectedHostId) void fetchContainers(selectedHostId);
       }, 1000);
     } catch (err) {
       console.error(`Failed to ${action} container`, err);
@@ -210,7 +210,7 @@ export default function DockerContainersPage() {
   };
 
   const handleCopyLogs = () => {
-    navigator.clipboard.writeText(logs.join('\n'));
+    void navigator.clipboard.writeText(logs.join('\n'));
     setCopiedLog(true);
     setTimeout(() => setCopiedLog(false), 2000);
   };

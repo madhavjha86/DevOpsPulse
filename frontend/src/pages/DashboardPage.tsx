@@ -101,14 +101,16 @@ export const DashboardPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 30000);
+    void fetchDashboardData();
+    const interval = setInterval(() => {
+      void fetchDashboardData();
+    }, 30000);
     return () => clearInterval(interval);
   }, [timePeriod]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    fetchDashboardData();
+    void fetchDashboardData();
   };
 
   const handleDownloadCsv = async () => {

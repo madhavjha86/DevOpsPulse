@@ -43,7 +43,7 @@ export const NotificationsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchNotifications(1, unreadOnly);
+    void fetchNotifications(1, unreadOnly);
   }, [unreadOnly]);
 
   const handleMarkAsRead = async (id: number) => {

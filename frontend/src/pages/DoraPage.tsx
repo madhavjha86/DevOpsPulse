@@ -35,7 +35,7 @@ export const DoraPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchDora();
+    void fetchDora();
   }, []);
 
   const getRatingBadge = (rating: string) => {

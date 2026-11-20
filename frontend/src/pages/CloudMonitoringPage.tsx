@@ -111,12 +111,12 @@ export default function CloudMonitoringPage() {
   };
 
   useEffect(() => {
-    fetchAccounts();
+    void fetchAccounts();
   }, []);
 
   useEffect(() => {
     if (selectedAccountId) {
-      fetchAccountData(selectedAccountId);
+      void fetchAccountData(selectedAccountId);
     }
   }, [selectedAccountId]);
 

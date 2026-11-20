@@ -76,7 +76,7 @@ export const WorkflowsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchWorkflows(1, filterConclusion);
+    void fetchWorkflows(1, filterConclusion);
     repositoryService
       .getAll(1, 100)
       .then((res: any) => {
@@ -93,7 +93,7 @@ export const WorkflowsPage: React.FC = () => {
   useEffect(() => {
     const intervalMs = hasActiveRuns ? 6000 : 20000;
     const timer = setInterval(() => {
-      silentPollWorkflows();
+      void silentPollWorkflows();
     }, intervalMs);
     return () => clearInterval(timer);
   }, [page, filterConclusion, hasActiveRuns]);
@@ -111,7 +111,7 @@ export const WorkflowsPage: React.FC = () => {
       });
       setIsModalOpen(false);
       setDispatchSuccess(`Workflow '${workflowName}' dispatched successfully on '${branch}' branch!`);
-      fetchWorkflows(1, filterConclusion);
+      void fetchWorkflows(1, filterConclusion);
     } catch (err) {
       console.error('Dispatch failed', err);
     } finally {

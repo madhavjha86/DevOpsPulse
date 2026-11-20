@@ -29,7 +29,7 @@ export const DeploymentsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchDeployments(1);
+    void fetchDeployments(1);
   }, []);
 
   return (
@@ -47,7 +47,7 @@ export const DeploymentsPage: React.FC = () => {
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => fetchDeployments(page)}
+          onClick={() => void fetchDeployments(page)}
           leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
         >
           Refresh Deployments

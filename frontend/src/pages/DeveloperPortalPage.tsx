@@ -94,7 +94,7 @@ export const DeveloperPortalPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, []);
 
   const handleCreateService = async (e: React.FormEvent) => {

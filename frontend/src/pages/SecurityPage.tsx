@@ -91,7 +91,7 @@ export const SecurityPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadAllData();
+    void loadAllData();
   }, []);
 
   const handleTriggerScan = async (e: React.FormEvent) => {

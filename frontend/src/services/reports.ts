@@ -122,6 +122,9 @@ export const reportsService = {
           printWindow.document.write(html);
           printWindow.document.close();
         }
+      })
+      .catch((err) => {
+        console.error('Failed to load printable PDF report', err);
       });
   },
 

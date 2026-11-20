@@ -35,7 +35,7 @@ export const GitHubCallbackPage: React.FC = () => {
       }
     };
 
-    exchangeCode();
+    void exchangeCode();
   }, [searchParams, navigate, setAuthTokens]);
 
   if (error) {

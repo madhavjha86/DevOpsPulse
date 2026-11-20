@@ -52,7 +52,7 @@ export const SettingsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchGithubAccounts();
+    void fetchGithubAccounts();
   }, []);
 
   const handleProfileSubmit = async (e: React.FormEvent) => {

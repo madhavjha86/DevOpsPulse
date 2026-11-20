@@ -54,7 +54,7 @@ export const RepositoriesPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchRepositories(1);
+    void fetchRepositories(1);
   }, []);
 
   const handleImport = async (e: React.FormEvent) => {
@@ -72,7 +72,7 @@ export const RepositoriesPage: React.FC = () => {
       await repositoryService.importRepo(cleanName);
       setIsModalOpen(false);
       setRepoFullName('');
-      fetchRepositories(1);
+      void fetchRepositories(1);
     } catch (err: any) {
       const detail = err.response?.data?.detail;
       let msg = 'Failed to import repository from GitHub.';
@@ -114,7 +114,7 @@ export const RepositoriesPage: React.FC = () => {
     }
     try {
       await repositoryService.deleteRepo(id);
-      fetchRepositories(page);
+      void fetchRepositories(page);
     } catch (err) {
       console.error('Delete failed', err);
     }

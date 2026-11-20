@@ -97,7 +97,7 @@ export const UptimePage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchAllData();
+    void fetchAllData();
   }, []);
 
   const handleCreateSlo = async (e: React.FormEvent) => {

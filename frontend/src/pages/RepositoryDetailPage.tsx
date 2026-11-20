@@ -98,9 +98,9 @@ export const RepositoryDetailPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchRepoData();
+    void fetchRepoData();
     // Trigger an immediate background sync on load so any new runs (#12, #13, #14) reflect right away
-    syncWorkflowsSilently();
+    void syncWorkflowsSilently();
   }, [repoId]);
 
   // Real-time telemetry polling: 6 seconds if runs are in-progress; 18 seconds if viewing workflows tab
@@ -111,7 +111,7 @@ export const RepositoryDetailPage: React.FC = () => {
     if (!pollInterval) return;
 
     const timer = setInterval(() => {
-      syncWorkflowsSilently();
+      void syncWorkflowsSilently();
     }, pollInterval);
 
     return () => clearInterval(timer);

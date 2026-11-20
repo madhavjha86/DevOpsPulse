@@ -73,7 +73,7 @@ export const DisasterRecoveryPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadAllData();
+    void loadAllData();
   }, []);
 
   const handleExecuteDrill = async () => {
@@ -154,7 +154,7 @@ export const DisasterRecoveryPage: React.FC = () => {
 
   const handleCopyKey = () => {
     if (!newlyCreatedKey) return;
-    navigator.clipboard.writeText(newlyCreatedKey.raw_key);
+    void navigator.clipboard.writeText(newlyCreatedKey.raw_key);
     setCopiedKey(true);
     setTimeout(() => setCopiedKey(false), 2500);
   };

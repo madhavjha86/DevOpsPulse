@@ -117,12 +117,12 @@ export default function KubernetesPage() {
   };
 
   useEffect(() => {
-    fetchClusters();
+    void fetchClusters();
   }, []);
 
   useEffect(() => {
     if (selectedClusterId) {
-      fetchClusterResources(selectedClusterId);
+      void fetchClusterResources(selectedClusterId);
     }
   }, [selectedClusterId, selectedNamespace]);
 
@@ -209,7 +209,7 @@ export default function KubernetesPage() {
   };
 
   const handleCopyLogs = () => {
-    navigator.clipboard.writeText(podLogs.join('\n'));
+    void navigator.clipboard.writeText(podLogs.join('\n'));
     setCopiedLog(true);
     setTimeout(() => setCopiedLog(false), 2000);
   };
