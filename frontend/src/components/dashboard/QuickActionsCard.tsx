@@ -6,7 +6,7 @@ export const QuickActionsCard: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 sm:p-6 shadow-subtle hover:shadow-card-hover transition-all duration-200 h-full flex flex-col justify-between">
+    <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 sm:p-6 shadow-subtle hover:shadow-card-hover transition-all duration-200 w-full flex flex-col justify-between">
       {/* Header */}
       <div className="flex items-center gap-3 pb-4 border-b border-[#F1F5F9]">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-[#7C3AED] border border-purple-100 shadow-2xs">
@@ -18,7 +18,7 @@ export const QuickActionsCard: React.FC = () => {
       </div>
 
       {/* 2x2 Action Buttons Grid */}
-      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 my-auto pt-2">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 pt-3">
         {/* Action 1: Run Pipeline */}
         <button
           onClick={() => navigate('/workflows')}

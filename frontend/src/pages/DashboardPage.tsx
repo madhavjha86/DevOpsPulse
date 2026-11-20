@@ -385,7 +385,7 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           {/* Core Operations Split: Infrastructure & Topology vs Incident/Security Alerts */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* Left 7 Cols: System Health, Copilot, & Quick Actions */}
             <div className="lg:col-span-7 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -527,7 +527,7 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           {/* Repository Telemetry Strip */}
-          <div className="space-y-3 pt-2">
+          <div className="space-y-3 pt-6 w-full clear-both">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xs sm:text-sm font-bold text-dark-300 uppercase tracking-wider">
