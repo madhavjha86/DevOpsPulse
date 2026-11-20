@@ -81,6 +81,9 @@ export const AIGovernancePage: React.FC = () => {
     setError(null);
     try {
       const data = await aiGovernanceService.getSummary(timeframe);
+      if (!data || typeof data !== 'object' || !data.summary) {
+        throw new Error('Received unexpected response format from server');
+      }
       setSummaryData(data);
     } catch (err: unknown) {
       console.error('Failed to load AI governance metrics', err);
@@ -137,7 +140,7 @@ export const AIGovernancePage: React.FC = () => {
     );
   });
 
-  if (loading && !summaryData) {
+  if (loading && (!summaryData || !summaryData.summary)) {
     return (
       <div className="flex h-96 items-center justify-center">
         <LoadingSpinner size="lg" message="Loading Enterprise AI Governance metrics..." />
@@ -145,7 +148,7 @@ export const AIGovernancePage: React.FC = () => {
     );
   }
 
-  if (!summaryData) {
+  if (!summaryData || !summaryData.summary) {
     return (
       <div className="bg-white rounded-2xl border border-[#E5E7EB] p-8 text-center space-y-4 shadow-2xs max-w-lg mx-auto my-12">
         <AlertTriangle className="h-10 w-10 text-amber-500 mx-auto" />
@@ -237,7 +240,7 @@ export const AIGovernancePage: React.FC = () => {
           <div>
             <span className="text-[11px] font-medium text-dark-300 block">Total AI Spend ({timeframe}d)</span>
             <div className="text-xl font-bold text-dark-100 mt-0.5">
-              ${summaryData?.summary.total_cost_usd.toFixed(2) || '0.00'}
+              ${(summaryData?.summary?.total_cost_usd ?? 0).toFixed(2)}
             </div>
             <span className="text-[10px] text-dark-400">Calculated per model token rates</span>
           </div>
@@ -251,10 +254,10 @@ export const AIGovernancePage: React.FC = () => {
           <div>
             <span className="text-[11px] font-medium text-dark-300 block">Total Tokens Ingested</span>
             <div className="text-xl font-bold text-dark-100 mt-0.5">
-              {formatTokens(summaryData?.summary.total_tokens || 0)}
+              {formatTokens(summaryData?.summary?.total_tokens ?? 0)}
             </div>
             <span className="text-[10px] text-dark-400">
-              Prompt: {formatTokens(summaryData?.summary.prompt_tokens || 0)} · Comp: {formatTokens(summaryData?.summary.completion_tokens || 0)}
+              Prompt: {formatTokens(summaryData?.summary?.prompt_tokens ?? 0)} · Comp: {formatTokens(summaryData?.summary?.completion_tokens ?? 0)}
             </span>
           </div>
         </div>
@@ -267,7 +270,7 @@ export const AIGovernancePage: React.FC = () => {
           <div>
             <span className="text-[11px] font-medium text-dark-300 block">Active AI Users</span>
             <div className="text-xl font-bold text-dark-100 mt-0.5">
-              {summaryData?.summary.active_developers || 0} Developers
+              {summaryData?.summary?.active_developers ?? 0} Developers
             </div>
             <span className="text-[10px] text-emerald-600 font-medium">100% of workspace tracked</span>
           </div>
@@ -281,7 +284,7 @@ export const AIGovernancePage: React.FC = () => {
           <div>
             <span className="text-[11px] font-medium text-dark-300 block">Avg Cost / Developer</span>
             <div className="text-xl font-bold text-dark-100 mt-0.5">
-              ${summaryData?.summary.avg_cost_per_dev.toFixed(2) || '0.00'}
+              ${(summaryData?.summary?.avg_cost_per_dev ?? 0).toFixed(2)}
             </div>
             <span className="text-[10px] text-dark-400">Monthly budget headroom: ~$45</span>
           </div>
@@ -388,7 +391,7 @@ export const AIGovernancePage: React.FC = () => {
 
           {/* Tool legend list */}
           <div className="space-y-1.5 pt-2 border-t border-slate-150">
-            {summaryData?.tool_breakdown.map((t) => (
+            {(summaryData?.tool_breakdown ?? []).map((t) => (
               <div key={t.tool_name} className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
                   <span

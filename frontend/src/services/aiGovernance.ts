@@ -65,12 +65,12 @@ export interface UpdateQuotaPayload {
 
 export const aiGovernanceService = {
   getSummary: async (timeframe: number = 30): Promise<AIGovernanceSummary> => {
-    const response = await api.get<AIGovernanceSummary>(`/ai-governance/summary?timeframe=${timeframe}`);
+    const response = await api.get<AIGovernanceSummary>(`/api/v1/ai-governance/summary?timeframe=${timeframe}`);
     return response.data;
   },
 
   updateUserQuota: async (userId: number, payload: UpdateQuotaPayload) => {
-    const response = await api.put(`/ai-governance/users/${userId}/quota`, payload);
+    const response = await api.put(`/api/v1/ai-governance/users/${userId}/quota`, payload);
     return response.data;
   },
 
@@ -83,11 +83,11 @@ export const aiGovernanceService = {
     user_email?: string;
     session_id?: string;
   }) => {
-    const response = await api.post('/ai-governance/ingest', payload);
+    const response = await api.post('/api/v1/ai-governance/ingest', payload);
     return response.data;
   },
 
   getExportUrl: (timeframe: number = 30): string => {
-    return `${api.defaults.baseURL || '/api/v1'}/ai-governance/export?timeframe=${timeframe}`;
+    return `/api/v1/ai-governance/export?timeframe=${timeframe}`;
   },
 };
