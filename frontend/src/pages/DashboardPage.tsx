@@ -98,10 +98,22 @@ export const DashboardPage: React.FC = () => {
         setExecSummary(execRes);
       }
       if (devPortalRes?.data?.services && devPortalRes.data.services.length > 0) {
-        setCoreServices(devPortalRes.data.services.slice(0, 3));
+        const seen = new Set<string>();
+        const unique = devPortalRes.data.services.filter((s: ServiceCatalogItem) => {
+          if (seen.has(s.name)) return false;
+          seen.add(s.name);
+          return true;
+        });
+        setCoreServices(unique.slice(0, 3));
       }
       if (incidentsRes && Array.isArray(incidentsRes) && incidentsRes.length > 0) {
-        setLiveIncidents(incidentsRes.slice(0, 3));
+        const seenInc = new Set<number>();
+        const uniqueInc = incidentsRes.filter((inc: Incident) => {
+          if (seenInc.has(inc.id)) return false;
+          seenInc.add(inc.id);
+          return true;
+        });
+        setLiveIncidents(uniqueInc.slice(0, 3));
       }
       setLastSyncedAt(new Date());
     } catch (err) {
@@ -431,6 +443,7 @@ export const DashboardPage: React.FC = () => {
                 <div className="space-y-3">
                   {(coreServices.length > 0
                     ? coreServices.map((svc) => ({
+                        id: svc.id,
                         name: svc.name,
                         tier: svc.tier || 'TIER_1_CRITICAL',
                         status: svc.health_status || 'HEALTHY',
@@ -438,13 +451,13 @@ export const DashboardPage: React.FC = () => {
                         team: svc.owner_team || 'Platform Team',
                       }))
                     : [
-                        { name: 'payment-gateway', tier: 'TIER_1_CRITICAL', status: 'HEALTHY', latency: '42ms', team: 'Core FinTech' },
-                        { name: 'auth-service', tier: 'TIER_1_CRITICAL', status: 'HEALTHY', latency: '28ms', team: 'SecOps Team' },
-                        { name: 'telemetry-collector', tier: 'TIER_2_CORE', status: 'HEALTHY', latency: '19ms', team: 'Observability' },
+                        { id: 1, name: 'payment-gateway', tier: 'TIER_1_CRITICAL', status: 'HEALTHY', latency: '42ms', team: 'Core FinTech' },
+                        { id: 2, name: 'auth-service', tier: 'TIER_1_CRITICAL', status: 'HEALTHY', latency: '28ms', team: 'SecOps Team' },
+                        { id: 3, name: 'telemetry-collector', tier: 'TIER_2_CORE', status: 'HEALTHY', latency: '19ms', team: 'Observability' },
                       ]
-                  ).map((svc) => (
+                  ).map((svc, idx) => (
                     <div
-                      key={svc.name}
+                      key={svc.id ? `core-service-${svc.id}` : `core-service-${svc.name}-${idx}`}
                       className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/60 p-3 hover:bg-slate-50 transition-colors"
                     >
                       <div className="flex items-center gap-3">

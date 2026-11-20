@@ -36,14 +36,12 @@ class IacAndCatalogService:
         cls, db: AsyncSession, user_id: int, organization_id: int | None = None
     ) -> None:
         """Seed default Terraform workspaces, service catalog items, and golden path templates."""
-        stmt = select(func.count()).select_from(TerraformWorkspace).where(
-            TerraformWorkspace.user_id == user_id
-        )
+        # 1. Default Workspaces
+        ws_stmt = select(TerraformWorkspace.id).where(TerraformWorkspace.user_id == user_id)
         if organization_id is not None:
-            stmt = stmt.where(TerraformWorkspace.organization_id == organization_id)
-        res = await db.execute(stmt)
-        if (res.scalar() or 0) == 0:
-            # 1. Default Workspaces
+            ws_stmt = ws_stmt.where(TerraformWorkspace.organization_id == organization_id)
+        ws_res = await db.execute(ws_stmt.limit(1))
+        if ws_res.scalar() is None:
             ws_prod = TerraformWorkspace(
                 user_id=user_id,
                 organization_id=organization_id,
@@ -96,7 +94,12 @@ class IacAndCatalogService:
             )
             db.add(run_1)
 
-            # 2. Service Catalog Items
+        # 2. Service Catalog Items
+        svc_stmt = select(ServiceCatalogItem.id).where(ServiceCatalogItem.user_id == user_id)
+        if organization_id is not None:
+            svc_stmt = svc_stmt.where(ServiceCatalogItem.organization_id == organization_id)
+        svc_res = await db.execute(svc_stmt.limit(1))
+        if svc_res.scalar() is None:
             services_data = [
                 ServiceCatalogItem(
                     user_id=user_id,
@@ -166,7 +169,12 @@ class IacAndCatalogService:
             for s in services_data:
                 db.add(s)
 
-            # 3. Golden Path Templates
+        # 3. Golden Path Templates
+        tmpl_stmt = select(GoldenPathTemplate.id)
+        if organization_id is not None:
+            tmpl_stmt = tmpl_stmt.where(GoldenPathTemplate.organization_id == organization_id)
+        tmpl_res = await db.execute(tmpl_stmt.limit(1))
+        if tmpl_res.scalar() is None:
             templates_data = [
                 GoldenPathTemplate(
                     organization_id=organization_id,
@@ -199,7 +207,7 @@ class IacAndCatalogService:
             for t in templates_data:
                 db.add(t)
 
-            await db.commit()
+        await db.commit()
 
     # -----------------------------------------------------------------------
     # Phase 5: Infrastructure as Code (Terraform)
