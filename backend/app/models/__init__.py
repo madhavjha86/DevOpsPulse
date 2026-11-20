@@ -53,6 +53,7 @@ from app.models.disaster_recovery_and_keys import (
     OrganizationApiKey,
 )
 from app.models.monitor import ServiceMonitor
+from app.models.jenkins import JenkinsServer, JenkinsJob, JenkinsBuild
 
 __all__ = [
     "User",
@@ -105,4 +106,7 @@ __all__ = [
     "BackupRecord",
     "OrganizationApiKey",
     "ServiceMonitor",
+    "JenkinsServer",
+    "JenkinsJob",
+    "JenkinsBuild",
 ]
