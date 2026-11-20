@@ -12,38 +12,38 @@ from app.core.logging import get_logger
 from app.core.security_redaction import redact_secrets
 
 logger = get_logger("llm_client")
-settings = get_settings()
-
-
 class LLMClient:
     """Unified asynchronous enterprise LLM client supporting OpenAI, Gemini, Anthropic, Groq, and Ollama."""
 
     @classmethod
     def is_configured(cls) -> bool:
         """Check if active LLM credentials or local endpoint are available."""
-        provider = (settings.AI_PROVIDER or "").lower().strip()
+        s = get_settings()
+        provider = (s.AI_PROVIDER or "").lower().strip()
         if provider == "ollama":
             return True
-        if settings.AI_API_KEY and len(settings.AI_API_KEY.strip()) > 3:
+        if s.AI_API_KEY and len(s.AI_API_KEY.strip()) > 3:
             return True
         return False
 
     @classmethod
     def get_provider_details(cls) -> dict[str, Any]:
         """Return provider connection telemetry for status badges."""
+        s = get_settings()
         return {
-            "provider": settings.AI_PROVIDER,
-            "model": settings.AI_MODEL,
+            "provider": s.AI_PROVIDER,
+            "model": s.AI_MODEL,
             "is_configured": cls.is_configured(),
-            "base_url": settings.AI_BASE_URL or "default",
+            "base_url": s.AI_BASE_URL or "default",
         }
 
     @classmethod
     def _resolve_endpoint_and_headers(cls) -> tuple[str, dict[str, str]]:
         """Determine endpoint URL and authentication headers based on AI_PROVIDER."""
-        provider = (settings.AI_PROVIDER or "openai").lower().strip()
-        api_key = settings.AI_API_KEY or ""
-        base_url = (settings.AI_BASE_URL or "").rstrip("/")
+        s = get_settings()
+        provider = (s.AI_PROVIDER or "openai").lower().strip()
+        api_key = s.AI_API_KEY or ""
+        base_url = (s.AI_BASE_URL or "").rstrip("/")
 
         if provider == "gemini":
             url = f"{base_url}/chat/completions" if base_url else "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
@@ -84,6 +84,7 @@ class LLMClient:
         json_mode: bool = False,
     ) -> dict[str, Any]:
         """Execute non-streaming LLM inference with redacted context."""
+        settings = get_settings()
         if not cls.is_configured():
             return {
                 "content": (
@@ -165,6 +166,7 @@ class LLMClient:
         system_prompt: str | None = None,
     ) -> AsyncGenerator[str, None]:
         """Stream real-time tokens via SSE from the LLM provider."""
+        settings = get_settings()
         if not cls.is_configured():
             yield (
                 "**AI_NOT_CONFIGURED**: AI Provider credentials are not configured. "

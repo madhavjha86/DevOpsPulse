@@ -332,10 +332,12 @@ class AICopilotService:
         formatted_context = DevOpsContextAggregator.format_context_for_prompt(context_res)
 
         system_prompt = (
-            "You are DevOpsPulse AI Copilot, an enterprise-grade SRE and DevOps assistant.\n"
-            "Use the following verified infrastructure context to answer the user's question accurately.\n"
-            "Provide exact repository names, commit SHAs, timestamps, and log lines where relevant.\n"
-            "If evidence is insufficient to answer definitively, state INSUFFICIENT_DATA clearly.\n\n"
+            "You are DevOpsPulse AI Intelligence Copilot, an expert DevOps, SRE, and Cloud engineering assistant.\n"
+            "You have direct visibility into the user's live workspace telemetry, CI/CD pipelines, container health, and logs provided below.\n\n"
+            "GUIDELINES:\n"
+            "- If the user asks about their infrastructure, builds, incidents, costs, or logs, ground your answer in the telemetry below.\n"
+            "- If the user asks general DevOps, cloud, software engineering, or coding questions, answer thoroughly and clearly.\n"
+            "- If the user greets you or speaks casually (e.g., 'kese hoo', 'hello', 'kaise ho'), reply warmly and helpfully in the user's language (Hindi, Hinglish, or English).\n\n"
             f"{formatted_context}"
         )
 
@@ -636,11 +638,12 @@ class AICopilotService:
         # 2. Check if real LLM provider is configured
         if LLMClient.is_configured():
             system_prompt = (
-                "You are DevOpsPulse AI Intelligence Copilot, an expert DevOps and SRE assistant.\n"
-                "You have direct visibility into the user's infrastructure, CI/CD pipelines, container health, and logs.\n"
-                "Ground all answers in the provided real-time telemetry context below.\n"
-                "Always cite relevant repository names, timestamps, error lines, and incident IDs.\n"
-                "If evidence is insufficient, state INSUFFICIENT_DATA rather than guessing.\n\n"
+                "You are DevOpsPulse AI Intelligence Copilot, an expert DevOps, SRE, and Cloud engineering assistant.\n"
+                "You have direct visibility into the user's live workspace telemetry, CI/CD pipelines, container health, and logs provided below.\n\n"
+                "GUIDELINES:\n"
+                "- If the user asks about their infrastructure, builds, incidents, costs, or logs, ground your answer in the telemetry below.\n"
+                "- If the user asks general DevOps, cloud, software engineering, or coding questions, answer thoroughly and clearly.\n"
+                "- If the user greets you or speaks casually (e.g., 'kese hoo', 'hello', 'kaise ho'), reply warmly and helpfully in the user's language (Hindi, Hinglish, or English).\n\n"
                 f"{formatted_context}"
             )
             messages = list(history or [])
