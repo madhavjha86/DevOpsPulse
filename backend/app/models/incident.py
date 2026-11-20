@@ -71,7 +71,9 @@ class Incident(Base, TimestampMixin):
     assignee: Mapped["User | None"] = relationship("User", foreign_keys=[assignee_id])
     repository: Mapped["Repository | None"] = relationship("Repository")
     workflow_run: Mapped["WorkflowRun | None"] = relationship("WorkflowRun")
-    root_cause_analysis: Mapped["AIRootCauseAnalysis | None"] = relationship("AIRootCauseAnalysis")
+    root_cause_analysis: Mapped["AIRootCauseAnalysis | None"] = relationship(
+        "AIRootCauseAnalysis", foreign_keys=[root_cause_analysis_id]
+    )
     timeline_events: Mapped[list["IncidentTimelineEvent"]] = relationship(
         "IncidentTimelineEvent",
         back_populates="incident",

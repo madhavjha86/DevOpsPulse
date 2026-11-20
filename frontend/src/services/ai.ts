@@ -1,10 +1,23 @@
 import api from './api';
 
+export interface AIMessageSource {
+  type: string;
+  id?: number | string;
+  title: string;
+  repo?: string;
+  sha?: string;
+  service?: string;
+  severity?: string;
+}
+
 export interface AIMessage {
   id: number;
   role: 'user' | 'assistant' | 'system';
   content: string;
   context_metadata: Record<string, unknown>;
+  sources?: AIMessageSource[];
+  tokens_used?: number | null;
+  model_name?: string | null;
   created_at: string;
 }
 
@@ -24,6 +37,13 @@ export interface AIConversationDetail {
   messages: AIMessage[];
 }
 
+export interface RCAEvidenceTimelineItem {
+  timestamp: string;
+  source: string;
+  event: string;
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO';
+}
+
 export interface AIRootCauseAnalysis {
   id: number;
   workflow_run_id?: number | null;
@@ -41,6 +61,14 @@ export interface AIRootCauseAnalysis {
     raw_log?: string;
     explanation?: string;
   }>;
+  evidence_timeline?: RCAEvidenceTimelineItem[];
+  affected_services?: string[];
+  correlated_metrics?: {
+    cpu_utilization_pct?: number;
+    memory_utilization_pct?: number;
+    http_5xx_error_rate_pct?: number;
+    [key: string]: unknown;
+  };
   suggested_fix_diff?: string | null;
   confidence_score: number;
   confidence_explanation?: string;
@@ -57,7 +85,19 @@ export interface GenerateRCARequest {
   job_name?: string | null;
 }
 
+export interface AIProviderStatus {
+  provider: string;
+  model: string;
+  is_configured: boolean;
+  base_url: string;
+}
+
 export const aiService = {
+  getStatus: async (): Promise<AIProviderStatus> => {
+    const res = await api.get<AIProviderStatus>('/api/v1/ai/status');
+    return res.data;
+  },
+
   getConversations: async (): Promise<AIConversation[]> => {
     const res = await api.get<AIConversation[]>('/api/v1/ai/conversations');
     return res.data;

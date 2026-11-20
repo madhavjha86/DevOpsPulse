@@ -107,6 +107,15 @@ class Settings(BaseSettings):
     SMTP_SSL: bool = False
     SMTP_TIMEOUT_SECONDS: int = 10
 
+    # AI Intelligence & LLM Configuration
+    AI_PROVIDER: str = "openai"  # "openai", "gemini", "anthropic", "groq", "ollama", or "none"
+    AI_API_KEY: str | None = None
+    AI_MODEL: str = "gpt-4o"
+    AI_BASE_URL: str | None = None  # e.g. "http://localhost:11434/v1" for Ollama or Azure
+    AI_TEMPERATURE: float = 0.2
+    AI_MAX_TOKENS: int = 2500
+    AI_TIMEOUT_SECONDS: int = 45
+
 
 @lru_cache
 def get_settings() -> Settings:

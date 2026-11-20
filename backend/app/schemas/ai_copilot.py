@@ -21,6 +21,9 @@ class AIMessageResponse(BaseModel):
     role: Literal["user", "assistant", "system"]
     content: str
     context_metadata: dict[str, Any] = Field(default_factory=dict)
+    sources: list[dict[str, Any]] = Field(default_factory=list)
+    tokens_used: int | None = None
+    model_name: str | None = None
     created_at: datetime
 
 
@@ -81,6 +84,9 @@ class AIRootCauseAnalysisResponse(BaseModel):
     root_cause: str
     remediation_steps: list[str] = []
     evidence_snippets: list[dict[str, Any]] = []
+    evidence_timeline: list[dict[str, Any]] = []
+    affected_services: list[str] = []
+    correlated_metrics: dict[str, Any] = {}
     suggested_fix_diff: str | None = None
     confidence_score: float
     confidence_explanation: str = ""

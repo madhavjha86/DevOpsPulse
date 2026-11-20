@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  AlertCircle,
   AlertTriangle,
   Bot,
+  Check,
   CheckCircle,
   Clock,
   Code,
-  FileCode,
+  Copy,
+  ExternalLink,
+  Info,
   Plus,
   RefreshCw,
   Send,
@@ -24,10 +26,14 @@ import {
   AIConversation,
   AIConversationDetail,
   AIRootCauseAnalysis,
+  AIProviderStatus,
 } from '../services/ai';
 
 export const AICopilotPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'copilot' | 'rca'>('copilot');
+
+  // AI Provider telemetry status
+  const [aiStatus, setAiStatus] = useState<AIProviderStatus | null>(null);
 
   // Copilot state
   const [conversations, setConversations] = useState<AIConversation[]>([]);
@@ -37,6 +43,7 @@ export const AICopilotPage: React.FC = () => {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [messageInput, setMessageInput] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // RCA state
@@ -47,6 +54,14 @@ export const AICopilotPage: React.FC = () => {
   const [manualLogExcerpt, setManualLogExcerpt] = useState('');
   const [manualJobName, setManualJobName] = useState('CI Pipeline Test Suite');
   const [analyzingLog, setAnalyzingLog] = useState(false);
+
+  // Initial load
+  useEffect(() => {
+    aiService
+      .getStatus()
+      .then((res) => setAiStatus(res))
+      .catch(() => {});
+  }, []);
 
   const fetchConversations = useCallback(async () => {
     setLoadingConv(true);
@@ -92,15 +107,15 @@ export const AICopilotPage: React.FC = () => {
 
   useEffect(() => {
     if (activeTab === 'copilot') {
-      fetchConversations();
+      void fetchConversations();
     } else {
-      fetchRCAs();
+      void fetchRCAs();
     }
   }, [activeTab, fetchConversations, fetchRCAs]);
 
   useEffect(() => {
     if (activeConversationId) {
-      fetchConversationDetail(activeConversationId);
+      void fetchConversationDetail(activeConversationId);
     }
   }, [activeConversationId, fetchConversationDetail]);
 
@@ -111,8 +126,8 @@ export const AICopilotPage: React.FC = () => {
   const handleCreateNewThread = async () => {
     try {
       const newConv = await aiService.createConversation({
-        title: 'New DevOps Session',
-        initial_message: 'Hi, I need assistance diagnosing an issue with my DevOps workflow.',
+        title: 'New DevOps Investigation',
+        initial_message: 'Hi, I need assistance diagnosing recent infrastructure and pipeline events.',
       });
       setConversations((prev) => [
         {
@@ -145,6 +160,7 @@ export const AICopilotPage: React.FC = () => {
       role: 'user' as const,
       content: promptToSend.trim(),
       context_metadata: {},
+      sources: [],
       created_at: new Date().toISOString(),
     };
     setConversationDetail((prev) =>
@@ -212,6 +228,12 @@ export const AICopilotPage: React.FC = () => {
     }
   };
 
+  const copyText = (text: string, msgId: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedMessageId(msgId);
+    setTimeout(() => setCopiedMessageId(null), 2000);
+  };
+
   const getSeverityBadge = (severity: string) => {
     switch (severity) {
       case 'CRITICAL':
@@ -219,7 +241,7 @@ export const AICopilotPage: React.FC = () => {
       case 'HIGH':
         return <Badge variant="warning">{severity}</Badge>;
       case 'MEDIUM':
-        return <Badge variant="info">{severity}</Badge>;
+        return <Badge variant="neutral">{severity}</Badge>;
       default:
         return <Badge variant="neutral">{severity}</Badge>;
     }
@@ -230,14 +252,35 @@ export const AICopilotPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-dark-100 flex items-center gap-2">
-            <Sparkles className="h-7 w-7 text-primary-600" />
-            AI DevOps Copilot &amp; Root Cause Analysis
-          </h1>
-          <p className="text-sm font-medium text-dark-400 mt-1">
-            Context-aware AI engineering assistant and automated post-mortem root cause diagnostic engine.
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-dark-100 flex items-center gap-2">
+              <Sparkles className="h-6 w-6 text-primary-600" />
+              AI DevOps Intelligence Copilot
+            </h1>
+            {aiStatus && (
+              <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+                  aiStatus.is_configured
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : 'bg-sky-50 text-sky-800 border-sky-200'
+                }`}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    aiStatus.is_configured ? 'bg-emerald-500 animate-pulse' : 'bg-sky-500'
+                  }`}
+                />
+                {aiStatus.is_configured
+                  ? `${aiStatus.provider.toUpperCase()} (${aiStatus.model})`
+                  : 'AI Telemetry Engine (Live Local)'}
+              </span>
+            )}
+          </div>
+          <p className="text-xs font-medium text-dark-400 mt-1">
+            Real-time, multi-source infrastructure intelligence correlating GitHub, Docker, Kubernetes, OpenTelemetry logs, and AWS billing.
           </p>
         </div>
+
         <div className="flex items-center gap-2">
           {activeTab === 'copilot' ? (
             <Button variant="primary" size="sm" onClick={handleCreateNewThread}>
@@ -253,192 +296,236 @@ export const AICopilotPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex border-b border-[#E5E7EB] space-x-6">
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b border-[#E5E7EB] pb-3">
         <button
           onClick={() => setActiveTab('copilot')}
-          className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all duration-150 ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'copilot'
-              ? 'border-primary-600 text-primary-600'
-              : 'border-transparent text-dark-400 hover:text-dark-100'
+              ? 'bg-primary-600 text-white shadow-sm shadow-primary-500/25'
+              : 'bg-white border border-[#E5E7EB] text-dark-300 hover:text-dark-100 hover:bg-slate-50'
           }`}
         >
-          <Bot className="h-4 w-4" />
+          <Bot className="w-4 h-4" />
           Interactive DevOps Copilot
         </button>
         <button
           onClick={() => setActiveTab('rca')}
-          className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all duration-150 ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'rca'
-              ? 'border-primary-600 text-primary-600'
-              : 'border-transparent text-dark-400 hover:text-dark-100'
+              ? 'bg-primary-600 text-white shadow-sm shadow-primary-500/25'
+              : 'bg-white border border-[#E5E7EB] text-dark-300 hover:text-dark-100 hover:bg-slate-50'
           }`}
         >
-          <Zap className="h-4 w-4" />
-          Root Cause Analysis (RCA) Center
+          <Terminal className="w-4 h-4 text-amber-500" />
+          Root Cause Analysis Reports ({rcas.length})
         </button>
       </div>
 
       {/* ========================================================================= */}
-      {/* TAB 1: COPILOT CHAT ASSISTANT */}
+      {/* TAB 1: COPILOT CONVERSATION */}
       {/* ========================================================================= */}
       {activeTab === 'copilot' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[640px]">
-          {/* Left Column: Conversation Sessions (4 cols) */}
-          <div className="lg:col-span-4 space-y-3">
-            <div className="glass-card p-3 flex items-center justify-between text-xs text-dark-400">
-              <span className="font-semibold uppercase tracking-wider">Discussions</span>
-              <span>{conversations.length} Threads</span>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-[620px]">
+          {/* Left Column: Conversations List */}
+          <div className="lg:col-span-1 bg-white rounded-2xl border border-[#E5E7EB] p-4 flex flex-col shadow-subtle">
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#F3F4F6]">
+              <span className="text-xs font-bold text-dark-100 uppercase tracking-wider">
+                Sessions ({conversations.length})
+              </span>
+              <button
+                onClick={fetchConversations}
+                disabled={loadingConv}
+                className="text-dark-400 hover:text-primary-600 transition-colors"
+                title="Refresh sessions"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${loadingConv ? 'animate-spin' : ''}`} />
+              </button>
             </div>
 
-            <div className="glass-card divide-y divide-dark-800/80 max-h-[600px] overflow-y-auto">
-              {loadingConv ? (
-                <div className="p-8 text-center text-dark-400 text-xs">
-                  <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-primary-400" />
-                  Loading discussions...
+            <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-[500px]">
+              {conversations.length === 0 ? (
+                <div className="p-4 text-center text-xs text-dark-400">
+                  No discussions yet. Click "New Discussion" to start.
                 </div>
-              ) : conversations.length === 0 ? (
-                <div className="p-8 text-center text-dark-400 text-xs">No conversations yet.</div>
               ) : (
-                conversations.map((c) => {
-                  const isSelected = activeConversationId === c.id;
-                  return (
-                    <div
-                      key={c.id}
-                      onClick={() => setActiveConversationId(c.id)}
-                      className={`p-3.5 cursor-pointer transition-colors flex items-center justify-between group ${
-                        isSelected
-                          ? 'bg-primary-500/10 border-l-4 border-l-primary-500'
-                          : 'hover:bg-dark-800/50'
-                      }`}
-                    >
-                      <div className="truncate mr-2">
-                        <p className="text-xs font-bold text-dark-100 truncate">{c.title}</p>
-                        <p className="text-[11px] text-dark-500 mt-1 font-mono">
-                          {new Date(c.updated_at).toLocaleDateString()} • {c.message_count} messages
-                        </p>
+                conversations.map((c) => (
+                  <div
+                    key={c.id}
+                    onClick={() => setActiveConversationId(c.id)}
+                    className={`p-3 rounded-xl cursor-pointer text-xs transition-all flex items-center justify-between group ${
+                      activeConversationId === c.id
+                        ? 'bg-primary-50/70 border border-primary-200 text-primary-950 font-semibold'
+                        : 'hover:bg-slate-50 border border-transparent text-dark-200'
+                    }`}
+                  >
+                    <div className="truncate flex-1 pr-2">
+                      <div className="truncate font-bold">{c.title}</div>
+                      <div className="text-[10px] text-dark-400 mt-0.5 font-mono">
+                        {new Date(c.updated_at).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
                       </div>
-                      <button
-                        onClick={(e) => handleDeleteConversation(e, c.id)}
-                        className="text-dark-500 hover:text-danger-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                        title="Delete Thread"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
                     </div>
-                  );
-                })
+                    <button
+                      onClick={(e) => handleDeleteConversation(e, c.id)}
+                      className="opacity-0 group-hover:opacity-100 text-rose-500 hover:text-rose-700 p-1 transition-opacity"
+                      title="Delete thread"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))
               )}
             </div>
           </div>
 
-          {/* Right Column: Active Chat Stream (8 cols) */}
-          <div className="lg:col-span-8 flex flex-col glass-card h-[680px] overflow-hidden">
+          {/* Right Column: Chat Stream Area */}
+          <div className="lg:col-span-3 bg-white rounded-2xl border border-[#E5E7EB] flex flex-col shadow-subtle overflow-hidden">
             {/* Thread Header */}
-            <div className="p-4 border-b border-[#E5E7EB] bg-slate-50/70 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-lg bg-primary-50 border border-primary-200 flex items-center justify-center text-primary-600">
-                  <Bot className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-dark-100">
-                    {conversationDetail?.title || 'DevOpsPulse Copilot'}
-                  </h3>
-                  <span className="text-[11px] text-emerald-600 flex items-center gap-1 font-sans font-medium">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Online • Context Linked (Workflows, Telemetry, Docker, K8s)
-                  </span>
-                </div>
+            <div className="px-5 py-3.5 border-b border-[#F3F4F6] bg-slate-50/50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bot className="h-4 w-4 text-primary-600" />
+                <span className="text-xs font-bold text-dark-100">
+                  {conversationDetail?.title || 'Active Investigation'}
+                </span>
               </div>
+              <span className="text-[11px] font-mono text-dark-400">
+                {conversationDetail?.messages.length || 0} messages
+              </span>
             </div>
 
-            {/* Message History */}
-            <div className="flex-1 p-5 overflow-y-auto space-y-4 bg-white">
+            {/* Messages Scroll View */}
+            <div className="flex-1 p-5 overflow-y-auto space-y-4 max-h-[460px]">
               {loadingMessages ? (
-                <div className="p-12 text-center text-dark-400 text-sm">
-                  <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-primary-600" />
-                  Loading message stream...
+                <div className="py-20 flex justify-center">
+                  <RefreshCw className="h-6 w-6 animate-spin text-primary-600" />
                 </div>
-              ) : !conversationDetail?.messages.length ? (
-                <div className="text-center py-16 text-dark-400 space-y-3">
-                  <Sparkles className="h-8 w-8 text-primary-600 mx-auto" />
-                  <p className="text-sm">Ask anything about your DevOps pipelines, Docker containers, or Kubernetes clusters.</p>
+              ) : conversationDetail?.messages.length === 0 ? (
+                <div className="py-20 text-center text-xs text-dark-400">
+                  <Bot className="h-10 w-10 mx-auto text-dark-300 mb-2" />
+                  Ask any question about your repositories, CI/CD failures, or infrastructure health below.
                 </div>
               ) : (
-                conversationDetail.messages.map((m) => {
+                conversationDetail?.messages.map((m) => {
                   const isUser = m.role === 'user';
+                  const isCopied = copiedMessageId === m.id;
                   return (
                     <div
                       key={m.id}
-                      className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
+                      className={`flex gap-3 text-xs ${isUser ? 'justify-end' : 'justify-start'}`}
                     >
                       {!isUser && (
-                        <div className="h-7 w-7 rounded-md bg-primary-50 border border-primary-200 flex items-center justify-center text-primary-600 shrink-0 mt-0.5">
-                          <Bot className="h-3.5 w-3.5" />
+                        <div className="w-7 h-7 rounded-lg bg-primary-100 text-primary-700 flex items-center justify-center shrink-0 mt-0.5">
+                          <Bot className="h-4 w-4" />
                         </div>
                       )}
                       <div
-                        className={`max-w-[85%] rounded-2xl p-4 text-xs leading-relaxed ${
+                        className={`max-w-[85%] rounded-2xl p-4 space-y-2.5 ${
                           isUser
-                            ? 'bg-primary-600 text-white rounded-br-none shadow-sm'
-                            : 'bg-slate-50 border border-[#E5E7EB] text-dark-100 rounded-bl-none font-sans shadow-sm'
+                            ? 'bg-primary-600 text-white rounded-tr-xs shadow-xs'
+                            : 'bg-slate-50 border border-[#E5E7EB] text-dark-100 rounded-tl-xs shadow-2xs'
                         }`}
                       >
-                        <div className="whitespace-pre-wrap font-sans">{m.content}</div>
-                        <span className={`text-[10px] block mt-2 text-right ${isUser ? 'text-purple-100' : 'text-dark-400'}`}>
-                          {new Date(m.created_at).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
+                        <div className="whitespace-pre-wrap leading-relaxed font-sans">
+                          {m.content}
+                        </div>
+
+                        {/* Cited Grounding Sources */}
+                        {!isUser && m.sources && m.sources.length > 0 && (
+                          <div className="pt-2 border-t border-slate-200/80 space-y-1">
+                            <span className="text-[10px] font-bold text-dark-400 uppercase tracking-wider block">
+                              Verified Evidence Sources Cited:
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {m.sources.map((src, sIdx) => (
+                                <span
+                                  key={sIdx}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-white border border-[#E5E7EB] text-dark-300"
+                                >
+                                  <Info className="h-2.5 w-2.5 text-primary-600" />
+                                  {src.title}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Metadata Footer */}
+                        <div
+                          className={`flex items-center justify-between text-[10px] pt-1 font-mono ${
+                            isUser ? 'text-primary-100' : 'text-dark-400'
+                          }`}
+                        >
+                          <span>{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          {!isUser && (
+                            <button
+                              onClick={() => copyText(m.content, m.id)}
+                              className="hover:text-primary-600 flex items-center gap-1 transition-colors"
+                              title="Copy response"
+                            >
+                              {isCopied ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                              <span>{isCopied ? 'Copied' : 'Copy'}</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
                 })
               )}
+              {sendingMessage && (
+                <div className="flex gap-3 text-xs items-center text-dark-400">
+                  <div className="w-7 h-7 rounded-lg bg-primary-100 text-primary-700 flex items-center justify-center shrink-0">
+                    <Bot className="h-4 w-4" />
+                  </div>
+                  <div className="flex items-center gap-1.5 py-2 px-3 bg-slate-50 rounded-xl border border-[#E5E7EB]">
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin text-primary-600" />
+                    <span>Aggregating real-time telemetry and reasoning...</span>
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Prompt Suggestions */}
-            <div className="px-4 py-2 border-t border-[#E5E7EB] bg-slate-50/70 flex items-center gap-2 overflow-x-auto text-[11px]">
-              <span className="text-dark-500 font-semibold shrink-0">Prompts:</span>
-              <button
-                onClick={() =>
-                  handleSendMessage(undefined, 'Generate a production GitHub Actions CI/CD workflow with caching.')
-                }
-                className="px-2.5 py-1 rounded-full bg-white border border-[#E5E7EB] text-dark-300 hover:text-primary-600 hover:border-primary-300 hover:shadow-subtle transition-all shrink-0"
-              >
-                🚀 Generate CI/CD YAML
-              </button>
-              <button
-                onClick={() =>
-                  handleSendMessage(undefined, 'How do I resolve a CrashLoopBackOff error on Kubernetes pods?')
-                }
-                className="px-2.5 py-1 rounded-full bg-white border border-[#E5E7EB] text-dark-300 hover:text-primary-600 hover:border-primary-300 hover:shadow-subtle transition-all shrink-0"
-              >
-                ☸️ Debug CrashLoopBackOff
-              </button>
-              <button
-                onClick={() =>
-                  handleSendMessage(undefined, 'How to troubleshoot Docker container OOMKilled and daemon issues?')
-                }
-                className="px-2.5 py-1 rounded-full bg-white border border-[#E5E7EB] text-dark-300 hover:text-primary-600 hover:border-primary-300 hover:shadow-subtle transition-all shrink-0"
-              >
-                🐳 Docker OOM &amp; Socket Guide
-              </button>
+            {/* Suggested Prompt Chips */}
+            <div className="px-5 py-2 border-t border-[#F3F4F6] bg-slate-50/70 flex items-center gap-2 overflow-x-auto text-[11px]">
+              <span className="text-dark-400 font-bold shrink-0">Quick Prompts:</span>
+              {[
+                'Why did my latest deployment fail?',
+                'Show recent production errors.',
+                'Why is my AWS bill increasing?',
+                'Which Docker containers are unhealthy?',
+                'Summarize active incidents.',
+              ].map((p, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSendMessage(undefined, p)}
+                  disabled={sendingMessage}
+                  className="px-2.5 py-1 rounded-full bg-white border border-[#E5E7EB] text-dark-300 hover:text-primary-600 hover:border-primary-300 hover:shadow-2xs transition-all shrink-0"
+                >
+                  {p}
+                </button>
+              ))}
             </div>
 
             {/* Input Bar */}
-            <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-[#E5E7EB] flex gap-2">
+            <form onSubmit={handleSendMessage} className="p-3.5 border-t border-[#E5E7EB] flex gap-2">
               <Input
-                placeholder="Ask DevOps Copilot (e.g., 'Analyze build failure #42', 'Write Dockerfile')..."
+                placeholder="Ask DevOps Copilot about your pipelines, cluster health, or error traces..."
                 value={messageInput}
                 onChange={(e) => setMessageInput(e.target.value)}
-                disabled={sendingMessage}
+                disabled={sendingMessage || !activeConversationId}
                 className="flex-1 text-xs"
               />
-              <Button type="submit" variant="primary" size="sm" isLoading={sendingMessage}>
-                <Send className="h-4 w-4 mr-1.5" />
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={sendingMessage || !messageInput.trim() || !activeConversationId}
+                leftIcon={<Send className="h-3.5 w-3.5" />}
+              >
                 Send
               </Button>
             </form>
@@ -447,184 +534,158 @@ export const AICopilotPage: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: ROOT CAUSE ANALYSIS (RCA) CENTER */}
+      {/* TAB 2: ROOT CAUSE ANALYSIS REPORTS */}
       {/* ========================================================================= */}
       {activeTab === 'rca' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column: RCA List (5 cols) */}
-          <div className="lg:col-span-5 space-y-3">
-            <div className="glass-card p-3 flex items-center justify-between text-xs text-dark-400">
-              <span className="font-semibold uppercase tracking-wider">Historical RCAs</span>
-              <span>{rcas.length} Reports</span>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column: RCA List */}
+          <div className="lg:col-span-1 space-y-3">
+            <div className="flex items-center justify-between pb-1">
+              <h3 className="text-sm font-bold text-dark-100">Historical RCA Investigations</h3>
+              <span className="text-xs text-dark-400 font-mono">{rcas.length} reports</span>
             </div>
 
-            <div className="glass-card divide-y divide-[#E5E7EB] max-h-[660px] overflow-y-auto">
+            <div className="space-y-2 max-h-[580px] overflow-y-auto pr-1">
               {loadingRca ? (
-                <div className="p-8 text-center text-dark-400 text-xs">
-                  <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-primary-600" />
-                  Loading RCA reports...
+                <div className="py-20 flex justify-center">
+                  <RefreshCw className="h-6 w-6 animate-spin text-primary-600" />
                 </div>
               ) : rcas.length === 0 ? (
-                <div className="p-8 text-center text-dark-400 text-xs">
-                  No failure analyses recorded yet.
+                <div className="p-8 text-center text-xs text-dark-400 bg-white rounded-2xl border border-[#E5E7EB]">
+                  No failure investigations recorded yet. Click "Analyze Failure Log" to start.
                 </div>
               ) : (
-                rcas.map((r) => {
-                  const isSelected = selectedRca?.id === r.id;
-                  return (
-                    <div
-                      key={r.id}
-                      onClick={() => setSelectedRca(r)}
-                      className={`p-4 cursor-pointer transition-colors space-y-2 ${
-                        isSelected
-                          ? 'bg-primary-50/70 border-l-4 border-l-primary-600'
-                          : 'hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-bold text-dark-100 truncate">{r.summary}</span>
-                        {getSeverityBadge(r.severity)}
-                      </div>
-
-                      <div className="flex items-center justify-between text-[11px] text-dark-400 font-mono">
-                        <span className="text-primary-600 font-semibold">{r.failure_category}</span>
-                        <span>{new Date(r.created_at).toLocaleDateString()}</span>
-                      </div>
-
-                      <div className="flex items-center justify-between text-[11px] text-dark-500 font-sans">
-                        <span>Confidence: {(r.confidence_score * 100).toFixed(0)}%</span>
-                        <span
-                          className={`font-semibold capitalize ${
-                            r.status === 'resolved'
-                              ? 'text-emerald-600'
-                              : r.status === 'acknowledged'
-                              ? 'text-warning-600'
-                              : 'text-dark-300'
-                          }`}
-                        >
-                          Status: {r.status}
-                        </span>
-                      </div>
+                rcas.map((r) => (
+                  <div
+                    key={r.id}
+                    onClick={() => setSelectedRca(r)}
+                    className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
+                      selectedRca?.id === r.id
+                        ? 'border-primary-500 bg-primary-50/50 shadow-2xs'
+                        : 'border-[#E5E7EB] bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-mono font-bold text-primary-700 bg-white px-2 py-0.5 rounded border border-primary-200">
+                        #{r.id}
+                      </span>
+                      {getSeverityBadge(r.severity)}
                     </div>
-                  );
-                })
+                    <h4 className="text-xs font-bold text-dark-100 line-clamp-1">{r.summary}</h4>
+                    <div className="mt-1 flex items-center justify-between text-[11px] text-dark-400">
+                      <span className="font-mono">{r.failure_category}</span>
+                      <span>{Math.round(r.confidence_score * 100)}% confidence</span>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
           </div>
 
-          {/* Right Column: Detailed RCA Diagnostic View (7 cols) */}
-          <div className="lg:col-span-7">
-            {!selectedRca ? (
-              <div className="glass-card p-12 text-center text-dark-400 text-sm">
-                Select an RCA report from the left panel to review remediation steps and code diffs.
-              </div>
-            ) : (
-              <div className="glass-card p-6 space-y-6">
-                {/* Header Card */}
-                <div className="border-b border-[#E5E7EB] pb-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2.5">
-                        {getSeverityBadge(selectedRca.severity)}
-                        <span className="text-xs font-mono font-semibold text-primary-600">
-                          {selectedRca.failure_category}
-                        </span>
-                      </div>
-                      <h2 className="text-lg font-bold text-dark-100 mt-1.5">{selectedRca.summary}</h2>
+          {/* Right Column: Selected RCA Detailed Report */}
+          <div className="lg:col-span-2">
+            {selectedRca ? (
+              <div className="bg-white rounded-2xl border border-[#E5E7EB] p-6 shadow-subtle space-y-6">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-[#F3F4F6] pb-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-mono font-bold text-dark-400">RCA #{selectedRca.id}</span>
+                      {getSeverityBadge(selectedRca.severity)}
+                      <Badge variant={selectedRca.status === 'resolved' ? 'success' : 'neutral'}>
+                        {selectedRca.status.toUpperCase()}
+                      </Badge>
                     </div>
-
-                    {/* Status Triage Controls */}
-                    <div className="flex items-center gap-2">
-                      {selectedRca.status !== 'resolved' && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleUpdateRCAStatus(selectedRca.id, 'acknowledged')}
-                        >
-                          <Clock className="h-3.5 w-3.5 mr-1" />
-                          Acknowledge
-                        </Button>
-                      )}
-                      {selectedRca.status !== 'resolved' ? (
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() => handleUpdateRCAStatus(selectedRca.id, 'resolved')}
-                        >
-                          <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                          Mark Resolved
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
-                          <CheckCircle className="h-4 w-4" />
-                          Resolved
-                        </span>
-                      )}
-                    </div>
+                    <h2 className="text-base font-bold text-dark-100">{selectedRca.summary}</h2>
                   </div>
-                </div>
 
-                {/* Root Cause Narrative */}
-                <div className="space-y-2">
-                  <h4 className="text-xs uppercase font-bold text-dark-400 tracking-wider flex items-center gap-1.5">
-                    <AlertTriangle className="h-4 w-4 text-warning-500" />
-                    Root Cause Diagnosis
-                  </h4>
-                  <div className="p-4 bg-slate-50 rounded-xl border border-[#E5E7EB] text-xs text-dark-100 leading-relaxed font-sans">
-                    {selectedRca.root_cause}
-                  </div>
-                </div>
-
-                {/* Numbered Remediation Action Steps */}
-                <div className="space-y-2">
-                  <h4 className="text-xs uppercase font-bold text-dark-400 tracking-wider flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-primary-600" />
-                    Actionable Remediation Steps
-                  </h4>
-                  <div className="space-y-2">
-                    {selectedRca.remediation_steps.map((step, idx) => (
-                      <div
-                        key={idx}
-                        className="p-3 bg-slate-50 rounded-xl border border-[#E5E7EB] text-xs text-dark-200 flex items-start gap-3"
+                  <div className="flex items-center gap-2">
+                    {selectedRca.status !== 'resolved' && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleUpdateRCAStatus(selectedRca.id, 'resolved')}
+                        leftIcon={<CheckCircle className="h-3.5 w-3.5 text-emerald-600" />}
                       >
-                        <span className="h-5 w-5 rounded-full bg-primary-100 text-primary-700 font-bold flex items-center justify-center shrink-0 text-[11px]">
-                          {idx + 1}
-                        </span>
-                        <span>{step}</span>
-                      </div>
-                    ))}
+                        Resolve
+                      </Button>
+                    )}
                   </div>
                 </div>
 
-                {/* Suggested Fix Diff */}
-                {selectedRca.suggested_fix_diff && (
+                {/* Insufficient Data Warning Banner */}
+                {selectedRca.is_insufficient_data && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                    <span>
+                      <strong>INSUFFICIENT_DATA:</strong> Telemetry was inadequate to draw a definitive conclusion.
+                      No speculative causes were fabricated.
+                    </span>
+                  </div>
+                )}
+
+                {/* Root Cause Card */}
+                <div className="p-4 rounded-xl bg-slate-50 border border-[#E5E7EB] space-y-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-dark-400">Root Cause Hypothesis:</span>
+                  <p className="text-xs text-dark-100 font-medium leading-relaxed">{selectedRca.root_cause}</p>
+                  <p className="text-[11px] font-mono text-dark-400 mt-1">{selectedRca.confidence_explanation}</p>
+                </div>
+
+                {/* Chronological Evidence Timeline */}
+                {selectedRca.evidence_timeline && selectedRca.evidence_timeline.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="text-xs uppercase font-bold text-dark-400 tracking-wider flex items-center gap-1.5">
-                      <FileCode className="h-4 w-4 text-emerald-600" />
-                      Suggested Patch / Fix Diff
-                    </h4>
-                    <div className="p-4 bg-slate-900 rounded-xl border border-slate-800 font-mono text-[11px] overflow-x-auto whitespace-pre leading-relaxed text-slate-100">
-                      {selectedRca.suggested_fix_diff.split('\n').map((line, i) => {
-                        const isAdd = line.startsWith('+');
-                        const isSub = line.startsWith('-');
-                        return (
-                          <div
-                            key={i}
-                            className={
-                              isAdd
-                                ? 'text-emerald-400 bg-emerald-500/10 px-1'
-                                : isSub
-                                ? 'text-rose-400 bg-rose-500/10 px-1'
-                                : 'text-slate-400'
-                            }
-                          >
-                            {line}
+                    <span className="text-xs font-bold uppercase tracking-wider text-dark-400">
+                      Chronological Incident Timeline:
+                    </span>
+                    <div className="border-l-2 border-primary-200 ml-2 space-y-3 pl-3 text-xs">
+                      {selectedRca.evidence_timeline.map((evt, idx) => (
+                        <div key={idx} className="relative">
+                          <span className="absolute -left-[19px] top-1.5 w-2.5 h-2.5 rounded-full bg-primary-600 ring-4 ring-white" />
+                          <div className="font-mono text-[10px] text-dark-400">
+                            {new Date(evt.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} • {evt.source}
                           </div>
-                        );
-                      })}
+                          <div className="font-medium text-dark-100 mt-0.5">{evt.event}</div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
+
+                {/* Remediation Steps Checklist */}
+                <div className="space-y-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-dark-400">
+                    Recommended Remediation Actions:
+                  </span>
+                  <ul className="space-y-2">
+                    {selectedRca.remediation_steps.map((step, idx) => (
+                      <li
+                        key={idx}
+                        className="flex items-start gap-2.5 text-xs text-dark-200 bg-slate-50/70 p-2.5 rounded-xl border border-[#F3F4F6]"
+                      >
+                        <span className="flex h-5 w-5 rounded-full bg-primary-100 text-primary-700 items-center justify-center font-bold text-[10px] shrink-0">
+                          {idx + 1}
+                        </span>
+                        <span className="leading-relaxed">{step}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Suggested Diff */}
+                {selectedRca.suggested_fix_diff && (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-dark-400">
+                      Suggested Fix Diff:
+                    </span>
+                    <pre className="p-3.5 rounded-xl bg-slate-950 text-slate-200 font-mono text-xs overflow-x-auto whitespace-pre-wrap">
+                      {selectedRca.suggested_fix_diff}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-16 text-center text-xs text-dark-400 bg-white rounded-2xl border border-[#E5E7EB]">
+                Select an investigation from the left column to view the full Root Cause Analysis report.
               </div>
             )}
           </div>
@@ -635,16 +696,12 @@ export const AICopilotPage: React.FC = () => {
       <Modal
         isOpen={isAnalyzeModalOpen}
         onClose={() => setIsAnalyzeModalOpen(false)}
-        title="Analyze Pipeline / Container Failure Log"
+        title="Analyze Build Failure or Error Log"
       >
         <form onSubmit={handleTriggerManualRCA} className="space-y-4">
-          <p className="text-xs text-dark-400">
-            Paste error stack traces, pytest failures, or Docker build logs below. The AI diagnostic engine will categorize the failure and generate remediation steps.
-          </p>
-
           <Input
-            label="Job / Pipeline Name"
-            placeholder="e.g., Pytest Unit Tests, Docker Production Build"
+            label="Pipeline / Job Name"
+            placeholder="e.g. CI Pipeline Test Suite"
             value={manualJobName}
             onChange={(e) => setManualJobName(e.target.value)}
             required
@@ -671,9 +728,8 @@ export const AICopilotPage: React.FC = () => {
             >
               Cancel
             </Button>
-            <Button type="submit" variant="primary" isLoading={analyzingLog}>
-              <Sparkles className="h-4 w-4 mr-1.5" />
-              Generate RCA
+            <Button type="submit" variant="primary" disabled={analyzingLog || !manualLogExcerpt.trim()}>
+              {analyzingLog ? 'Analyzing Telemetry...' : 'Generate RCA'}
             </Button>
           </div>
         </form>

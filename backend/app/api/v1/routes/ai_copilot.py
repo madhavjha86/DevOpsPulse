@@ -1,7 +1,8 @@
 """AI DevOps Copilot and Root Cause Analysis (RCA) API endpoints."""
 
-from typing import Annotated
+from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import TenantContext, get_db, get_tenant_context
@@ -16,6 +17,7 @@ from app.schemas.ai_copilot import (
     UpdateRCAStatusRequest,
 )
 from app.services.ai_copilot_service import AICopilotService
+from app.services.llm_client import LLMClient
 
 router = APIRouter(prefix="/ai", tags=["AI Intelligence & Copilot"])
 
@@ -23,6 +25,15 @@ router = APIRouter(prefix="/ai", tags=["AI Intelligence & Copilot"])
 # --------------------------------------------------------------------------
 # COPILOT CONVERSATION ENDPOINTS
 # --------------------------------------------------------------------------
+
+@router.get(
+    "/status",
+    summary="Get AI provider connection status",
+)
+async def get_ai_status() -> dict[str, Any]:
+    """Return active LLM provider configuration and model status."""
+    return LLMClient.get_provider_details()
+
 
 @router.get(
     "/conversations",
@@ -85,7 +96,7 @@ async def get_conversation(
     "/conversations/{conversation_id}/messages",
     response_model=AIMessageResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Send a message to the AI Copilot and receive streaming or immediate response",
+    summary="Send a message to the AI Copilot and receive assistant response",
 )
 async def send_message(
     conversation_id: int,
@@ -100,9 +111,39 @@ async def send_message(
             user_id=tenant.user.id,
             conversation_id=conversation_id,
             payload=payload,
+            organization_id=tenant.organization_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+@router.get(
+    "/conversations/{conversation_id}/stream",
+    summary="Stream real-time AI Copilot response using Server-Sent Events (SSE)",
+)
+async def stream_message(
+    conversation_id: int,
+    prompt: str,
+    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> StreamingResponse:
+    """Stream token-by-token LLM output for real-time conversational chat."""
+    stream_generator = AICopilotService.stream_copilot_message(
+        db=db,
+        user_id=tenant.user.id,
+        conversation_id=conversation_id,
+        prompt=prompt,
+        organization_id=tenant.organization_id,
+    )
+    return StreamingResponse(
+        stream_generator,
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.delete(

@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from sqlalchemy import Float, ForeignKey, Index, String, Text
+from sqlalchemy import Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
+    from app.models.incident import Incident
     from app.models.repository import Repository
     from app.models.user import User
     from app.models.workflow_run import WorkflowRun
@@ -27,6 +28,8 @@ class AIConversation(Base, TimestampMixin):
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     title: Mapped[str] = mapped_column(String(255), default="New DevOps Discussion")
+    system_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    context_scope: Mapped[str] = mapped_column(String(100), default="ORGANIZATION_WIDE")
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="ai_conversations")
@@ -47,6 +50,9 @@ class AIMessage(Base, TimestampMixin):
     role: Mapped[str] = mapped_column(String(50))  # user, assistant, system
     content: Mapped[str] = mapped_column(Text)
     context_metadata_json: Mapped[str | None] = mapped_column(Text)  # attached workflow/logs context
+    sources_json: Mapped[str | None] = mapped_column(Text, nullable=True)  # cited repos, runs, incidents
+    tokens_used: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    model_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Relationships
     conversation: Mapped["AIConversation"] = relationship(back_populates="messages")
@@ -64,6 +70,9 @@ class AIRootCauseAnalysis(Base, TimestampMixin):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
+    incident_id: Mapped[int | None] = mapped_column(
+        ForeignKey("incidents.id", ondelete="SET NULL", use_alter=True), nullable=True, index=True
+    )
     workflow_run_id: Mapped[int | None] = mapped_column(
         ForeignKey("workflow_runs.id", ondelete="SET NULL"), nullable=True, index=True
     )
@@ -72,15 +81,19 @@ class AIRootCauseAnalysis(Base, TimestampMixin):
     )
     failure_category: Mapped[str] = mapped_column(
         String(100), default="UNKNOWN"
-    )  # TEST_FAILURE, DEPENDENCY_ERROR, DOCKER_BUILD_ERROR, TIMEOUT, SYNTAX_ERROR, PERMISSION_DENIED
+    )  # TEST_FAILURE, DEPENDENCY_ERROR, DOCKER_BUILD_ERROR, TIMEOUT, SYNTAX_ERROR, PERMISSION_DENIED, INSUFFICIENT_DATA
     severity: Mapped[str] = mapped_column(
         String(50), default="MEDIUM"
     )  # CRITICAL, HIGH, MEDIUM, LOW
     summary: Mapped[str] = mapped_column(Text)
     root_cause: Mapped[str] = mapped_column(Text)
     remediation_steps_json: Mapped[str] = mapped_column(Text, default="[]")
+    evidence_timeline_json: Mapped[str | None] = mapped_column(Text, default="[]")
+    affected_services_json: Mapped[str | None] = mapped_column(Text, default="[]")
+    correlated_metrics_json: Mapped[str | None] = mapped_column(Text, default="{}")
     suggested_fix_diff: Mapped[str | None] = mapped_column(Text)
     confidence_score: Mapped[float] = mapped_column(Float, default=0.88)
+    confidence_explanation: Mapped[str | None] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(
         String(50), default="generated"
     )  # generated, acknowledged, resolved
@@ -89,6 +102,7 @@ class AIRootCauseAnalysis(Base, TimestampMixin):
     user: Mapped["User"] = relationship(back_populates="root_cause_analyses")
     workflow_run: Mapped["WorkflowRun | None"] = relationship()
     repository: Mapped["Repository | None"] = relationship()
+    incident: Mapped["Incident | None"] = relationship(foreign_keys=[incident_id])
 
     __table_args__ = (
         Index("ix_rca_failure_category", "failure_category"),
