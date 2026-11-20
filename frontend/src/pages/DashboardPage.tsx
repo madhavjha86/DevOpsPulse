@@ -386,17 +386,18 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Core Operations Split: Infrastructure & Topology vs Incident/Security Alerts */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Left 7 Cols: System Health, Copilot, & Quick Actions */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <AiCopilotHighlightCard />
-                <SystemHealthCard />
-              </div>
+          {/* Row 1: AI DevOps Copilot, System Health & Quick Actions (Clean 3-column symmetry) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <AiCopilotHighlightCard />
+            <SystemHealthCard />
+            <QuickActionsCard />
+          </div>
 
-              {/* Service Inventory & Microservice Health */}
-              <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-xs">
+          {/* Row 2: Architecture Topology & Live Remediation Alerts Stream */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            {/* Left 7 Cols: Service Inventory & Microservice Health */}
+            <div className="lg:col-span-7 min-h-0">
+              <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-xs h-full flex flex-col">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-sm font-extrabold text-dark-100 flex items-center gap-2">
@@ -445,11 +446,8 @@ export const DashboardPage: React.FC = () => {
             </div>
 
             {/* Right 5 Cols: Active Incident & Vulnerability Feed */}
-            <div className="lg:col-span-5 space-y-6">
-              <QuickActionsCard />
-
-              {/* Live Alerts & Remediation Stream */}
-              <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-xs">
+            <div className="lg:col-span-5 min-h-0">
+              <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-xs h-full flex flex-col">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4 text-amber-500" />
@@ -528,8 +526,8 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Repository Telemetry Strip */}
-          <div className="space-y-3 pt-6 w-full clear-both">
+          {/* Row 3: Repository Telemetry Strip */}
+          <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xs sm:text-sm font-bold text-dark-300 uppercase tracking-wider">

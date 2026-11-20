@@ -30,6 +30,7 @@ class CloudAccount(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     region: Mapped[str] = mapped_column(String(50), nullable=False, default="us-east-1")
     encrypted_credentials: Mapped[str] = mapped_column(Text, nullable=False)
+    external_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     
     # Status and telemetry caches
     last_status: Mapped[str] = mapped_column(

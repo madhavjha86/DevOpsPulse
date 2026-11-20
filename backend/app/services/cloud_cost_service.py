@@ -1,6 +1,9 @@
 """Service layer for Cloud Cost Intelligence."""
 
+import calendar
+import hashlib
 from datetime import date, datetime, timedelta, timezone
+from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -55,10 +58,13 @@ class CloudCostService:
         else:
             cost_q = cost_q.where(CloudCostItem.user_id == user_id)
         cost_res = await db.execute(cost_q)
-        items = cost_res.scalars().all()
+        all_items = cost_res.scalars().all()
+
+        real_items = [i for i in all_items if not i.is_simulated]
+        simulated_items = [i for i in all_items if i.is_simulated]
 
         is_demo = False
-        if not items and include_demo:
+        if not real_items and not simulated_items and include_demo:
             await cls._seed_default_cost_data(db, user_id, organization_id)
             if organization_id is not None:
                 cost_res = await db.execute(
@@ -68,17 +74,23 @@ class CloudCostService:
                 cost_res = await db.execute(
                     select(CloudCostItem).where(CloudCostItem.user_id == user_id)
                 )
-            items = cost_res.scalars().all()
+            all_items = cost_res.scalars().all()
+            simulated_items = [i for i in all_items if i.is_simulated]
             is_demo = True
+        elif not real_items and include_demo:
+            is_demo = True
+
+        # Production spend only sums non-simulated records unless in explicit demo mode
+        display_items = simulated_items if is_demo else real_items
 
         # Calculate monthly totals
         today = date.today()
         first_of_month = today.replace(day=1)
-        month_items = [i for i in items if i.usage_date >= first_of_month]
+        month_items = [i for i in display_items if i.usage_date >= first_of_month]
 
         monthly_spend = round(sum(i.cost_amount for i in month_items), 2)
         day_of_month = max(today.day, 1)
-        days_in_month = 30
+        days_in_month = calendar.monthrange(today.year, today.month)[1]
         projected = round((monthly_spend / day_of_month) * days_in_month, 2) if day_of_month > 0 else monthly_spend
 
         # Provider spend breakdown
@@ -86,30 +98,51 @@ class CloudCostService:
         gcp_spend = round(sum(i.cost_amount for i in month_items if i.provider.upper() == "GCP"), 2)
         azure_spend = round(sum(i.cost_amount for i in month_items if i.provider.upper() == "AZURE"), 2)
 
+        def get_provider_status_and_spend(
+            prov_code: str, raw_spend: float
+        ) -> tuple[str, bool, str | None, float, str]:
+            prov_acc = configured_providers.get(prov_code)
+            if prov_acc:
+                if prov_acc.last_status == "connected":
+                    return "CONNECTED", True, prov_acc.name, raw_spend, f"Verified connection ({prov_acc.name})"
+                elif prov_acc.last_status == "auth_error":
+                    return "AUTH_ERROR", False, prov_acc.name, 0.0, prov_acc.error_message or "Authentication failed — invalid credentials or IAM AssumeRole"
+                elif prov_acc.last_status in ("unreachable", "error"):
+                    return "UNREACHABLE", False, prov_acc.name, 0.0, prov_acc.error_message or f"{prov_code.upper()} endpoint unreachable"
+                else:
+                    return "NOT_CONFIGURED", False, prov_acc.name, 0.0, "Credentials unconfigured"
+            if is_demo:
+                return "DEMO_MODE", True, f"{prov_code.upper()} Account (Simulated)", raw_spend, f"Simulated {prov_code.upper()} Cost Telemetry"
+            return "NOT_CONFIGURED", False, None, 0.0, f"Not configured — Connect {prov_code.upper()} billing for live spend"
+
+        aws_st, aws_conn, aws_name, aws_final_spend, aws_det = get_provider_status_and_spend("aws", aws_spend)
+        gcp_st, gcp_conn, gcp_name, gcp_final_spend, gcp_det = get_provider_status_and_spend("gcp", gcp_spend)
+        azure_st, azure_conn, azure_name, azure_final_spend, azure_det = get_provider_status_and_spend("azure", azure_spend)
+
         providers_status = [
             ProviderCostStatus(
                 provider="AWS",
-                status="CONNECTED" if "aws" in configured_providers else ("DEMO_MODE" if is_demo else "NOT_CONFIGURED"),
-                account_name=configured_providers.get("aws").name if "aws" in configured_providers else "AWS Account (Simulated)" if is_demo else None,
-                monthly_spend=aws_spend,
-                is_connected="aws" in configured_providers or is_demo,
-                details="Connected via IAM AssumeRole" if "aws" in configured_providers else "Simulated AWS Cost Telemetry" if is_demo else "Not configured — Connect AWS billing for live spend",
+                status=aws_st,
+                account_name=aws_name,
+                monthly_spend=aws_final_spend,
+                is_connected=aws_conn,
+                details=aws_det,
             ),
             ProviderCostStatus(
                 provider="GCP",
-                status="CONNECTED" if "gcp" in configured_providers else ("DEMO_MODE" if is_demo else "NOT_CONFIGURED"),
-                account_name=configured_providers.get("gcp").name if "gcp" in configured_providers else "GCP Project (Simulated)" if is_demo else None,
-                monthly_spend=gcp_spend,
-                is_connected="gcp" in configured_providers or is_demo,
-                details="Connected via Service Account" if "gcp" in configured_providers else "Simulated GCP Cost Telemetry" if is_demo else "Not configured — Connect GCP billing export",
+                status=gcp_st,
+                account_name=gcp_name,
+                monthly_spend=gcp_final_spend,
+                is_connected=gcp_conn,
+                details=gcp_det,
             ),
             ProviderCostStatus(
                 provider="AZURE",
-                status="CONNECTED" if "azure" in configured_providers else ("DEMO_MODE" if is_demo else "NOT_CONFIGURED"),
-                account_name=configured_providers.get("azure").name if "azure" in configured_providers else "Azure Subscription (Simulated)" if is_demo else None,
-                monthly_spend=azure_spend,
-                is_connected="azure" in configured_providers or is_demo,
-                details="Connected via Service Principal" if "azure" in configured_providers else "Simulated Azure Cost Telemetry" if is_demo else "Not configured — Connect Azure Cost Management",
+                status=azure_st,
+                account_name=azure_name,
+                monthly_spend=azure_final_spend,
+                is_connected=azure_conn,
+                details=azure_det,
             ),
         ]
 
@@ -120,7 +153,7 @@ class CloudCostService:
             d_str = (cutoff_date + timedelta(days=d_idx)).strftime("%Y-%m-%d")
             daily_map[d_str] = {"AWS": 0.0, "AZURE": 0.0, "GCP": 0.0, "TOTAL": 0.0}
 
-        for item in items:
+        for item in display_items:
             d_key = item.usage_date.strftime("%Y-%m-%d")
             if d_key in daily_map:
                 prov = item.provider.upper()
@@ -163,7 +196,7 @@ class CloudCostService:
             )
 
         # 4. Active Budgets
-        budgets_resp = await cls.list_budgets(db, user_id)
+        budgets_resp = await cls.list_budgets(db, user_id, organization_id=organization_id)
 
         # 5. Cost Optimizations
         opts_resp = await cls.list_optimizations(db, user_id, organization_id=organization_id)
@@ -177,6 +210,7 @@ class CloudCostService:
         return CloudCostOverviewResponse(
             total_monthly_spend=monthly_spend,
             projected_month_end=projected,
+            forecast_label="ESTIMATED RUN-RATE",
             monthly_change_percent=-4.2,  # 4.2% reduction vs prior month
             currency="USD",
             providers=providers_status,
@@ -204,9 +238,23 @@ class CloudCostService:
         budgets = res.scalars().all()
 
         responses = []
+        first_of_month = date.today().replace(day=1)
         for b in budgets:
-            pct = round((b.current_spend / b.monthly_budget) * 100.0, 1) if b.monthly_budget > 0 else 0.0
-            forecasted = round(b.current_spend * 1.12, 2)
+            b_spend_q = select(func.sum(CloudCostItem.cost_amount)).where(
+                CloudCostItem.usage_date >= first_of_month,
+            )
+            if b.organization_id is not None:
+                b_spend_q = b_spend_q.where(CloudCostItem.organization_id == b.organization_id)
+            else:
+                b_spend_q = b_spend_q.where(CloudCostItem.user_id == b.user_id)
+            if b.provider != "ALL":
+                b_spend_q = b_spend_q.where(CloudCostItem.provider == b.provider)
+
+            spend_res = await db.execute(b_spend_q)
+            curr_spend = float(spend_res.scalar() or b.current_spend or 0.0)
+
+            pct = round((curr_spend / b.monthly_budget) * 100.0, 1) if b.monthly_budget > 0 else 0.0
+            forecasted = round(curr_spend * 1.12, 2)
             st = "OK"
             if pct >= b.critical_threshold:
                 st = "CRITICAL"
@@ -221,7 +269,7 @@ class CloudCostService:
                     monthly_budget=b.monthly_budget,
                     warning_threshold=b.warning_threshold,
                     critical_threshold=b.critical_threshold,
-                    current_spend=b.current_spend,
+                    current_spend=round(curr_spend, 2),
                     forecasted_spend=forecasted,
                     percentage_used=pct,
                     status=st,
@@ -461,21 +509,38 @@ class CloudCostService:
         expected = 42.50
         actual = 168.20
         spike_pct = round(((actual - expected) / expected) * 100.0, 1)
+        sim_fingerprint = f"sim_{organization_id or user_id}_ec2_{today.isoformat()}"
 
-        anomaly = CloudCostAnomaly(
-            user_id=user_id,
-            organization_id=organization_id,
-            provider="AWS",
-            service_name="Amazon Elastic Compute Cloud (EC2)",
-            anomaly_date=today,
-            actual_amount=actual,
-            expected_amount=expected,
-            spike_percentage=spike_pct,
-            severity="CRITICAL",
-            root_cause="Runaway compute: 14 on-demand m5.2xlarge instances launched in us-east-1 without auto-termination policy.",
-            status="ACTIVE",
+        stmt = select(CloudCostAnomaly).where(
+            CloudCostAnomaly.anomaly_fingerprint == sim_fingerprint
         )
-        db.add(anomaly)
+        res = await db.execute(stmt)
+        existing = res.scalar_one_or_none()
+
+        if existing:
+            existing.actual_amount = actual
+            existing.spike_percentage = spike_pct
+            existing.status = "ACTIVE"
+            anomaly = existing
+        else:
+            anomaly = CloudCostAnomaly(
+                user_id=user_id,
+                organization_id=organization_id,
+                provider="AWS",
+                service_name="Amazon Elastic Compute Cloud (EC2)",
+                region="us-east-1",
+                anomaly_date=today,
+                actual_amount=actual,
+                expected_amount=expected,
+                spike_percentage=spike_pct,
+                severity="CRITICAL",
+                root_cause="Runaway compute: 14 on-demand m5.2xlarge instances launched in us-east-1 without auto-termination policy.",
+                status="ACTIVE",
+                anomaly_fingerprint=sim_fingerprint,
+                is_simulated=True,
+            )
+            db.add(anomaly)
+
         await db.commit()
         await db.refresh(anomaly)
 
@@ -550,6 +615,10 @@ class CloudCostService:
                     currency="USD",
                     usage_date=cur_date,
                     is_simulated=True,
+                    region="us-east-1",
+                    usage_type="Standard",
+                    granularity="DAILY",
+                    billing_status="FINAL",
                 )
                 db.add(cost_item)
 
@@ -642,12 +711,14 @@ class CloudCostService:
         )
 
         # Seed initial cost anomaly
+        seed_fingerprint = f"seed_{organization_id or user_id}_ec2_{today.isoformat()}"
         db.add(
             CloudCostAnomaly(
                 user_id=user_id,
                 organization_id=organization_id,
                 provider="AWS",
                 service_name="Amazon Elastic Compute Cloud (EC2)",
+                region="us-east-1",
                 anomaly_date=today,
                 actual_amount=154.50,
                 expected_amount=42.50,
@@ -655,6 +726,8 @@ class CloudCostService:
                 severity="CRITICAL",
                 root_cause="Sudden +263% surge in EC2 compute charges detected. 12 spot instances were interrupted and replaced by on-demand m5.xlarge instances without savings plan coverage.",
                 status="ACTIVE",
+                anomaly_fingerprint=seed_fingerprint,
+                is_simulated=True,
             )
         )
 

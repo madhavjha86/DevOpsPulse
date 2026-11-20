@@ -222,3 +222,41 @@ async def simulate_cost_spike(
         organization_id=tenant.organization_id,
     )
 
+
+@router.post(
+    "/sync/aws",
+    summary="Synchronize real AWS billing data from AWS Cost Explorer",
+)
+async def sync_aws_billing(
+    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    days: int = Query(default=30, ge=1, le=90, description="Number of past days to synchronize"),
+) -> dict:
+    """Ingest actual AWS Cost Explorer billing data for the organization's configured AWS account."""
+    from datetime import date, timedelta
+    from app.models.cloud_account import CloudAccount
+    from app.services.aws_cost_explorer_service import AWSCostExplorerService
+    from sqlalchemy import select
+
+    q = select(CloudAccount).where(
+        CloudAccount.provider == "aws",
+        CloudAccount.is_active == True,
+    )
+    if tenant.organization_id is not None:
+        q = q.where(CloudAccount.organization_id == tenant.organization_id)
+    else:
+        q = q.where(CloudAccount.user_id == tenant.user.id)
+
+    res = await db.execute(q)
+    account = res.scalar_one_or_none()
+    if not account:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No configured AWS cloud account found for this workspace.",
+        )
+
+    today = date.today()
+    start_date = today - timedelta(days=days)
+    service = AWSCostExplorerService(account)
+    return await service.sync_cost_and_usage(db=db, start_date=start_date, end_date=today)
+

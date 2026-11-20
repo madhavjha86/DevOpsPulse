@@ -30,7 +30,7 @@ class ProviderCostStatus(BaseModel):
     """Connection and spend status for a specific cloud provider."""
 
     provider: str
-    status: Literal["CONNECTED", "NOT_CONFIGURED", "ERROR", "DEMO_MODE"]
+    status: Literal["CONNECTED", "NOT_CONFIGURED", "ERROR", "DEMO_MODE", "AUTH_ERROR", "UNREACHABLE"]
     account_name: str | None = None
     monthly_spend: float = 0.0
     is_connected: bool = False
@@ -116,6 +116,7 @@ class CloudCostOverviewResponse(BaseModel):
 
     total_monthly_spend: float
     projected_month_end: float
+    forecast_label: str = "ESTIMATED RUN-RATE"
     monthly_change_percent: float
     currency: str = "USD"
     providers: list[ProviderCostStatus]

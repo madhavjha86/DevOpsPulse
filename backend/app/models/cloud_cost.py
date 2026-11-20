@@ -72,6 +72,12 @@ class CloudCostItem(Base, TimestampMixin):
     currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
     usage_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     is_simulated: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    region: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    usage_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    granularity: Mapped[str] = mapped_column(String(20), default="DAILY", nullable=False)
+    billing_status: Mapped[str] = mapped_column(String(20), default="FINAL", nullable=False)
+    usage_quantity: Mapped[float | None] = mapped_column(Float, nullable=True)
+    usage_unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # Relationships
     user: Mapped["User"] = relationship("User")
@@ -80,6 +86,18 @@ class CloudCostItem(Base, TimestampMixin):
     __table_args__ = (
         Index("ix_cloud_cost_user_date", "user_id", "usage_date"),
         Index("ix_cloud_cost_provider_service", "provider", "service_name"),
+        Index(
+            "ix_cloud_cost_composite_natural_key",
+            "organization_id",
+            "cloud_account_id",
+            "provider",
+            "service_name",
+            "region",
+            "usage_type",
+            "usage_date",
+            "granularity",
+            "currency",
+        ),
     )
 
 
@@ -152,6 +170,9 @@ class CloudCostAnomaly(Base, TimestampMixin):
         String(50), default="ACTIVE", nullable=False
     )  # ACTIVE, ACKNOWLEDGED, RESOLVED
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    region: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    anomaly_fingerprint: Mapped[str | None] = mapped_column(String(64), unique=True, index=True, nullable=True)
+    is_simulated: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # Relationships
     user: Mapped["User"] = relationship("User")

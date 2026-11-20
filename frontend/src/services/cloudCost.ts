@@ -17,7 +17,7 @@ export interface DailyCostPoint {
 
 export interface ProviderCostStatus {
   provider: string;
-  status: 'CONNECTED' | 'NOT_CONFIGURED' | 'ERROR' | 'DEMO_MODE';
+  status: 'CONNECTED' | 'NOT_CONFIGURED' | 'ERROR' | 'DEMO_MODE' | 'AUTH_ERROR' | 'UNREACHABLE';
   account_name?: string | null;
   monthly_spend: number;
   is_connected: boolean;
@@ -82,6 +82,7 @@ export interface CloudCostOverview {
   anomalies?: CostAnomaly[];
   active_anomalies_count?: number;
   is_demo_mode: boolean;
+  forecast_label?: string;
 }
 
 export interface BudgetCreatePayload {
@@ -145,6 +146,11 @@ export const cloudCostService = {
 
   simulateSpike: async (): Promise<CostAnomaly> => {
     const res = await api.post<CostAnomaly>('/api/v1/cloud/cost/anomalies/simulate');
+    return res.data;
+  },
+
+  syncAwsBilling: async (days: number = 30): Promise<{ success: boolean; message: string; synced_records: number }> => {
+    const res = await api.post('/api/v1/cloud/cost/sync/aws', null, { params: { days } });
     return res.data;
   },
 };

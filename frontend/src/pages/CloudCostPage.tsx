@@ -15,6 +15,7 @@ import {
   Zap,
   CheckCircle2,
   Bell,
+  RefreshCw,
 } from 'lucide-react';
 import {
   cloudCostService,
@@ -36,6 +37,8 @@ export const CloudCostPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSimulatingSpike, setIsSimulatingSpike] = useState<boolean>(false);
   const [simulateToast, setSimulateToast] = useState<string | null>(null);
+  const [isSyncingAws, setIsSyncingAws] = useState<boolean>(false);
+  const [syncToast, setSyncToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Budget Modal
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState<boolean>(false);
@@ -83,6 +86,28 @@ export const CloudCostPage: React.FC = () => {
       alert('Failed to simulate cost anomaly spike.');
     } finally {
       setIsSimulatingSpike(false);
+    }
+  };
+
+  const handleSyncAws = async () => {
+    setIsSyncingAws(true);
+    setSyncToast(null);
+    try {
+      const res = await cloudCostService.syncAwsBilling(30);
+      setSyncToast({
+        type: res.success ? 'success' : 'error',
+        message: res.message,
+      });
+      setTimeout(() => setSyncToast(null), 8000);
+      void fetchData();
+    } catch (e: any) {
+      setSyncToast({
+        type: 'error',
+        message: e.response?.data?.detail || 'Failed to trigger AWS Cost Explorer synchronization.',
+      });
+      setTimeout(() => setSyncToast(null), 8000);
+    } finally {
+      setIsSyncingAws(false);
     }
   };
 
@@ -185,6 +210,16 @@ export const CloudCostPage: React.FC = () => {
           </select>
 
           <Button
+            variant="secondary"
+            onClick={() => void handleSyncAws()}
+            disabled={isSyncingAws}
+            className="flex items-center gap-1.5 text-xs text-slate-700 hover:text-[#7C3AED]"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isSyncingAws ? 'animate-spin' : ''}`} />
+            <span>{isSyncingAws ? 'Syncing AWS...' : 'Sync AWS Bill'}</span>
+          </Button>
+
+          <Button
             onClick={() => setIsBudgetModalOpen(true)}
             className="flex items-center gap-2 bg-[#7C3AED] hover:bg-[#6D28D9] text-white shadow-sm text-xs"
           >
@@ -193,6 +228,21 @@ export const CloudCostPage: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {syncToast && (
+        <div
+          className={`p-3.5 rounded-xl border text-xs flex items-center justify-between ${
+            syncToast.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-rose-50 border-rose-200 text-rose-800'
+          }`}
+        >
+          <span>{syncToast.message}</span>
+          <button onClick={() => setSyncToast(null)} className="text-slate-400 hover:text-slate-600">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
@@ -224,13 +274,21 @@ export const CloudCostPage: React.FC = () => {
                   <Cloud className="h-5 w-5 text-slate-600" />
                   <span className="text-sm font-bold text-slate-900">{p.provider}</span>
                 </div>
-                {isNotConfigured ? (
+                {p.status === 'NOT_CONFIGURED' ? (
                   <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                     Not Configured
                   </span>
-                ) : isDemo ? (
+                ) : p.status === 'DEMO_MODE' ? (
                   <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
                     Demo Mode
+                  </span>
+                ) : p.status === 'AUTH_ERROR' ? (
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                    Auth Error
+                  </span>
+                ) : p.status === 'UNREACHABLE' ? (
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                    Unreachable
                   </span>
                 ) : (
                   <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -241,14 +299,14 @@ export const CloudCostPage: React.FC = () => {
 
               <div className="mt-3">
                 <div className="text-xl font-bold text-slate-900">
-                  {isNotConfigured ? (
+                  {p.status === 'NOT_CONFIGURED' || p.status === 'AUTH_ERROR' || p.status === 'UNREACHABLE' ? (
                     <span className="text-slate-400 font-normal text-sm">Integration Inactive</span>
                   ) : (
                     `$${p.monthly_spend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                   )}
                 </div>
                 <p className="mt-1 text-xs text-slate-500">
-                  {p.details || (isNotConfigured ? 'Distinguished from zero cost — configure credentials to ingest spend.' : 'Monthly billing synced')}
+                  {p.details || (p.status === 'NOT_CONFIGURED' ? 'Distinguished from zero cost — configure credentials to ingest spend.' : 'Monthly billing synced')}
                 </p>
               </div>
             </div>
@@ -274,8 +332,8 @@ export const CloudCostPage: React.FC = () => {
           <div className="mt-2 text-2xl font-bold text-purple-700">
             ${overview ? overview.projected_month_end.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
           </div>
-          <div className="mt-1 text-xs text-slate-400">
-            Forecast based on 30-day velocity
+          <div className="mt-1 text-xs text-slate-400 font-medium">
+            {overview?.forecast_label || 'ESTIMATED RUN-RATE'}
           </div>
         </div>
 
