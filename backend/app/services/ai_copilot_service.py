@@ -93,6 +93,24 @@ class AICopilotService:
             await db.commit()
             await db.refresh(assistant_msg)
 
+            if organization_id and assistant_msg.tokens_used:
+                try:
+                    from app.services.ai_governance_service import AIGovernanceService
+                    p_tok = int(assistant_msg.tokens_used * 0.6)
+                    c_tok = max(1, assistant_msg.tokens_used - p_tok)
+                    await AIGovernanceService.record_usage(
+                        db=db,
+                        organization_id=organization_id,
+                        user_id=user_id,
+                        tool_name="DevOpsPulse Copilot",
+                        provider=settings.AI_PROVIDER or "groq",
+                        model_name=assistant_msg.model_name or settings.AI_MODEL,
+                        prompt_tokens=p_tok,
+                        completion_tokens=c_tok,
+                    )
+                except Exception as e:
+                    logger.warning("Failed to record AI governance ledger", exc=str(e))
+
             messages_list = [
                 AIMessageResponse(
                     id=user_msg.id,
@@ -272,6 +290,24 @@ class AICopilotService:
         db.add(assistant_msg)
         await db.commit()
         await db.refresh(assistant_msg)
+
+        if organization_id and assistant_msg.tokens_used:
+            try:
+                from app.services.ai_governance_service import AIGovernanceService
+                p_tok = int(assistant_msg.tokens_used * 0.6)
+                c_tok = max(1, assistant_msg.tokens_used - p_tok)
+                await AIGovernanceService.record_usage(
+                    db=db,
+                    organization_id=organization_id,
+                    user_id=user_id,
+                    tool_name="DevOpsPulse Copilot",
+                    provider=settings.AI_PROVIDER or "groq",
+                    model_name=assistant_msg.model_name or settings.AI_MODEL,
+                    prompt_tokens=p_tok,
+                    completion_tokens=c_tok,
+                )
+            except Exception as e:
+                logger.warning("Failed to record AI governance ledger", exc=str(e))
 
         return AIMessageResponse(
             id=assistant_msg.id,

@@ -30,6 +30,7 @@ const TelemetryPage = lazy(() => import('@/pages/TelemetryPage'));
 const AICopilotPage = lazy(() => import('@/pages/AICopilotPage'));
 const AIRootCauseAnalysisPage = lazy(() => import('@/pages/AIRootCauseAnalysisPage'));
 const AICodeIntelligencePage = lazy(() => import('@/pages/AICodeIntelligencePage'));
+const AIGovernancePage = lazy(() => import('@/pages/AIGovernancePage'));
 const NotificationsPage = lazy(() => import('@/pages/NotificationsPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 const OrganizationSettingsPage = lazy(() => import('@/pages/OrganizationSettingsPage'));
@@ -73,6 +74,8 @@ export const App: React.FC = () => {
           <Route path="/ai/copilot" element={<AICopilotPage />} />
           <Route path="/ai/rca" element={<AIRootCauseAnalysisPage />} />
           <Route path="/ai/code-intelligence" element={<AICodeIntelligencePage />} />
+          <Route path="/ai/governance" element={<AIGovernancePage />} />
+          <Route path="/organization/ai-governance" element={<AIGovernancePage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/settings/organization" element={<OrganizationSettingsPage />} />

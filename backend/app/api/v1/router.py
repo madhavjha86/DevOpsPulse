@@ -28,6 +28,7 @@ from app.api.v1.routes.developer_portal import router as developer_portal_router
 from app.api.v1.routes.disaster_recovery import router as disaster_recovery_router
 from app.api.v1.routes.reports import router as reports_router
 from app.api.v1.routes.jenkins import router as jenkins_router
+from app.api.v1.routes.ai_governance import router as ai_governance_router
 
 api_router = APIRouter()
 
@@ -56,3 +57,4 @@ api_router.include_router(developer_portal_router)
 api_router.include_router(disaster_recovery_router)
 api_router.include_router(reports_router)
 api_router.include_router(jenkins_router)
+api_router.include_router(ai_governance_router)
