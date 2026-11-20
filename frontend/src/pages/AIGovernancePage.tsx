@@ -40,6 +40,7 @@ import {
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { Modal } from '../components/ui/Modal';
 import {
   aiGovernanceService,
@@ -61,6 +62,7 @@ const DEFAULT_COLOR = '#6366F1';
 export const AIGovernancePage: React.FC = () => {
   const [summaryData, setSummaryData] = useState<AIGovernanceSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [timeframe, setTimeframe] = useState<number>(30);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -76,11 +78,15 @@ export const AIGovernancePage: React.FC = () => {
 
   const fetchSummary = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await aiGovernanceService.getSummary(timeframe);
       setSummaryData(data);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to load AI governance metrics', err);
+      const message =
+        err instanceof Error ? err.message : 'Failed to load AI governance metrics';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -121,14 +127,39 @@ export const AIGovernancePage: React.FC = () => {
     return tokens.toLocaleString();
   };
 
-  const filteredEmployees = summaryData?.employees.filter((emp) => {
+  const employeesList = summaryData?.employees ?? [];
+  const filteredEmployees = employeesList.filter((emp) => {
     const q = searchQuery.toLowerCase();
     return (
       emp.name.toLowerCase().includes(q) ||
       emp.email.toLowerCase().includes(q) ||
       emp.role.toLowerCase().includes(q)
     );
-  }) || [];
+  });
+
+  if (loading && !summaryData) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <LoadingSpinner size="lg" message="Loading Enterprise AI Governance metrics..." />
+      </div>
+    );
+  }
+
+  if (!summaryData) {
+    return (
+      <div className="bg-white rounded-2xl border border-[#E5E7EB] p-8 text-center space-y-4 shadow-2xs max-w-lg mx-auto my-12">
+        <AlertTriangle className="h-10 w-10 text-amber-500 mx-auto" />
+        <h3 className="text-base font-bold text-dark-100">Unable to load AI Governance metrics</h3>
+        <p className="text-xs text-dark-300">
+          {error || 'Could not fetch token telemetry from the server. Please check your connection or login session.'}
+        </p>
+        <Button size="sm" onClick={fetchSummary} className="mx-auto">
+          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
