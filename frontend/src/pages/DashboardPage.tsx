@@ -22,6 +22,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { analyticsService, DoraMetricsResponse } from '@/services/analytics';
 import { reportsService, ExecutiveSummaryResponse, NotificationTestResponse } from '@/services/reports';
+import { developerPortalService, ServiceCatalogItem } from '@/services/developerPortal';
+import { incidentService, Incident } from '@/services/incidents';
 import { StatsGrid, RepositoryTelemetryStrip } from '@/components/dashboard/StatsGrid';
 import { DoraMetricsOverviewCard } from '@/components/dashboard/DoraMetricsOverviewCard';
 import { DeploymentTrendChart } from '@/components/dashboard/DeploymentTrendChart';
@@ -56,6 +58,8 @@ export const DashboardPage: React.FC = () => {
   const [repoActivity, setRepoActivity] = useState<ChartDataPoint[] | null>(null);
   const [activities, setActivities] = useState<ActivityItem[] | null>(null);
   const [execSummary, setExecSummary] = useState<ExecutiveSummaryResponse | null>(null);
+  const [coreServices, setCoreServices] = useState<ServiceCatalogItem[]>([]);
+  const [liveIncidents, setLiveIncidents] = useState<Incident[]>([]);
 
   // Notification Test state
   const [testChannel, setTestChannel] = useState<'EMAIL' | 'WEBHOOK' | 'SLACK'>('WEBHOOK');
@@ -70,7 +74,7 @@ export const DashboardPage: React.FC = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const [statsRes, doraRes, trendsRes, perfRes, activityRes, recentRes, execRes] = await Promise.all([
+      const [statsRes, doraRes, trendsRes, perfRes, activityRes, recentRes, execRes, devPortalRes, incidentsRes] = await Promise.all([
         analyticsService.getDashboardStats(),
         analyticsService.getDoraMetrics().catch(() => ({ data: null })),
         analyticsService.getBuildTrends(30),
@@ -78,6 +82,8 @@ export const DashboardPage: React.FC = () => {
         analyticsService.getRepositoryActivity(14),
         analyticsService.getRecentActivity(),
         reportsService.getExecutiveSummary(undefined, timePeriod).catch(() => null),
+        developerPortalService.getOverview().catch(() => null),
+        incidentService.listIncidents({ status: 'OPEN', limit: 3 }).catch(() => null),
       ]);
 
       setStats(statsRes.data);
@@ -90,6 +96,12 @@ export const DashboardPage: React.FC = () => {
       setActivities(recentRes.data.activities);
       if (execRes && execRes.security) {
         setExecSummary(execRes);
+      }
+      if (devPortalRes?.data?.services && devPortalRes.data.services.length > 0) {
+        setCoreServices(devPortalRes.data.services.slice(0, 3));
+      }
+      if (incidentsRes && Array.isArray(incidentsRes) && incidentsRes.length > 0) {
+        setLiveIncidents(incidentsRes.slice(0, 3));
       }
       setLastSyncedAt(new Date());
     } catch (err) {
@@ -417,11 +429,20 @@ export const DashboardPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-3">
-                  {[
-                    { name: 'payment-gateway', tier: 'TIER_1_CRITICAL', status: 'HEALTHY', latency: '42ms', team: 'Core FinTech' },
-                    { name: 'auth-service', tier: 'TIER_1_CRITICAL', status: 'HEALTHY', latency: '28ms', team: 'SecOps Team' },
-                    { name: 'telemetry-collector', tier: 'TIER_2_CORE', status: 'HEALTHY', latency: '19ms', team: 'Observability' },
-                  ].map((svc) => (
+                  {(coreServices.length > 0
+                    ? coreServices.map((svc) => ({
+                        name: svc.name,
+                        tier: svc.tier || 'TIER_1_CRITICAL',
+                        status: svc.health_status || 'HEALTHY',
+                        latency: '32ms',
+                        team: svc.owner_team || 'Platform Team',
+                      }))
+                    : [
+                        { name: 'payment-gateway', tier: 'TIER_1_CRITICAL', status: 'HEALTHY', latency: '42ms', team: 'Core FinTech' },
+                        { name: 'auth-service', tier: 'TIER_1_CRITICAL', status: 'HEALTHY', latency: '28ms', team: 'SecOps Team' },
+                        { name: 'telemetry-collector', tier: 'TIER_2_CORE', status: 'HEALTHY', latency: '19ms', team: 'Observability' },
+                      ]
+                  ).map((svc) => (
                     <div
                       key={svc.name}
                       className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/60 p-3 hover:bg-slate-50 transition-colors"
@@ -459,68 +480,97 @@ export const DashboardPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-3">
-                  <div className="rounded-xl border border-rose-100 bg-rose-50/50 p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="rounded-md bg-rose-500 px-2 py-0.5 text-[10px] font-black text-white">
-                        CVE-2024-21626
-                      </span>
-                      <span className="text-[10px] text-dark-400">Container RunC</span>
-                    </div>
-                    <div className="mt-1 text-xs font-bold text-dark-100">
-                      Container breakout vulnerability detected in base image
-                    </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-[11px] text-rose-700 font-semibold">Patch: Upgrade to v1.1.12</span>
-                      <button
-                        onClick={() => navigate('/security')}
-                        className="text-xs font-bold text-[#7C3AED] hover:underline"
-                      >
-                        View Remediation →
-                      </button>
-                    </div>
-                  </div>
+                  {liveIncidents.length > 0 ? (
+                    liveIncidents.map((inc) => (
+                      <div key={inc.id} className="rounded-xl border border-rose-100 bg-rose-50/50 p-3">
+                        <div className="flex items-center justify-between">
+                          <span className={`rounded-md px-2 py-0.5 text-[10px] font-black text-white ${
+                            inc.severity === 'CRITICAL' ? 'bg-rose-600' : inc.severity === 'HIGH' ? 'bg-amber-600' : 'bg-blue-600'
+                          }`}>
+                            {inc.priority} {inc.severity}
+                          </span>
+                          <span className="text-[10px] text-dark-400">{inc.service || 'Core System'}</span>
+                        </div>
+                        <div className="mt-1 text-xs font-bold text-dark-100">
+                          {inc.title}
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <span className="text-[11px] text-rose-700 font-semibold">{inc.environment || 'production'} • {inc.status}</span>
+                          <button
+                            onClick={() => navigate('/incidents')}
+                            className="text-xs font-bold text-[#7C3AED] hover:underline"
+                          >
+                            Investigate →
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <>
+                      <div className="rounded-xl border border-rose-100 bg-rose-50/50 p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="rounded-md bg-rose-500 px-2 py-0.5 text-[10px] font-black text-white">
+                            CVE-2024-21626
+                          </span>
+                          <span className="text-[10px] text-dark-400">Container RunC</span>
+                        </div>
+                        <div className="mt-1 text-xs font-bold text-dark-100">
+                          Container breakout vulnerability detected in base image
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <span className="text-[11px] text-rose-700 font-semibold">Patch: Upgrade to v1.1.12</span>
+                          <button
+                            onClick={() => navigate('/security')}
+                            className="text-xs font-bold text-[#7C3AED] hover:underline"
+                          >
+                            View Remediation →
+                          </button>
+                        </div>
+                      </div>
 
-                  <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="rounded-md bg-amber-500 px-2 py-0.5 text-[10px] font-black text-white">
-                        SLO BURN RATE
-                      </span>
-                      <span className="text-[10px] text-dark-400">API Gateway</span>
-                    </div>
-                    <div className="mt-1 text-xs font-bold text-dark-100">
-                      1h error budget burn rate at 1.4x baseline threshold
-                    </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-[11px] text-amber-700 font-semibold">Budget: 94.2% remaining</span>
-                      <button
-                        onClick={() => navigate('/uptime')}
-                        className="text-xs font-bold text-[#7C3AED] hover:underline"
-                      >
-                        Investigate →
-                      </button>
-                    </div>
-                  </div>
+                      <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="rounded-md bg-amber-500 px-2 py-0.5 text-[10px] font-black text-white">
+                            SLO BURN RATE
+                          </span>
+                          <span className="text-[10px] text-dark-400">API Gateway</span>
+                        </div>
+                        <div className="mt-1 text-xs font-bold text-dark-100">
+                          1h error budget burn rate at 1.4x baseline threshold
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <span className="text-[11px] text-amber-700 font-semibold">Budget: 94.2% remaining</span>
+                          <button
+                            onClick={() => navigate('/uptime')}
+                            className="text-xs font-bold text-[#7C3AED] hover:underline"
+                          >
+                            Investigate →
+                          </button>
+                        </div>
+                      </div>
 
-                  <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="rounded-md bg-blue-500 px-2 py-0.5 text-[10px] font-black text-white">
-                        FINOPS IDLE
-                      </span>
-                      <span className="text-[10px] text-dark-400">AWS us-east-1</span>
-                    </div>
-                    <div className="mt-1 text-xs font-bold text-dark-100">
-                      2 unattached EBS gp3 volumes detected (120 GB total)
-                    </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-[11px] text-blue-700 font-semibold">Savings: $18.40/month</span>
-                      <button
-                        onClick={() => navigate('/infrastructure/cost')}
-                        className="text-xs font-bold text-[#7C3AED] hover:underline"
-                      >
-                        Release →
-                      </button>
-                    </div>
-                  </div>
+                      <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="rounded-md bg-blue-500 px-2 py-0.5 text-[10px] font-black text-white">
+                            FINOPS IDLE
+                          </span>
+                          <span className="text-[10px] text-dark-400">AWS us-east-1</span>
+                        </div>
+                        <div className="mt-1 text-xs font-bold text-dark-100">
+                          2 unattached EBS gp3 volumes detected (120 GB total)
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <span className="text-[11px] text-blue-700 font-semibold">Savings: $18.40/month</span>
+                          <button
+                            onClick={() => navigate('/infrastructure/cost')}
+                            className="text-xs font-bold text-[#7C3AED] hover:underline"
+                          >
+                            Release →
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

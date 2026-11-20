@@ -1,6 +1,6 @@
 """Service Uptime & Health Monitor Pydantic schemas."""
 from datetime import datetime
-from pydantic import BaseModel, HttpUrl, Field
+from pydantic import BaseModel, Field
 
 
 class MonitorCreateRequest(BaseModel):
@@ -35,3 +35,22 @@ class MonitorResponse(BaseModel):
     avg_latency_ms: float
     last_checked_at: datetime | None = None
     recent_probes: list[int] = Field(default_factory=list)  # status codes of recent probes
+
+    model_config = {"from_attributes": True}
+
+
+class SystemHealthServiceItem(BaseModel):
+    """Health status and telemetry for an underlying infrastructure service."""
+
+    name: str
+    status: str  # Healthy, Degraded, Offline
+    latency_ms: float | None = None
+    details: str | None = None
+
+
+class SystemHealthResponse(BaseModel):
+    """System-wide health report across Database, Redis, Workers, and API."""
+
+    status: str  # Healthy, Degraded, Offline
+    services: list[SystemHealthServiceItem]
+    checked_at: datetime

@@ -21,10 +21,24 @@ export interface ProbeResult {
   message: string;
 }
 
+export interface SystemHealthServiceItem {
+  name: string;
+  status: 'Healthy' | 'Degraded' | 'Offline';
+  latency_ms?: number | null;
+  details?: string | null;
+}
+
+export interface SystemHealthResponse {
+  status: 'Healthy' | 'Degraded' | 'Offline';
+  services: SystemHealthServiceItem[];
+  checked_at: string;
+}
+
 export const monitorService = {
   list: () => api.get<Monitor[]>('/api/v1/monitors'),
   create: (data: { name: string; url: string; method?: string; interval_seconds?: number }) =>
     api.post<Monitor>('/api/v1/monitors', data),
   probe: (id: number) => api.post<ProbeResult>(`/api/v1/monitors/${id}/probe`),
   delete: (id: number) => api.delete(`/api/v1/monitors/${id}`),
+  getSystemHealth: () => api.get<SystemHealthResponse>('/api/v1/monitors/system-health'),
 };

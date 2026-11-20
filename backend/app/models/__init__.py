@@ -52,6 +52,7 @@ from app.models.disaster_recovery_and_keys import (
     BackupRecord,
     OrganizationApiKey,
 )
+from app.models.monitor import ServiceMonitor
 
 __all__ = [
     "User",
@@ -103,4 +104,5 @@ __all__ = [
     "DisasterRecoveryDrill",
     "BackupRecord",
     "OrganizationApiKey",
+    "ServiceMonitor",
 ]
