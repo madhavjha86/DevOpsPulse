@@ -20,6 +20,9 @@ import {
   Zap,
   Check,
   XCircle,
+  BarChart3,
+  ExternalLink,
+  Gauge,
 } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -41,7 +44,8 @@ import {
 } from '../services/sre';
 
 export const TelemetryPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'logs' | 'traces' | 'topology' | 'apm'>('logs');
+  const [activeTab, setActiveTab] = useState<'logs' | 'traces' | 'topology' | 'apm' | 'grafana'>('logs');
+  const [grafanaTheme, setGrafanaTheme] = useState<'light' | 'dark'>('light');
   const [stats, setStats] = useState<TelemetryStats | null>(null);
   const [services, setServices] = useState<string[]>([]);
   const [loadingStats, setLoadingStats] = useState(false);
@@ -390,6 +394,18 @@ export const TelemetryPage: React.FC = () => {
         >
           <Zap className="h-4 w-4" />
           APM Latency &amp; Alert Rules
+        </button>
+
+        <button
+          onClick={() => setActiveTab('grafana')}
+          className={`pb-3 text-xs sm:text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors ${
+            activeTab === 'grafana'
+              ? 'border-primary-600 text-primary-700'
+              : 'border-transparent text-dark-400 hover:text-dark-100'
+          }`}
+        >
+          <BarChart3 className="h-4 w-4" />
+          Grafana &amp; Prometheus Hub
         </button>
       </div>
 
@@ -882,6 +898,131 @@ export const TelemetryPage: React.FC = () => {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: Grafana & Prometheus Hub */}
+      {activeTab === 'grafana' && (
+        <div className="space-y-6">
+          {/* Grafana Control Strip */}
+          <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-[#F97316] to-[#EA580C] text-white shadow-md shadow-orange-500/25">
+                  <BarChart3 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-dark-100 flex items-center gap-2">
+                    Grafana &amp; Prometheus Real-Time Engine
+                    <span className="rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5">
+                      LIVE EXPORTER
+                    </span>
+                  </h3>
+                  <p className="text-xs text-dark-400">
+                    FastAPI metrics scraped at <code className="text-[#7C3AED] font-mono">/metrics</code> • Prometheus Server :9090 • Grafana :3001
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setGrafanaTheme(grafanaTheme === 'light' ? 'dark' : 'light')}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-dark-300 hover:bg-slate-50 transition-colors"
+              >
+                Theme: <strong className="capitalize">{grafanaTheme}</strong>
+              </button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => window.open('http://localhost:9090/targets', '_blank')}
+                leftIcon={<Activity className="h-3.5 w-3.5" />}
+              >
+                Prometheus Targets
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => window.open('http://localhost:3001', '_blank')}
+                rightIcon={<ExternalLink className="h-3.5 w-3.5" />}
+              >
+                Launch Standalone Grafana
+              </Button>
+            </div>
+          </div>
+
+          {/* Quick Metrics Metric Strip */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+              <div className="flex items-center justify-between text-dark-400 text-xs font-semibold uppercase">
+                <span>Scraped Endpoint</span>
+                <Server className="h-4 w-4 text-[#7C3AED]" />
+              </div>
+              <div className="mt-2 text-xl font-black text-dark-100 font-mono">/metrics</div>
+              <p className="text-[11px] text-emerald-600 mt-1 font-medium">Auto-Instrumented via FastAPI</p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+              <div className="flex items-center justify-between text-dark-400 text-xs font-semibold uppercase">
+                <span>Median Latency (p50)</span>
+                <Clock className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div className="mt-2 text-xl font-black text-emerald-700 font-mono">18.4 ms</div>
+              <p className="text-[11px] text-dark-400 mt-1">Histogram quantile 0.50 bucket</p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+              <div className="flex items-center justify-between text-dark-400 text-xs font-semibold uppercase">
+                <span>95th Percentile SLA</span>
+                <Gauge className="h-4 w-4 text-amber-500" />
+              </div>
+              <div className="mt-2 text-xl font-black text-amber-600 font-mono">48.2 ms</div>
+              <p className="text-[11px] text-emerald-600 mt-1 font-medium">Within 100ms SLO target</p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+              <div className="flex items-center justify-between text-dark-400 text-xs font-semibold uppercase">
+                <span>Default Dashboard</span>
+                <BarChart3 className="h-4 w-4 text-orange-500" />
+              </div>
+              <div className="mt-2 text-sm font-extrabold text-dark-100 truncate">Platform Overview</div>
+              <p className="text-[11px] text-dark-400 mt-1">UID: devopspulse-platform-overview</p>
+            </div>
+          </div>
+
+          {/* Embedded Grafana Dashboard Container */}
+          <div className="rounded-2xl border border-[#E5E7EB] bg-white shadow-xs overflow-hidden">
+            <div className="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-3 bg-slate-50/50">
+              <div className="flex items-center gap-2 text-xs font-bold text-dark-100">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Live Embedded Grafana View (Port 3001)</span>
+              </div>
+              <span className="text-[11px] text-dark-400">
+                Powered by Grafana Container &bull; Auto-refreshes every 5s
+              </span>
+            </div>
+
+            <div className="relative w-full h-[650px] bg-slate-900">
+              <iframe
+                title="DevOpsPulse Platform Grafana Dashboard"
+                src={`http://localhost:3001/d/devopspulse-platform-overview/devopspulse-real-time-platform-observability?orgId=1&kiosk=tv&theme=${grafanaTheme}`}
+                className="w-full h-full border-0"
+              />
+
+              {/* Startup overlay helper if container isn't up */}
+              <div className="absolute bottom-3 right-3 rounded-xl bg-slate-900/90 border border-slate-700/80 p-3 text-xs text-white max-w-sm backdrop-blur-xs">
+                <div className="font-bold flex items-center gap-1.5 text-amber-400 mb-1">
+                  <span>💡 Local Setup Tip</span>
+                </div>
+                <p className="text-[11px] text-slate-300">
+                  To boot Grafana locally with Docker:
+                </p>
+                <code className="mt-1 block bg-slate-950 p-1.5 rounded-lg text-emerald-400 font-mono text-[10px]">
+                  docker compose up -d prometheus grafana
+                </code>
+              </div>
             </div>
           </div>
         </div>

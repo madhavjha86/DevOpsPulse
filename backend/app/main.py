@@ -6,6 +6,7 @@ from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api.v1.router import api_router
 from app.core.config import get_settings
@@ -59,6 +60,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Prometheus Metrics Instrumentation (Exposes /metrics for Grafana & Prometheus scraping)
+Instrumentator(
+    should_group_status_codes=False,
+    should_ignore_untemplated=True,
+    should_respect_env_var=False,
+    should_instrument_requests_inprogress=True,
+    excluded_handlers=["/metrics", "/health"],
+    inprogress_name="devopspulse_requests_inprogress",
+    inprogress_labels=True,
+).instrument(app).expose(app, endpoint="/metrics", tags=["Observability & Telemetry"])
 
 # API v1 Router
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
