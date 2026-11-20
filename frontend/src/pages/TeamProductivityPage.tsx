@@ -422,3 +422,5 @@ export const TeamProductivityPage: React.FC = () => {
     </div>
   );
 };
+
+export default TeamProductivityPage;

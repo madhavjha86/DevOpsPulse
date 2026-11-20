@@ -836,3 +836,5 @@ export const CloudCostPage: React.FC = () => {
     </div>
   );
 };
+
+export default CloudCostPage;

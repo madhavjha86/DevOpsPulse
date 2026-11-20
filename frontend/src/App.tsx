@@ -1,75 +1,87 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
-import { LoginPage } from '@/pages/LoginPage';
-import { RegisterPage } from '@/pages/RegisterPage';
-import { GitHubCallbackPage } from '@/pages/GitHubCallbackPage';
-import { DashboardPage } from '@/pages/DashboardPage';
-import { RepositoriesPage } from '@/pages/RepositoriesPage';
-import { RepositoryDetailPage } from '@/pages/RepositoryDetailPage';
-import { WorkflowsPage } from '@/pages/WorkflowsPage';
-import { DeploymentsPage } from '@/pages/DeploymentsPage';
-import { DoraPage } from '@/pages/DoraPage';
-import { UptimePage } from '@/pages/UptimePage';
-import { SecurityPage } from '@/pages/SecurityPage';
-import DockerContainersPage from '@/pages/DockerContainersPage';
-import KubernetesPage from '@/pages/KubernetesPage';
-import CloudMonitoringPage from '@/pages/CloudMonitoringPage';
-import { TelemetryPage } from '@/pages/TelemetryPage';
-import { AICopilotPage } from '@/pages/AICopilotPage';
-import { AICodeIntelligencePage } from '@/pages/AICodeIntelligencePage';
-import { IncidentsPage } from '@/pages/IncidentsPage';
-import { AIRootCauseAnalysisPage } from '@/pages/AIRootCauseAnalysisPage';
-import { CloudCostPage } from '@/pages/CloudCostPage';
-import { TeamProductivityPage } from '@/pages/TeamProductivityPage';
-import { NotificationsPage } from '@/pages/NotificationsPage';
-import { SettingsPage } from '@/pages/SettingsPage';
-import { OrganizationSettingsPage } from '@/pages/OrganizationSettingsPage';
-import { AcceptInvitationPage } from '@/pages/AcceptInvitationPage';
-import { DeveloperPortalPage } from '@/pages/DeveloperPortalPage';
-import { DisasterRecoveryPage } from '@/pages/DisasterRecoveryPage';
-import { LandingPage } from '@/pages/LandingPage';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+
+// Dynamic lazy imports for route code-splitting
+const LandingPage = lazy(() => import('@/pages/LandingPage'));
+const LoginPage = lazy(() => import('@/pages/LoginPage'));
+const RegisterPage = lazy(() => import('@/pages/RegisterPage'));
+const GitHubCallbackPage = lazy(() => import('@/pages/GitHubCallbackPage'));
+const AcceptInvitationPage = lazy(() => import('@/pages/AcceptInvitationPage'));
+
+const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
+const RepositoriesPage = lazy(() => import('@/pages/RepositoriesPage'));
+const RepositoryDetailPage = lazy(() => import('@/pages/RepositoryDetailPage'));
+const WorkflowsPage = lazy(() => import('@/pages/WorkflowsPage'));
+const DeploymentsPage = lazy(() => import('@/pages/DeploymentsPage'));
+const DoraPage = lazy(() => import('@/pages/DoraPage'));
+const TeamProductivityPage = lazy(() => import('@/pages/TeamProductivityPage'));
+const IncidentsPage = lazy(() => import('@/pages/IncidentsPage'));
+const UptimePage = lazy(() => import('@/pages/UptimePage'));
+const SecurityPage = lazy(() => import('@/pages/SecurityPage'));
+const DeveloperPortalPage = lazy(() => import('@/pages/DeveloperPortalPage'));
+const DisasterRecoveryPage = lazy(() => import('@/pages/DisasterRecoveryPage'));
+const DockerContainersPage = lazy(() => import('@/pages/DockerContainersPage'));
+const KubernetesPage = lazy(() => import('@/pages/KubernetesPage'));
+const CloudMonitoringPage = lazy(() => import('@/pages/CloudMonitoringPage'));
+const CloudCostPage = lazy(() => import('@/pages/CloudCostPage'));
+const TelemetryPage = lazy(() => import('@/pages/TelemetryPage'));
+const AICopilotPage = lazy(() => import('@/pages/AICopilotPage'));
+const AIRootCauseAnalysisPage = lazy(() => import('@/pages/AIRootCauseAnalysisPage'));
+const AICodeIntelligencePage = lazy(() => import('@/pages/AICodeIntelligencePage'));
+const NotificationsPage = lazy(() => import('@/pages/NotificationsPage'));
+const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
+const OrganizationSettingsPage = lazy(() => import('@/pages/OrganizationSettingsPage'));
+
+const PageFallback: React.FC = () => (
+  <div className="flex h-96 w-full items-center justify-center">
+    <LoadingSpinner size="lg" message="Loading interface..." />
+  </div>
+);
 
 export const App: React.FC = () => {
   return (
-    <Routes>
-      {/* Public Marketing & Authentication routes */}
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/auth/github/callback" element={<GitHubCallbackPage />} />
-      <Route path="/invitations/accept" element={<AcceptInvitationPage />} />
+    <Suspense fallback={<PageFallback />}>
+      <Routes>
+        {/* Public Marketing & Authentication routes */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/auth/github/callback" element={<GitHubCallbackPage />} />
+        <Route path="/invitations/accept" element={<AcceptInvitationPage />} />
 
-      {/* Protected routes wrapped in Layout */}
-      <Route element={<Layout />}>
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/repositories" element={<RepositoriesPage />} />
-        <Route path="/repositories/:id" element={<RepositoryDetailPage />} />
-        <Route path="/workflows" element={<WorkflowsPage />} />
-        <Route path="/deployments" element={<DeploymentsPage />} />
-        <Route path="/dora" element={<DoraPage />} />
-        <Route path="/analytics/team-productivity" element={<TeamProductivityPage />} />
-        <Route path="/incidents" element={<IncidentsPage />} />
-        <Route path="/uptime" element={<UptimePage />} />
-        <Route path="/security" element={<SecurityPage />} />
-        <Route path="/developer-portal" element={<DeveloperPortalPage />} />
-        <Route path="/disaster-recovery" element={<DisasterRecoveryPage />} />
-        <Route path="/infrastructure/docker" element={<DockerContainersPage />} />
-        <Route path="/infrastructure/kubernetes" element={<KubernetesPage />} />
-        <Route path="/infrastructure/cloud" element={<CloudMonitoringPage />} />
-        <Route path="/infrastructure/cost" element={<CloudCostPage />} />
-        <Route path="/observability/telemetry" element={<TelemetryPage />} />
-        <Route path="/ai/copilot" element={<AICopilotPage />} />
-        <Route path="/ai/rca" element={<AIRootCauseAnalysisPage />} />
-        <Route path="/ai/code-intelligence" element={<AICodeIntelligencePage />} />
-        <Route path="/notifications" element={<NotificationsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/settings/organization" element={<OrganizationSettingsPage />} />
-      </Route>
+        {/* Protected routes wrapped in Layout */}
+        <Route element={<Layout />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/repositories" element={<RepositoriesPage />} />
+          <Route path="/repositories/:id" element={<RepositoryDetailPage />} />
+          <Route path="/workflows" element={<WorkflowsPage />} />
+          <Route path="/deployments" element={<DeploymentsPage />} />
+          <Route path="/dora" element={<DoraPage />} />
+          <Route path="/analytics/team-productivity" element={<TeamProductivityPage />} />
+          <Route path="/incidents" element={<IncidentsPage />} />
+          <Route path="/uptime" element={<UptimePage />} />
+          <Route path="/security" element={<SecurityPage />} />
+          <Route path="/developer-portal" element={<DeveloperPortalPage />} />
+          <Route path="/disaster-recovery" element={<DisasterRecoveryPage />} />
+          <Route path="/infrastructure/docker" element={<DockerContainersPage />} />
+          <Route path="/infrastructure/kubernetes" element={<KubernetesPage />} />
+          <Route path="/infrastructure/cloud" element={<CloudMonitoringPage />} />
+          <Route path="/infrastructure/cost" element={<CloudCostPage />} />
+          <Route path="/observability/telemetry" element={<TelemetryPage />} />
+          <Route path="/ai/copilot" element={<AICopilotPage />} />
+          <Route path="/ai/rca" element={<AIRootCauseAnalysisPage />} />
+          <Route path="/ai/code-intelligence" element={<AICodeIntelligencePage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings/organization" element={<OrganizationSettingsPage />} />
+        </Route>
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </Suspense>
   );
 };
 

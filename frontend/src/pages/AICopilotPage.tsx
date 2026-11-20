@@ -681,3 +681,5 @@ export const AICopilotPage: React.FC = () => {
     </div>
   );
 };
+
+export default AICopilotPage;

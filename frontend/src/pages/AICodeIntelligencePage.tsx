@@ -676,3 +676,5 @@ export const AICodeIntelligencePage: React.FC = () => {
     </div>
   );
 };
+
+export default AICodeIntelligencePage;

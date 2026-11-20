@@ -413,3 +413,5 @@ export const AIRootCauseAnalysisPage: React.FC = () => {
     </div>
   );
 };
+
+export default AIRootCauseAnalysisPage;

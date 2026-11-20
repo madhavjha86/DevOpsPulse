@@ -911,3 +911,5 @@ export const IncidentsPage: React.FC = () => {
     </div>
   );
 };
+
+export default IncidentsPage;
