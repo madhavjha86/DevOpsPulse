@@ -21,6 +21,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { MarkdownView } from '../components/ui/MarkdownView';
 import {
   aiService,
   AIConversation,
@@ -428,9 +429,13 @@ export const AICopilotPage: React.FC = () => {
                             : 'bg-slate-50 border border-[#E5E7EB] text-dark-100 rounded-tl-xs shadow-2xs'
                         }`}
                       >
-                        <div className="whitespace-pre-wrap leading-relaxed font-sans">
-                          {m.content}
-                        </div>
+                        {isUser ? (
+                          <div className="whitespace-pre-wrap leading-relaxed font-sans">
+                            {m.content}
+                          </div>
+                        ) : (
+                          <MarkdownView content={m.content} />
+                        )}
 
                         {/* Cited Grounding Sources */}
                         {!isUser && m.sources && m.sources.length > 0 && (

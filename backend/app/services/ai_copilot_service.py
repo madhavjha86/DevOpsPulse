@@ -338,6 +338,11 @@ class AICopilotService:
             "- If the user asks about their infrastructure, builds, incidents, costs, or logs, ground your answer in the telemetry below.\n"
             "- If the user asks general DevOps, cloud, software engineering, or coding questions, answer thoroughly and clearly.\n"
             "- If the user greets you or speaks casually (e.g., 'kese hoo', 'hello', 'kaise ho'), reply warmly and helpfully in the user's language (Hindi, Hinglish, or English).\n\n"
+            "FORMATTING RULES:\n"
+            "- Format answers cleanly using markdown headings (###), clear bullet points, and bold highlights.\n"
+            "- For step-by-step guidance, prefer clear numbered or bulleted steps instead of crowded tables with HTML <br> tags.\n"
+            "- Do NOT use raw HTML tags like <br> or <b>; use standard clean Markdown syntax.\n"
+            "- Keep explanations structured and easy to skim.\n\n"
             f"{formatted_context}"
         )
 
@@ -644,6 +649,11 @@ class AICopilotService:
                 "- If the user asks about their infrastructure, builds, incidents, costs, or logs, ground your answer in the telemetry below.\n"
                 "- If the user asks general DevOps, cloud, software engineering, or coding questions, answer thoroughly and clearly.\n"
                 "- If the user greets you or speaks casually (e.g., 'kese hoo', 'hello', 'kaise ho'), reply warmly and helpfully in the user's language (Hindi, Hinglish, or English).\n\n"
+                "FORMATTING RULES:\n"
+                "- Format answers cleanly using markdown headings (###), clear bullet points, and bold highlights.\n"
+                "- For step-by-step guidance, prefer clear numbered or bulleted steps instead of crowded tables with HTML <br> tags.\n"
+                "- Do NOT use raw HTML tags like <br> or <b>; use standard clean Markdown syntax.\n"
+                "- Keep explanations structured and easy to skim.\n\n"
                 f"{formatted_context}"
             )
             messages = list(history or [])
