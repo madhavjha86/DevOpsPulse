@@ -591,6 +591,149 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
+      {/* 4.5. PulseCI Autonomous 10-Stage Pipeline Engine Section */}
+      <section id="cicd" className="py-24 bg-slate-900 text-white relative overflow-hidden">
+        {/* Glow backdrop */}
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[900px] bg-purple-600/10 rounded-full blur-3xl" />
+
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center max-w-3xl mx-auto space-y-4">
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-4 py-1.5 text-xs font-bold text-amber-300">
+              <Zap className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
+              <span>PULSECI • ZERO-TOUCH AUTONOMOUS ENGINE</span>
+            </div>
+            <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-white">
+              Autonomous 10-Stage Pipeline Engine
+            </h2>
+            <p className="text-sm sm:text-base text-slate-300 font-normal leading-relaxed">
+              When any developer pushes code to GitHub (<code className="bg-slate-800 px-2 py-0.5 rounded text-amber-300 font-mono text-xs">git push origin main</code>), DevOpsPulse intercepts the webhook and drives every step autonomously — from static analysis and Docker packaging to zero-downtime Kubernetes deployments.
+            </p>
+          </div>
+
+          {/* 10-Stage Interactive Visual Pipeline */}
+          <div className="mt-14 rounded-3xl border border-slate-800 bg-slate-950/80 p-6 sm:p-8 backdrop-blur-md shadow-2xl">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-5">
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-3 w-3 rounded-full bg-emerald-500 animate-ping" />
+                  <span className="text-sm font-extrabold text-white">Live Execution Pipeline #128</span>
+                  <span className="rounded-full bg-emerald-500/20 text-emerald-400 px-2.5 py-0.5 text-[10px] font-bold border border-emerald-500/30">
+                    STATUS: SUCCESS (10/10 Stages)
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">Triggered by: Webhook on <code className="text-indigo-400 font-mono">refs/heads/main</code> • Commit <code className="text-amber-400 font-mono">7aeb036</code></p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => navigate('/workflows')}
+                  className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white flex items-center gap-1.5"
+                >
+                  <Zap className="h-3.5 w-3.5 fill-white" />
+                  Launch PulseCI Console
+                </Button>
+              </div>
+            </div>
+
+            {/* 10 Sequential Stage Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6">
+              {[
+                { step: '01', name: 'Clone Source', icon: GitBranch, time: '2.1s', color: 'text-indigo-400' },
+                { step: '02', name: 'Install Deps', icon: Box, time: '8.4s', color: 'text-blue-400' },
+                { step: '03', name: 'SAST Scan', icon: ShieldCheck, time: '4.2s', color: 'text-purple-400' },
+                { step: '04', name: 'Compile Build', icon: Cpu, time: '12.8s', color: 'text-amber-400' },
+                { step: '05', name: 'Unit Tests', icon: CheckCircle2, time: '6.5s', color: 'text-emerald-400' },
+                { step: '06', name: 'Lint & Format', icon: FileCode, time: '2.0s', color: 'text-cyan-400' },
+                { step: '07', name: 'Docker Build', icon: Box, time: '14.1s', color: 'text-orange-400' },
+                { step: '08', name: 'Push Registry', icon: Server, time: '5.3s', color: 'text-pink-400' },
+                { step: '09', name: 'K8s Deploy', icon: Server, time: '7.0s', color: 'text-emerald-400' },
+                { step: '10', name: 'Notify Team', icon: Activity, time: '0.8s', color: 'text-teal-400' },
+              ].map((s) => {
+                const SIcon = s.icon;
+                return (
+                  <div key={s.step} className="rounded-2xl border border-slate-800 bg-slate-900/90 p-3.5 flex flex-col justify-between hover:border-purple-500/50 transition-colors">
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] font-mono text-slate-500">
+                        <span>STAGE {s.step}</span>
+                        <span className="text-emerald-400 font-bold flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3" /> {s.time}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <SIcon className={`h-4 w-4 ${s.color}`} />
+                        <span className="text-xs font-bold text-white truncate">{s.name}</span>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
+                      <span className="text-slate-400">Exit: 0</span>
+                      <span className="rounded bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 font-bold">100% OK</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Terminal Live Output Simulation */}
+            <div className="mt-6 rounded-2xl border border-slate-800 bg-black/90 p-4 font-mono text-xs">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800 text-slate-500 text-[11px]">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-red-500/80 inline-block" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-amber-500/80 inline-block" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/80 inline-block" />
+                  <span className="ml-2 text-slate-400">pulseci-worker-01: /workspace/devopspulse</span>
+                </div>
+                <span className="text-slate-400">Execution Time: 63.3s total</span>
+              </div>
+              <div className="mt-3 space-y-1.5 text-slate-300">
+                <div className="text-slate-400"># PulseCI Automated Zero-Touch Run Triggered by Webhook</div>
+                <div className="text-emerald-400">[00:02] ✓ Stage 1/10: Clone source completed. HEAD at 7aeb036 (feat: autonomous pipeline)</div>
+                <div className="text-emerald-400">[00:10] ✓ Stage 2/10: Dependencies installed. 1,847 packages audited in 8.4s</div>
+                <div className="text-emerald-400">[00:14] ✓ Stage 3/10: DevSecOps scan passed: 0 critical vulnerabilities, 0 hardcoded secrets</div>
+                <div className="text-emerald-400">[00:27] ✓ Stage 4/10: TypeScript compilation passed with zero errors. Bundle size: 2.4 MB</div>
+                <div className="text-emerald-400">[00:33] ✓ Stage 5/10: All 28 unit and integration test suites passed (100% success rate)</div>
+                <div className="text-emerald-400">[00:48] ✓ Stage 7/10: Docker image built: registry.devopspulse.io/app:7aeb036 (12 layers cached)</div>
+                <div className="text-emerald-400">[00:53] ✓ Stage 8/10: Container image pushed to private registry. SHA-256 verified</div>
+                <div className="text-emerald-400">[01:00] ✓ Stage 9/10: Kubernetes rolling deployment completed. 3/3 pods ready, zero downtime</div>
+                <div className="text-emerald-400">[01:03] ✓ Stage 10/10: Slack and email deployment notifications delivered to #devops-alerts</div>
+                <div className="text-amber-300 font-bold mt-2">🎉 PulseCI Result: PIPELINE SUCCESS • Production traffic switched 100% with zero downtime.</div>
+              </div>
+            </div>
+
+            {/* 3 Pillar Benefits */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-400 mb-1">
+                  <Zap className="h-4 w-4" />
+                  <span>Zero Manual Clicks</span>
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  No need to open a browser and press "Build Now". Pushing code to GitHub triggers the complete domino chain automatically.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                <div className="flex items-center gap-2 text-xs font-bold text-purple-400 mb-1">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Automatic SAST Gatekeeping</span>
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Blocks Docker build and deployment automatically if hardcoded secrets or critical CVE vulnerabilities are introduced.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 mb-1">
+                  <Activity className="h-4 w-4" />
+                  <span>Instant DORA Sync</span>
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Automatically calculates Lead Time for Changes and Deployment Frequency in real-time right from execution telemetry.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 5. Deep Feature Section: DevSecOps & Supply Chain Security */}
       <section id="security" className="py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
