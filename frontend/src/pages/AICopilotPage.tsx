@@ -230,7 +230,7 @@ export const AICopilotPage: React.FC = () => {
   };
 
   const copyText = (text: string, msgId: number) => {
-    navigator.clipboard.writeText(text);
+    void navigator.clipboard.writeText(text);
     setCopiedMessageId(msgId);
     setTimeout(() => setCopiedMessageId(null), 2000);
   };

@@ -80,7 +80,7 @@ export const AIGovernancePage: React.FC = () => {
   const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
 
   const handleCopy = (text: string, key: string) => {
-    navigator.clipboard.writeText(text);
+    void navigator.clipboard.writeText(text);
     setCopiedSnippet(key);
     setTimeout(() => setCopiedSnippet(null), 2000);
   };

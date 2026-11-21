@@ -397,7 +397,7 @@ export const WorkflowsPage: React.FC = () => {
   };
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
+    void navigator.clipboard.writeText(text);
     setCopiedLogs(true);
     setTimeout(() => setCopiedLogs(false), 2000);
   };
@@ -1546,7 +1546,7 @@ export const WorkflowsPage: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={() => {
-                navigator.clipboard.writeText(stageLogsModal.logs);
+                void navigator.clipboard.writeText(stageLogsModal.logs);
                 setCopiedStageLogs(true);
                 setTimeout(() => setCopiedStageLogs(false), 2000);
               }}

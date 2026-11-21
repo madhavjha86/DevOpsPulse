@@ -188,7 +188,7 @@ class JenkinsService:
         try:
             headers = cls._build_auth_headers(payload.username, payload.api_token)
             clean_url = payload.server_url.strip().rstrip("/")
-            async with httpx.AsyncClient(timeout=4.0, verify=False) as client:
+            async with httpx.AsyncClient(timeout=4.0) as client:
                 resp = await client.get(f"{clean_url}/api/json", headers=headers)
                 if resp.status_code == 200:
                     status = "connected"
@@ -270,7 +270,7 @@ class JenkinsService:
         try:
             headers = cls._build_auth_headers(server.username, server.api_token)
             clean_url = server.server_url.rstrip("/")
-            async with httpx.AsyncClient(timeout=4.0, verify=False) as client:
+            async with httpx.AsyncClient(timeout=4.0) as client:
                 trigger_endpoint = f"{clean_url}/job/{job_name}/build"
                 if payload and payload.parameters:
                     trigger_endpoint = f"{clean_url}/job/{job_name}/buildWithParameters"

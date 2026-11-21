@@ -169,8 +169,8 @@ _FAIL_LOGS: dict[str, str] = {
                "npm ERR! peer dep missing: react@^17.0.0, required by @old/lib@2.1.0\n"
                "Exit code: 1",
     "SECURITY_SCAN": "❌ Security scan FAILED — blocking issue found!\n"
-                     "CRITICAL: Hardcoded AWS Secret Key detected in src/config.ts:42\n"
-                     "  → AKIA3EXAMPLE... (AWS Access Key)\n"
+                     "CRITICAL: Hardcoded credential token pattern detected in src/config.ts:42\n"
+                     "  → [REDACTED_ACCESS_KEY] (Credential Leak Detection)\n"
                      "Pipeline blocked. Remove secret and retry.",
     "BUILD": "❌ Build failed!\n"
              "src/services/UserService.ts(42,5): error TS2345:\n"
@@ -223,12 +223,14 @@ DEFAULT_STAGES = [
 ]
 
 
+import secrets
+
 def _rand_sha() -> str:
-    return "".join(random.choices("0123456789abcdef", k=40))
+    return secrets.token_hex(20)
 
 
 def _rand_short_sha() -> str:
-    return "".join(random.choices("0123456789abcdef", k=7))
+    return secrets.token_hex(4)[:7]
 
 
 # ── Service Class ───────────────────────────────────────────────
