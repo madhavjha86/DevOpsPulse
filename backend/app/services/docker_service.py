@@ -1,5 +1,7 @@
 """Docker Engine client and container monitoring service."""
 
+import asyncio
+import os
 import re
 from datetime import datetime, timezone
 import httpx
@@ -24,6 +26,100 @@ from app.schemas.docker_monitoring import (
 logger = get_logger("docker_service")
 
 
+class NamedPipeTransport(httpx.AsyncBaseTransport):
+    """Custom HTTP transport communicating with Windows Named Pipe (\\.\\pipe\\docker_engine)."""
+
+    def __init__(self, pipe_path: str = r"\\.\pipe\docker_engine"):
+        self.pipe_path = pipe_path
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        def do_request() -> bytes:
+            with open(self.pipe_path, "r+b", buffering=0) as f:
+                path = request.url.raw_path.decode("ascii")
+                headers_bytes = b""
+                for k, v in request.headers.items():
+                    if k.lower() not in ("host", "content-length", "connection"):
+                        headers_bytes += f"{k}: {v}\r\n".encode("utf-8")
+
+                content = request.content or b""
+                req_data = (
+                    f"{request.method} {path} HTTP/1.1\r\n"
+                    f"Host: docker\r\n"
+                    f"Connection: close\r\n"
+                    f"Content-Length: {len(content)}\r\n"
+                ).encode("ascii") + headers_bytes + b"\r\n" + content
+
+                f.write(req_data)
+
+                raw = b""
+                header_part: bytes | None = None
+                content_length: int | None = None
+                chunked = False
+
+                while True:
+                    chunk = f.read(8192)
+                    if not chunk:
+                        break
+                    raw += chunk
+                    if header_part is None and b"\r\n\r\n" in raw:
+                        header_part, rest = raw.split(b"\r\n\r\n", 1)
+                        for line in header_part.split(b"\r\n"):
+                            lower = line.lower()
+                            if lower.startswith(b"content-length:"):
+                                content_length = int(line.split(b":")[1].strip())
+                            elif lower.startswith(b"transfer-encoding:") and b"chunked" in lower:
+                                chunked = True
+
+                    if header_part is not None:
+                        body_len = len(raw) - len(header_part) - 4
+                        if content_length is not None and body_len >= content_length:
+                            break
+                        if chunked and raw.endswith(b"0\r\n\r\n"):
+                            break
+                return raw
+
+        raw = await asyncio.to_thread(do_request)
+        if b"\r\n\r\n" not in raw:
+            return httpx.Response(status_code=502, request=request)
+
+        header_bytes, body_bytes = raw.split(b"\r\n\r\n", 1)
+        lines = header_bytes.split(b"\r\n")
+        status_line = lines[0].decode("latin1")
+        parts = status_line.split(" ")
+        status_code = int(parts[1]) if len(parts) > 1 else 200
+
+        response_headers: list[tuple[str, str]] = []
+        for line in lines[1:]:
+            if b":" in line:
+                k, v = line.split(b":", 1)
+                response_headers.append((k.strip().decode("latin1"), v.strip().decode("latin1")))
+
+        is_chunked = any(k.lower() == "transfer-encoding" and "chunked" in v.lower() for k, v in response_headers)
+        if is_chunked:
+            clean_body = b""
+            rem = body_bytes
+            while rem:
+                if b"\r\n" not in rem:
+                    break
+                len_str, rem = rem.split(b"\r\n", 1)
+                try:
+                    c_len = int(len_str.strip().split(b";")[0], 16)
+                except ValueError:
+                    break
+                if c_len == 0:
+                    break
+                clean_body += rem[:c_len]
+                rem = rem[c_len + 2 :]
+            body_bytes = clean_body
+
+        return httpx.Response(
+            status_code=status_code,
+            headers=response_headers,
+            content=body_bytes,
+            request=request,
+        )
+
+
 class DockerService:
     """Manages Docker host endpoints and monitors container states & metrics."""
 
@@ -34,24 +130,61 @@ class DockerService:
         if trimmed.startswith("tcp://"):
             protocol = "https://" if tls else "http://"
             return protocol + trimmed[6:]
-        if not trimmed.startswith("http://") and not trimmed.startswith("https://") and not trimmed.startswith("unix://"):
+        if not trimmed.startswith("http://") and not trimmed.startswith("https://") and not trimmed.startswith("unix://") and not trimmed.startswith("npipe://"):
             protocol = "https://" if tls else "http://"
             return protocol + trimmed
         return trimmed
 
     @classmethod
     def _get_client_kwargs(cls, host: DockerHost) -> dict:
-        """Construct transport configuration for Unix socket or HTTP endpoint."""
-        url = cls._normalize_host_url(host.host_url, host.tls_verify)
-        if url.startswith("unix://"):
-            socket_path = url[7:]
+        """Construct transport configuration for Named Pipe, Unix socket, or HTTP endpoint."""
+        url = host.host_url.strip()
+
+        # Check for Windows named pipe
+        if url.startswith("npipe://") or url.startswith("\\\\.\\pipe\\") or url.startswith("//./pipe/"):
+            pipe_path = r"\\.\pipe\docker_engine"
+            if url.startswith("npipe://"):
+                extracted = url[8:].replace("/", "\\").lstrip("\\")
+                if extracted.lower().startswith(".\\pipe\\"):
+                    pipe_path = "\\\\" + extracted
+                elif extracted.lower().startswith("pipe\\"):
+                    pipe_path = "\\\\.\\" + extracted
+                else:
+                    pipe_path = "\\\\.\\pipe\\" + extracted
+            elif url.startswith("//./pipe/"):
+                pipe_path = "\\\\.\\pipe\\" + url[10:].replace("/", "\\")
+            elif url.startswith("\\\\.\\pipe\\"):
+                pipe_path = url
+            return {
+                "transport": NamedPipeTransport(pipe_path=pipe_path),
+                "base_url": "http://docker",
+                "timeout": 5.0,
+            }
+
+        # On Windows, if host_url is localhost:2375 or 127.0.0.1:2375, check if named pipe is available
+        if os.name == "nt" and ("localhost:2375" in url or "127.0.0.1:2375" in url or "default" in url):
+            pipe_path = r"\\.\pipe\docker_engine"
+            try:
+                with open(pipe_path, "r+b", buffering=0) as _:
+                    pass
+                return {
+                    "transport": NamedPipeTransport(pipe_path=pipe_path),
+                    "base_url": "http://docker",
+                    "timeout": 5.0,
+                }
+            except Exception:
+                pass
+
+        normalized = cls._normalize_host_url(url, host.tls_verify)
+        if normalized.startswith("unix://"):
+            socket_path = normalized[7:]
             return {
                 "transport": httpx.AsyncHTTPTransport(uds=socket_path),
                 "base_url": "http://docker",
                 "timeout": 3.0,
             }
         return {
-            "base_url": url,
+            "base_url": normalized,
             "verify": host.tls_verify,
             "timeout": 3.0,
         }

@@ -74,11 +74,30 @@ export default function KubernetesPage() {
     try {
       const data = await kubernetesService.getClusters();
       setClusters(data);
-      if (data.length > 0 && !selectedClusterId) {
+      if (data.length > 0 && (!selectedClusterId || !data.some((c) => c.id === selectedClusterId))) {
         setSelectedClusterId(data[0].id);
       }
     } catch (err) {
       console.error('Failed to load Kubernetes clusters', err);
+    }
+  };
+
+  const handleFullRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const data = await kubernetesService.getClusters();
+      setClusters(data);
+      const targetId = (data.length > 0 && (!selectedClusterId || !data.some((c) => c.id === selectedClusterId)))
+        ? data[0].id
+        : selectedClusterId;
+      if (targetId) {
+        setSelectedClusterId(targetId);
+        await fetchClusterResources(targetId);
+      }
+    } catch (err) {
+      console.error('Failed to reload Kubernetes clusters', err);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -253,7 +272,7 @@ export default function KubernetesPage() {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => selectedClusterId && fetchClusterResources(selectedClusterId)}
+            onClick={handleFullRefresh}
             isLoading={refreshing}
           >
             <RefreshCw className={`h-4 w-4 mr-1.5 ${refreshing ? 'animate-spin' : ''}`} />

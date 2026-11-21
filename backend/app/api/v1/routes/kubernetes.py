@@ -30,22 +30,35 @@ async def list_clusters(
     tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[K8sClusterResponse]:
-    """Fetch all clusters registered in workspace. Auto-seeds default local cluster if none exist."""
+    """Fetch all clusters registered in workspace. Auto-links connected cluster if available."""
     clusters = await KubernetesService.get_user_clusters(
         db, tenant.user.id, organization_id=tenant.organization_id
     )
     if not clusters:
-        default_payload = K8sClusterCreate(
-            name="Local Minikube / Kind",
-            api_server_url="https://127.0.0.1:6443",
-            auth_type="token",
-            namespace_filter="all",
-            tls_verify=False,
+        # Check if user has an existing active/connected cluster
+        from sqlalchemy import select
+        stmt = (
+            select(K8sCluster)
+            .where(K8sCluster.user_id == tenant.user.id)
+            .where(K8sCluster.last_status == "connected")
+            .order_by(K8sCluster.id.desc())
         )
-        created = await KubernetesService.create_cluster(
-            db, tenant.user.id, default_payload, organization_id=tenant.organization_id
-        )
-        return [created]
+        res = await db.execute(stmt)
+        existing = res.scalars().first()
+        if existing:
+            default_payload = K8sClusterCreate(
+                name=existing.name,
+                api_server_url=existing.api_server_url,
+                auth_type=existing.auth_type,
+                bearer_token=existing.bearer_token,
+                namespace_filter=existing.namespace_filter,
+                tls_verify=existing.tls_verify,
+            )
+            created = await KubernetesService.create_cluster(
+                db, tenant.user.id, default_payload, organization_id=tenant.organization_id
+            )
+            return [created]
+        return []
     return clusters
 
 

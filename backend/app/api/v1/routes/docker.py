@@ -30,14 +30,36 @@ async def list_docker_hosts(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[DockerHostResponse]:
     """Retrieve all Docker hosts registered in the active workspace."""
+    import os
+    from sqlalchemy import select
     hosts = await DockerService.get_user_hosts(
         db, tenant.user.id, organization_id=tenant.organization_id
     )
-    # If workspace has no hosts, auto-seed a default Local Docker Host entry
     if not hosts:
+        # Check if user has an active connected host in another workspace
+        stmt = (
+            select(DockerHost)
+            .where(DockerHost.user_id == tenant.user.id)
+            .where(DockerHost.last_status == "connected")
+            .order_by(DockerHost.id.desc())
+        )
+        res = await db.execute(stmt)
+        existing = res.scalars().first()
+        if existing:
+            default_payload = DockerHostCreate(
+                name=existing.name,
+                host_url=existing.host_url,
+                tls_verify=existing.tls_verify,
+            )
+            created = await DockerService.create_host(
+                db, tenant.user.id, default_payload, organization_id=tenant.organization_id
+            )
+            return [created]
+
+        default_url = "npipe:////./pipe/docker_engine" if os.name == "nt" else "unix:///var/run/docker.sock"
         default_payload = DockerHostCreate(
-            name="Local Docker Daemon",
-            host_url="http://localhost:2375",
+            name="Docker Desktop (Local)",
+            host_url=default_url,
             tls_verify=False,
         )
         created = await DockerService.create_host(

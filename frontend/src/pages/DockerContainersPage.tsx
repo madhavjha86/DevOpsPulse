@@ -46,7 +46,7 @@ export default function DockerContainersPage() {
   // Add Host Modal
   const [isAddHostOpen, setIsAddHostOpen] = useState(false);
   const [newHostName, setNewHostName] = useState('');
-  const [newHostUrl, setNewHostUrl] = useState('http://localhost:2375');
+  const [newHostUrl, setNewHostUrl] = useState('npipe:////./pipe/docker_engine');
   const [newHostTls, setNewHostTls] = useState(false);
   const [addHostLoading, setAddHostLoading] = useState(false);
   const [addHostError, setAddHostError] = useState('');
@@ -68,11 +68,30 @@ export default function DockerContainersPage() {
     try {
       const data = await dockerService.getHosts();
       setHosts(data);
-      if (data.length > 0 && !selectedHostId) {
+      if (data.length > 0 && (!selectedHostId || !data.some((h) => h.id === selectedHostId))) {
         setSelectedHostId(data[0].id);
       }
     } catch (err) {
       console.error('Failed to load Docker hosts', err);
+    }
+  };
+
+  const handleFullRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const data = await dockerService.getHosts();
+      setHosts(data);
+      const targetId = (data.length > 0 && (!selectedHostId || !data.some((h) => h.id === selectedHostId)))
+        ? data[0].id
+        : selectedHostId;
+      if (targetId) {
+        setSelectedHostId(targetId);
+        await fetchContainers(targetId);
+      }
+    } catch (err) {
+      console.error('Failed to reload Docker hosts', err);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -126,7 +145,7 @@ export default function DockerContainersPage() {
       setSelectedHostId(created.id);
       setIsAddHostOpen(false);
       setNewHostName('');
-      setNewHostUrl('http://localhost:2375');
+      setNewHostUrl('npipe:////./pipe/docker_engine');
       setNewHostTls(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to register Docker host';
@@ -259,7 +278,7 @@ export default function DockerContainersPage() {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => selectedHostId && fetchContainers(selectedHostId)}
+            onClick={handleFullRefresh}
             isLoading={refreshing}
           >
             <RefreshCw className={`h-4 w-4 mr-1.5 ${refreshing ? 'animate-spin' : ''}`} />
