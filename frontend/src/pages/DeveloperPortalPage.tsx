@@ -70,12 +70,33 @@ export const DeveloperPortalPage: React.FC = () => {
   const [isSubmittingSvc, setIsSubmittingSvc] = useState(false);
 
   // New Workspace Form
-  const [wsName, setWsName] = useState('');
-  const [wsRepo, setWsRepo] = useState('');
+  const [wsName, setWsName] = useState('aws-cloud-infra');
+  const [wsRepo, setWsRepo] = useState('https://github.com/devopspulse/infrastructure-terraform');
   const [wsDir, setWsDir] = useState('terraform');
   const [wsVersion, setWsVersion] = useState('1.8.2');
   const [wsDesc, setWsDesc] = useState('');
+  const [wsModalError, setWsModalError] = useState<string | null>(null);
   const [isSubmittingWs, setIsSubmittingWs] = useState(false);
+
+  const extractErrorMessage = (err: unknown, fallback: string): string => {
+    if (err && typeof err === 'object' && 'response' in err) {
+      const res = (err as { response?: { data?: { detail?: unknown } } }).response;
+      const detail = res?.data?.detail;
+      if (typeof detail === 'string') return detail;
+      if (Array.isArray(detail)) {
+        return detail.map((d: any) => (d.msg ? `${d.loc?.slice(-1)[0] || 'field'}: ${d.msg}` : JSON.stringify(d))).join(', ');
+      }
+    }
+    if (err instanceof Error) return err.message;
+    return fallback;
+  };
+
+  const openConnectWorkspaceModal = () => {
+    if (!wsName) setWsName('aws-cloud-infra');
+    if (!wsRepo) setWsRepo('https://github.com/devopspulse/infrastructure-terraform');
+    setWsModalError(null);
+    setIsWorkspaceModalOpen(true);
+  };
 
   const loadData = async () => {
     setIsLoading(true);
@@ -132,21 +153,30 @@ export const DeveloperPortalPage: React.FC = () => {
     e.preventDefault();
     setIsSubmittingWs(true);
     setFeedbackMsg(null);
+    setWsModalError(null);
+
+    let finalRepo = wsRepo.trim();
+    if (finalRepo && !finalRepo.startsWith('http://') && !finalRepo.startsWith('https://')) {
+      finalRepo = 'https://' + finalRepo;
+    }
+    const finalName = wsName.trim() || (finalRepo.split('/').filter(Boolean).pop()?.replace('.git', '') || 'cloud') + '-workspace';
+
     try {
       await developerPortalService.createWorkspace({
-        name: wsName,
-        repository_url: wsRepo,
-        working_directory: wsDir,
-        terraform_version: wsVersion,
-        description: wsDesc,
+        name: finalName,
+        repository_url: finalRepo,
+        working_directory: wsDir.trim() || 'terraform',
+        terraform_version: wsVersion.trim() || '1.8.2',
+        description: wsDesc.trim() || undefined,
       });
       setIsWorkspaceModalOpen(false);
-      setWsName('');
-      setWsRepo('');
-      setFeedbackMsg({ type: 'success', text: `Terraform workspace '${wsName}' connected.` });
+      setWsModalError(null);
+      setFeedbackMsg({ type: 'success', text: `Terraform workspace '${finalName}' successfully connected.` });
       await loadData();
-    } catch {
-      setFeedbackMsg({ type: 'error', text: 'Failed to connect Terraform workspace.' });
+    } catch (err: unknown) {
+      const msg = extractErrorMessage(err, 'Failed to connect Terraform workspace.');
+      setWsModalError(msg);
+      setFeedbackMsg({ type: 'error', text: msg });
     } finally {
       setIsSubmittingWs(false);
     }
@@ -261,7 +291,7 @@ export const DeveloperPortalPage: React.FC = () => {
           {activeTab === 'iac' && (
             <Button
               variant="primary"
-              onClick={() => setIsWorkspaceModalOpen(true)}
+              onClick={openConnectWorkspaceModal}
               leftIcon={<Plus className="h-4 w-4" />}
             >
               Connect Workspace
@@ -524,7 +554,7 @@ export const DeveloperPortalPage: React.FC = () => {
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => setIsWorkspaceModalOpen(true)}
+                onClick={openConnectWorkspaceModal}
                 leftIcon={<Plus className="h-3.5 w-3.5" />}
               >
                 Connect Workspace
@@ -859,6 +889,13 @@ export const DeveloperPortalPage: React.FC = () => {
         title="Connect Terraform IaC Workspace"
       >
         <form onSubmit={handleCreateWorkspace} className="space-y-4">
+          {wsModalError && (
+            <div className="p-3 rounded-xl bg-danger-500/10 border border-danger-500/20 text-danger-400 text-xs flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>{wsModalError}</span>
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-semibold text-dark-100 mb-1">Workspace Name</label>
             <input
@@ -874,7 +911,7 @@ export const DeveloperPortalPage: React.FC = () => {
           <div>
             <label className="block text-xs font-semibold text-dark-100 mb-1">Git Repository URL</label>
             <input
-              type="url"
+              type="text"
               value={wsRepo}
               onChange={(e) => setWsRepo(e.target.value)}
               placeholder="https://github.com/org/infra-terraform"
