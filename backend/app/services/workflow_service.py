@@ -12,6 +12,8 @@ from app.models.github_account import GitHubAccount
 from app.models.notification import Notification
 from app.models.repository import Repository
 from app.models.workflow_run import WorkflowRun
+from app.models.pipeline import Pipeline
+from app.services.pipeline_engine import pipeline_engine
 from app.repositories.repository_repo import RepositoryRepo
 from app.repositories.user_repo import UserRepository
 from app.repositories.workflow_repo import WorkflowRepo
@@ -340,6 +342,33 @@ class WorkflowService:
             if commit_records:
                 await repo_db.bulk_upsert_commits(commit_records)
                 await db.commit()
+
+            # Autonomous Trigger: Run CI/CD pipelines automatically on git push (Zero-Click)
+            try:
+                head_commit = commit_records[0] if commit_records else {}
+                matching_pipelines = (
+                    await db.execute(
+                        select(Pipeline).where(
+                            Pipeline.is_active == True,
+                            Pipeline.trigger == "PUSH",
+                        )
+                    )
+                ).scalars().all()
+
+                for pipe in matching_pipelines:
+                    await pipeline_engine.trigger_run(
+                        db=db,
+                        pipeline=pipe,
+                        trigger="PUSH",
+                        commit_sha=head_commit.get("sha"),
+                        commit_message=head_commit.get("message"),
+                        commit_author=head_commit.get("author_name"),
+                        branch=payload.get("ref", "").replace("refs/heads/", "") or pipe.branch,
+                    )
+                await db.commit()
+            except Exception as auto_err:
+                logger.warning("Auto-triggering PulseCI pipeline on git push encountered error", error=str(auto_err))
+
             return {"status": "processed", "event": event_type, "commits_count": len(commit_records)}
 
         elif event_type == "pull_request":
