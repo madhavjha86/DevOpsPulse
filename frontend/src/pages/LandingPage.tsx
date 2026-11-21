@@ -18,6 +18,20 @@ import {
   Cpu,
   Flame,
   Search,
+  Box,
+  GitBranch,
+  GitCommit,
+  CheckCircle,
+  XCircle,
+  Server,
+  BarChart2,
+  HelpCircle,
+  FileCode,
+  ShieldAlert,
+  TrendingDown,
+  Award,
+  Users,
+  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -248,24 +262,28 @@ export const LandingPage: React.FC = () => {
             {/* Interactive Preview Tabs */}
             <div className="flex flex-wrap items-center gap-2 mb-4">
               {[
-                { id: 'cicd', label: '⚡ 1. PulseCI Autonomous Pipeline' },
-                { id: 'security', label: '🛡️ 2. DevSecOps & SBOM' },
-                { id: 'sre', label: '📊 3. SRE & Error Budgets' },
-                { id: 'finops', label: '💰 4. Cloud FinOps' },
-                { id: 'iac', label: '🏛️ 5. IaC & Service Portal' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTabPreview(tab.id as any)}
-                  className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
-                    activeTabPreview === tab.id
-                      ? 'bg-[#7C3AED] text-white shadow-xs'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+                { id: 'cicd', label: 'PulseCI Autonomous Pipeline', icon: Zap },
+                { id: 'security', label: 'DevSecOps & SBOM', icon: ShieldCheck },
+                { id: 'sre', label: 'SRE & Error Budgets', icon: Activity },
+                { id: 'finops', label: 'Cloud FinOps Intelligence', icon: DollarSign },
+                { id: 'iac', label: 'IaC & Service Portal', icon: Compass },
+              ].map((tab) => {
+                const TabIcon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTabPreview(tab.id as any)}
+                    className={`rounded-xl px-3.5 py-2 text-xs font-bold transition-all flex items-center gap-2 ${
+                      activeTabPreview === tab.id
+                        ? 'bg-[#7C3AED] text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    <TabIcon className="h-3.5 w-3.5 shrink-0" />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Simulated Live View Body */}
@@ -274,67 +292,101 @@ export const LandingPage: React.FC = () => {
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <h4 className="text-sm font-extrabold text-slate-900">PulseCI: Autonomous 10-Stage Pipeline Engine</h4>
-                      <p className="text-xs text-slate-500">Zero-Touch: Git Push → SAST Scan → Docker Packaging → Zero-Downtime K8s Rollout</p>
+                      <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-amber-500 fill-amber-500" />
+                        PulseCI: Autonomous 10-Stage Pipeline Engine
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Zero-Touch: Git Push → SAST Scan → Docker Packaging → Zero-Downtime K8s Rollout
+                      </p>
                     </div>
-                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 flex items-center gap-1">
-                      <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                       Zero Manual Clicks Required
                     </span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-1">
                     <div className="rounded-xl border border-emerald-200 bg-white p-3 text-center shadow-2xs">
-                      <span className="text-[10px] font-mono font-bold text-emerald-700">01. GIT PUSH</span>
-                      <div className="text-xs font-black text-slate-900 mt-1">Webhook Ingest</div>
-                      <div className="text-[10px] text-emerald-600 font-semibold">Automatic</div>
+                      <GitCommit className="w-4 h-4 text-emerald-600 mx-auto mb-1" />
+                      <span className="text-[10px] font-mono font-bold text-emerald-700 block">01. GIT PUSH</span>
+                      <div className="text-xs font-black text-slate-900 mt-0.5">Webhook Ingest</div>
+                      <div className="text-[10px] text-emerald-600 font-semibold mt-0.5 flex items-center justify-center gap-1">
+                        <Check className="w-2.5 h-2.5" /> Automatic
+                      </div>
                     </div>
                     <div className="rounded-xl border border-emerald-200 bg-white p-3 text-center shadow-2xs">
-                      <span className="text-[10px] font-mono font-bold text-emerald-700">02. SECURITY</span>
-                      <div className="text-xs font-black text-slate-900 mt-1">SAST & Secrets</div>
-                      <div className="text-[10px] text-emerald-600 font-semibold">0 Leaks Detected</div>
+                      <ShieldCheck className="w-4 h-4 text-emerald-600 mx-auto mb-1" />
+                      <span className="text-[10px] font-mono font-bold text-emerald-700 block">02. SECURITY</span>
+                      <div className="text-xs font-black text-slate-900 mt-0.5">SAST & Secrets</div>
+                      <div className="text-[10px] text-emerald-600 font-semibold mt-0.5 flex items-center justify-center gap-1">
+                        <Check className="w-2.5 h-2.5" /> 0 Leaks Found
+                      </div>
                     </div>
                     <div className="rounded-xl border border-emerald-200 bg-white p-3 text-center shadow-2xs">
-                      <span className="text-[10px] font-mono font-bold text-emerald-700">03. TEST & LINT</span>
-                      <div className="text-xs font-black text-slate-900 mt-1">Jest / Pytest</div>
-                      <div className="text-[10px] text-emerald-600 font-semibold">47/47 Passed</div>
+                      <CheckCircle className="w-4 h-4 text-emerald-600 mx-auto mb-1" />
+                      <span className="text-[10px] font-mono font-bold text-emerald-700 block">03. TEST & LINT</span>
+                      <div className="text-xs font-black text-slate-900 mt-0.5">Jest / Pytest</div>
+                      <div className="text-[10px] text-emerald-600 font-semibold mt-0.5 flex items-center justify-center gap-1">
+                        <Check className="w-2.5 h-2.5" /> 47/47 Passed
+                      </div>
                     </div>
                     <div className="rounded-xl border border-emerald-200 bg-white p-3 text-center shadow-2xs">
-                      <span className="text-[10px] font-mono font-bold text-emerald-700">04. DOCKER</span>
-                      <div className="text-xs font-black text-slate-900 mt-1">Auto-Packaging</div>
-                      <div className="text-[10px] text-emerald-600 font-semibold">Tagged & Pushed</div>
+                      <Box className="w-4 h-4 text-emerald-600 mx-auto mb-1" />
+                      <span className="text-[10px] font-mono font-bold text-emerald-700 block">04. DOCKER</span>
+                      <div className="text-xs font-black text-slate-900 mt-0.5">Auto-Packaging</div>
+                      <div className="text-[10px] text-emerald-600 font-semibold mt-0.5 flex items-center justify-center gap-1">
+                        <Check className="w-2.5 h-2.5" /> Tagged & Pushed
+                      </div>
                     </div>
                     <div className="rounded-xl border border-emerald-200 bg-white p-3 text-center shadow-2xs col-span-2 sm:col-span-1">
-                      <span className="text-[10px] font-mono font-bold text-emerald-700">05. K8s DEPLOY</span>
-                      <div className="text-xs font-black text-slate-900 mt-1">Rolling Update</div>
-                      <div className="text-[10px] text-emerald-600 font-semibold">Live in 18.4s</div>
+                      <Server className="w-4 h-4 text-emerald-600 mx-auto mb-1" />
+                      <span className="text-[10px] font-mono font-bold text-emerald-700 block">05. K8s DEPLOY</span>
+                      <div className="text-xs font-black text-slate-900 mt-0.5">Rolling Update</div>
+                      <div className="text-[10px] text-emerald-600 font-semibold mt-0.5 flex items-center justify-center gap-1">
+                        <Check className="w-2.5 h-2.5" /> Live in 18.4s
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
+
               {activeTabPreview === 'security' && (
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <h4 className="text-sm font-extrabold text-slate-900">Multi-Vector DevSecOps Posture: Grade A</h4>
-                      <p className="text-xs text-slate-500">Continuous SAST, SCA, Secret Scanning & SBOM Cataloging</p>
+                      <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4 text-[#7C3AED]" />
+                        Multi-Vector DevSecOps Posture: Grade A
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">Continuous SAST, SCA, Secret Scanning & SBOM Cataloging</p>
                     </div>
-                    <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-[#7C3AED]">
+                    <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-[#7C3AED] flex items-center gap-1">
+                      <FileCode className="h-3 w-3" />
                       18 Packages Analyzed
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="rounded-xl border border-white bg-white p-3 shadow-2xs">
-                      <div className="text-[11px] font-bold text-slate-400">SAST & CODE SECURITY</div>
+                    <div className="rounded-xl border border-white bg-white p-3.5 shadow-2xs">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+                        <FileCode className="h-3.5 w-3.5 text-slate-400" />
+                        <span>SAST & CODE SECURITY</span>
+                      </div>
                       <div className="text-xl font-black text-emerald-600 mt-1">0 Critical Issues</div>
                       <div className="text-[11px] text-slate-500">SQLi, Eval, Deserialization clean</div>
                     </div>
-                    <div className="rounded-xl border border-white bg-white p-3 shadow-2xs">
-                      <div className="text-[11px] font-bold text-slate-400">SECRET DETECTION</div>
+                    <div className="rounded-xl border border-white bg-white p-3.5 shadow-2xs">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+                        <Lock className="h-3.5 w-3.5 text-slate-400" />
+                        <span>SECRET DETECTION</span>
+                      </div>
                       <div className="text-xl font-black text-emerald-600 mt-1">100% Protected</div>
                       <div className="text-[11px] text-slate-500">AWS keys, GitHub tokens verified</div>
                     </div>
-                    <div className="rounded-xl border border-white bg-white p-3 shadow-2xs">
-                      <div className="text-[11px] font-bold text-slate-400">SUPPLY CHAIN SBOM</div>
+                    <div className="rounded-xl border border-white bg-white p-3.5 shadow-2xs">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+                        <Layers className="h-3.5 w-3.5 text-purple-500" />
+                        <span>SUPPLY CHAIN SBOM</span>
+                      </div>
                       <div className="text-xl font-black text-[#7C3AED] mt-1">SPDX & CycloneDX</div>
                       <div className="text-[11px] text-slate-500">SHA-256 integrity hashes matched</div>
                     </div>
@@ -346,26 +398,42 @@ export const LandingPage: React.FC = () => {
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <h4 className="text-sm font-extrabold text-slate-900">SRE Reliability: 99.9% Target SLO</h4>
-                      <p className="text-xs text-slate-500">Contractual SLA 99.5% • Multi-window burn rate monitoring</p>
+                      <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                        <Activity className="h-4 w-4 text-emerald-600" />
+                        SRE Reliability: 99.9% Target SLO
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">Contractual SLA 99.5% • Multi-window burn rate monitoring</p>
                     </div>
-                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
+                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700 flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
                       Error Budget: 94.2% Remaining
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="rounded-xl border border-white bg-white p-3 shadow-2xs">
-                      <div className="text-[11px] font-bold text-slate-400">MEAN TIME TO DETECT</div>
+                    <div className="rounded-xl border border-white bg-white p-3.5 shadow-2xs">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+                        <Cpu className="h-3.5 w-3.5 text-slate-400" />
+                        <span>MEAN TIME TO DETECT</span>
+                      </div>
                       <div className="text-xl font-black text-slate-900 mt-1">3.2 Minutes</div>
-                      <div className="text-[11px] text-emerald-600">↓ 42% faster detection</div>
+                      <div className="text-[11px] text-emerald-600 flex items-center gap-1">
+                        <TrendingDown className="h-3 w-3" />
+                        <span>42% faster detection</span>
+                      </div>
                     </div>
-                    <div className="rounded-xl border border-white bg-white p-3 shadow-2xs">
-                      <div className="text-[11px] font-bold text-slate-400">MEAN TIME TO RESOLVE</div>
+                    <div className="rounded-xl border border-white bg-white p-3.5 shadow-2xs">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+                        <RefreshCw className="h-3.5 w-3.5 text-slate-400" />
+                        <span>MEAN TIME TO RESOLVE</span>
+                      </div>
                       <div className="text-xl font-black text-slate-900 mt-1">14.5 Minutes</div>
                       <div className="text-[11px] text-emerald-600">Within 30m target</div>
                     </div>
-                    <div className="rounded-xl border border-white bg-white p-3 shadow-2xs">
-                      <div className="text-[11px] font-bold text-slate-400">ON-CALL ESCALATION</div>
+                    <div className="rounded-xl border border-white bg-white p-3.5 shadow-2xs">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+                        <Users className="h-3.5 w-3.5 text-purple-500" />
+                        <span>ON-CALL ESCALATION</span>
+                      </div>
                       <div className="text-xl font-black text-[#7C3AED] mt-1">Primary Active</div>
                       <div className="text-[11px] text-slate-500">Tier-1 auto-escalation armed</div>
                     </div>
@@ -377,26 +445,39 @@ export const LandingPage: React.FC = () => {
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <h4 className="text-sm font-extrabold text-slate-900">Cloud FinOps: $1,280.00 Recorded Spend</h4>
-                      <p className="text-xs text-slate-500">Service-wise allocation across AWS EC2, RDS, and S3</p>
+                      <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                        <DollarSign className="h-4 w-4 text-emerald-600" />
+                        Cloud FinOps: $1,280.00 Recorded Spend
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">Service-wise allocation across AWS EC2, RDS, and S3</p>
                     </div>
-                    <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
+                    <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700 flex items-center gap-1">
+                      <TrendingDown className="h-3 w-3" />
                       Actionable Savings: $180.00/mo
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="rounded-xl border border-white bg-white p-3 shadow-2xs">
-                      <div className="text-[11px] font-bold text-slate-400">IDLE EBS VOLUMES</div>
+                    <div className="rounded-xl border border-white bg-white p-3.5 shadow-2xs">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+                        <Server className="h-3.5 w-3.5 text-slate-400" />
+                        <span>IDLE EBS VOLUMES</span>
+                      </div>
                       <div className="text-xl font-black text-slate-900 mt-1">2 Unattached</div>
                       <div className="text-[11px] text-emerald-600">Save $18.40 / mo</div>
                     </div>
-                    <div className="rounded-xl border border-white bg-white p-3 shadow-2xs">
-                      <div className="text-[11px] font-bold text-slate-400">NAT GATEWAY RUN-RATE</div>
+                    <div className="rounded-xl border border-white bg-white p-3.5 shadow-2xs">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+                        <TrendingDown className="h-3.5 w-3.5 text-emerald-500" />
+                        <span>NAT GATEWAY RUN-RATE</span>
+                      </div>
                       <div className="text-xl font-black text-slate-900 mt-1">Optimization Ready</div>
                       <div className="text-[11px] text-emerald-600">Save $64.00 / mo</div>
                     </div>
-                    <div className="rounded-xl border border-white bg-white p-3 shadow-2xs">
-                      <div className="text-[11px] font-bold text-slate-400">BUDGET THRESHOLDS</div>
+                    <div className="rounded-xl border border-white bg-white p-3.5 shadow-2xs">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+                        <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
+                        <span>BUDGET THRESHOLDS</span>
+                      </div>
                       <div className="text-xl font-black text-emerald-600 mt-1">Healthy</div>
                       <div className="text-[11px] text-slate-500">68% of monthly limit</div>
                     </div>
@@ -408,26 +489,39 @@ export const LandingPage: React.FC = () => {
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <h4 className="text-sm font-extrabold text-slate-900">Infrastructure as Code & IDP</h4>
-                      <p className="text-xs text-slate-500">Terraform Workspaces, Drift Detection & Golden Path Blueprints</p>
+                      <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                        <Compass className="h-4 w-4 text-indigo-600" />
+                        Infrastructure as Code & IDP
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">Terraform Workspaces, Drift Detection & Golden Path Blueprints</p>
                     </div>
-                    <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold text-indigo-700">
+                    <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold text-indigo-700 flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
                       Zero Drift Detected
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="rounded-xl border border-white bg-white p-3 shadow-2xs">
-                      <div className="text-[11px] font-bold text-slate-400">TERRAFORM WORKSPACES</div>
+                    <div className="rounded-xl border border-white bg-white p-3.5 shadow-2xs">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+                        <FileCode className="h-3.5 w-3.5 text-slate-400" />
+                        <span>TERRAFORM WORKSPACES</span>
+                      </div>
                       <div className="text-xl font-black text-slate-900 mt-1">production-vpc</div>
                       <div className="text-[11px] text-slate-500">Checkov: PASSED</div>
                     </div>
-                    <div className="rounded-xl border border-white bg-white p-3 shadow-2xs">
-                      <div className="text-[11px] font-bold text-slate-400">SERVICE CATALOG</div>
+                    <div className="rounded-xl border border-white bg-white p-3.5 shadow-2xs">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+                        <Compass className="h-3.5 w-3.5 text-slate-400" />
+                        <span>SERVICE CATALOG</span>
+                      </div>
                       <div className="text-xl font-black text-slate-900 mt-1">4 Services Registered</div>
                       <div className="text-[11px] text-slate-500">Tier-1 payment-gateway active</div>
                     </div>
-                    <div className="rounded-xl border border-white bg-white p-3 shadow-2xs">
-                      <div className="text-[11px] font-bold text-slate-400">GOLDEN PATH TEMPLATES</div>
+                    <div className="rounded-xl border border-white bg-white p-3.5 shadow-2xs">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+                        <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+                        <span>GOLDEN PATH TEMPLATES</span>
+                      </div>
                       <div className="text-xl font-black text-[#7C3AED] mt-1">FastAPI Microservice</div>
                       <div className="text-[11px] text-slate-500">Pre-wired with OTel & CI/CD</div>
                     </div>
@@ -665,7 +759,10 @@ export const LandingPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs">
-              <div className="text-xs font-black text-slate-400 uppercase">Multi-Cloud Allocation</div>
+              <div className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase">
+                <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Multi-Cloud Allocation</span>
+              </div>
               <h3 className="mt-2 text-lg font-extrabold text-slate-900">Service-Wise Cost Tracking</h3>
               <p className="mt-2 text-xs text-slate-600 leading-relaxed">
                 Break down monthly expenditure across compute, database, and object storage with zero fabricated spend.
@@ -673,7 +770,10 @@ export const LandingPage: React.FC = () => {
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs">
-              <div className="text-xs font-black text-slate-400 uppercase">Idle Resource Detection</div>
+              <div className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase">
+                <Server className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Idle Resource Detection</span>
+              </div>
               <h3 className="mt-2 text-lg font-extrabold text-slate-900">Automated Savings Actions</h3>
               <p className="mt-2 text-xs text-slate-600 leading-relaxed">
                 Identify unattached EBS volumes, unassociated Elastic IPs, and over-provisioned Kubernetes nodes.
@@ -681,7 +781,10 @@ export const LandingPage: React.FC = () => {
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs">
-              <div className="text-xs font-black text-slate-400 uppercase">Forecasting & Budgets</div>
+              <div className="flex items-center gap-2 text-xs font-black text-slate-400 uppercase">
+                <TrendingDown className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Forecasting & Budgets</span>
+              </div>
               <h3 className="mt-2 text-lg font-extrabold text-slate-900">Predictive Anomaly Alerts</h3>
               <p className="mt-2 text-xs text-slate-600 leading-relaxed">
                 Forecast monthly run-rates and receive proactive threshold alerts before incurring budget overruns.
@@ -711,7 +814,10 @@ export const LandingPage: React.FC = () => {
             <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-400">Community</span>
+                  <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-400">
+                    <Users className="h-3.5 w-3.5 text-slate-400" />
+                    <span>Community</span>
+                  </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">Individual</span>
                 </div>
                 <div className="flex items-baseline gap-1">
@@ -756,12 +862,16 @@ export const LandingPage: React.FC = () => {
 
             {/* Pro Plan (Highlighted) */}
             <div className="rounded-3xl border-2 border-[#7C3AED] bg-white p-7 shadow-xl shadow-purple-500/10 flex flex-col justify-between relative transform md:-translate-y-2">
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[#7C3AED] to-indigo-600 px-4 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-sm">
-                Most Popular for Teams
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[#7C3AED] to-indigo-600 px-4 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-sm flex items-center gap-1.5">
+                <Zap className="h-3 w-3 fill-white" />
+                <span>Most Popular for Teams</span>
               </div>
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-black uppercase tracking-wider text-[#7C3AED]">Professional</span>
+                  <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#7C3AED]">
+                    <Zap className="h-3.5 w-3.5 text-[#7C3AED] fill-[#7C3AED]" />
+                    <span>Professional</span>
+                  </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-[#7C3AED] border border-purple-200">Scale-Up</span>
                 </div>
                 <div className="flex items-baseline gap-1">
@@ -817,7 +927,10 @@ export const LandingPage: React.FC = () => {
             <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-400">Enterprise</span>
+                  <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-400">
+                    <Award className="h-3.5 w-3.5 text-amber-500" />
+                    <span>Enterprise</span>
+                  </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">Custom</span>
                 </div>
                 <div className="flex items-baseline gap-1">
@@ -891,8 +1004,11 @@ export const LandingPage: React.FC = () => {
                     onClick={() => toggleFaq(idx)}
                     className="w-full flex items-center justify-between p-5 text-left text-sm font-extrabold text-slate-900 hover:text-[#7C3AED] transition-colors"
                   >
-                    <span>{faq.q}</span>
-                    <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                    <span className="flex items-center gap-3">
+                      <HelpCircle className="h-4 w-4 text-[#7C3AED] shrink-0" />
+                      <span>{faq.q}</span>
+                    </span>
+                    <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform shrink-0 ml-2 ${isOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {isOpen && (
                     <div className="px-5 pb-5 text-xs sm:text-sm text-slate-600 font-medium leading-relaxed border-t border-slate-200/60 pt-3">
