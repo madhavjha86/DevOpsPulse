@@ -6,6 +6,7 @@ import {
   Check,
   ChevronDown,
   Coins,
+  Copy,
   Cpu,
   Download,
   Edit2,
@@ -75,6 +76,14 @@ export const AIGovernancePage: React.FC = () => {
 
   // Ingestion Guide Modal
   const [showIngestModal, setShowIngestModal] = useState(false);
+  const [activeGuideTab, setActiveGuideTab] = useState<'cursor' | 'claude' | 'codex' | 'rest'>('cursor');
+  const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
+
+  const handleCopy = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedSnippet(key);
+    setTimeout(() => setCopiedSnippet(null), 2000);
+  };
 
   const fetchSummary = useCallback(async () => {
     setLoading(true);
@@ -625,48 +634,165 @@ export const AIGovernancePage: React.FC = () => {
         </Modal>
       )}
 
-      {/* Connect Dev Tools (Ingestion Guide Modal) */}
+      {/* Connect Dev Tools (Universal Gateway & Ingestion Modal) */}
       {showIngestModal && (
         <Modal
           isOpen={true}
           onClose={() => setShowIngestModal(false)}
-          title="Connect Claude Code, Cursor, & Codex to Token Ledger"
+          title="Connect Cursor, Claude Code, & Codex to AI Governance"
         >
           <div className="space-y-4 text-xs">
             <p className="text-dark-300">
-              DevOpsPulse provides a universal ingestion API. You can configure your company's AI Gateway,
-              Claude Code CLI hooks, or developer IDE scripts to report tokens automatically.
+              DevOpsPulse acts as your company's central AI Gateway. Developers use their standard tools without change, while tokens and costs are automatically attributed and audited in real time.
             </p>
 
-            <div className="space-y-1.5">
-              <span className="font-semibold text-dark-100 block">Ingestion REST Endpoint:</span>
-              <pre className="p-2.5 rounded-lg bg-slate-900 text-slate-100 font-mono text-[11px] overflow-x-auto">
-                POST http://localhost:8000/api/v1/ai-governance/ingest
-              </pre>
+            {/* Navigation Tabs */}
+            <div className="flex border-b border-slate-200 gap-1 pb-1">
+              {[
+                { id: 'cursor', label: 'Cursor IDE (Easiest)' },
+                { id: 'claude', label: 'Claude Code CLI' },
+                { id: 'codex', label: 'OpenAI / Codex' },
+                { id: 'rest', label: 'REST Ingest' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveGuideTab(tab.id as 'cursor' | 'claude' | 'codex' | 'rest')}
+                  className={`px-3 py-1.5 rounded-t-lg font-medium text-[11px] transition-colors ${
+                    activeGuideTab === tab.id
+                      ? 'bg-primary-50 text-primary-700 border-b-2 border-primary-600'
+                      : 'text-dark-300 hover:text-dark-100'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
-            <div className="space-y-1.5">
-              <span className="font-semibold text-dark-100 block">Sample Payload (JSON):</span>
-              <pre className="p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-[11px] overflow-x-auto">
+            {/* Tab 1: Cursor IDE */}
+            {activeGuideTab === 'cursor' && (
+              <div className="space-y-3">
+                <div className="p-2.5 rounded-lg bg-blue-50/70 border border-blue-100 text-[11px] text-blue-900">
+                  <strong>Zero-Code Setup:</strong> Developers paste this URL in Cursor Settings. Every AI completion is streamed and attributed to their corporate account.
+                </div>
+
+                <div>
+                  <span className="font-semibold text-dark-100 block mb-1">1. Cursor Settings ➔ Models ➔ Override OpenAI Base URL:</span>
+                  <div className="relative group">
+                    <pre className="p-2.5 rounded-lg bg-slate-900 text-emerald-400 font-mono text-[11px] overflow-x-auto">
+                      http://localhost:8000/api/v1/ai-governance/proxy/v1
+                    </pre>
+                    <button
+                      onClick={() => handleCopy('http://localhost:8000/api/v1/ai-governance/proxy/v1', 'cursor_url')}
+                      className="absolute right-2 top-2 p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] flex items-center gap-1"
+                    >
+                      {copiedSnippet === 'cursor_url' ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                      {copiedSnippet === 'cursor_url' ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="font-semibold text-dark-100 block mb-1">2. Developer API Key in Cursor:</span>
+                  <p className="text-[11px] text-dark-400">
+                    Developers can enter their corporate email or employee access token as the API key in Cursor.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Tab 2: Claude Code CLI */}
+            {activeGuideTab === 'claude' && (
+              <div className="space-y-3">
+                <p className="text-[11px] text-dark-300">
+                  Add this environment variable to your terminal session or <code className="bg-slate-100 px-1 py-0.5 rounded">~/.bashrc</code>:
+                </p>
+
+                <div className="relative group">
+                  <pre className="p-3 rounded-lg bg-slate-900 text-amber-400 font-mono text-[11px] overflow-x-auto">
+{`export ANTHROPIC_BASE_URL="http://localhost:8000/api/v1/ai-governance/proxy"
+export ANTHROPIC_API_KEY="devopspulse-user-token"`}
+                  </pre>
+                  <button
+                    onClick={() =>
+                      handleCopy(
+                        'export ANTHROPIC_BASE_URL="http://localhost:8000/api/v1/ai-governance/proxy"\nexport ANTHROPIC_API_KEY="devopspulse-user-token"',
+                        'claude_env'
+                      )
+                    }
+                    className="absolute right-2 top-2 p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] flex items-center gap-1"
+                  >
+                    {copiedSnippet === 'claude_env' ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                    {copiedSnippet === 'claude_env' ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-dark-400">
+                  Now running <code className="font-mono text-dark-200">claude</code> will stream responses and log all input and output tokens directly to your enterprise dashboard.
+                </p>
+              </div>
+            )}
+
+            {/* Tab 3: OpenAI / Codex */}
+            {activeGuideTab === 'codex' && (
+              <div className="space-y-3">
+                <p className="text-[11px] text-dark-300">
+                  Configure the OpenAI Python SDK, Codex scripts, or CLI assistants:
+                </p>
+
+                <div className="relative group">
+                  <pre className="p-3 rounded-lg bg-slate-900 text-blue-400 font-mono text-[11px] overflow-x-auto">
+{`export OPENAI_BASE_URL="http://localhost:8000/api/v1/ai-governance/proxy/v1"
+export OPENAI_API_KEY="devopspulse-user-token"`}
+                  </pre>
+                  <button
+                    onClick={() =>
+                      handleCopy(
+                        'export OPENAI_BASE_URL="http://localhost:8000/api/v1/ai-governance/proxy/v1"\nexport OPENAI_API_KEY="devopspulse-user-token"',
+                        'codex_env'
+                      )
+                    }
+                    className="absolute right-2 top-2 p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] flex items-center gap-1"
+                  >
+                    {copiedSnippet === 'codex_env' ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                    {copiedSnippet === 'codex_env' ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Tab 4: Direct REST Ingestion */}
+            {activeGuideTab === 'rest' && (
+              <div className="space-y-3">
+                <p className="text-[11px] text-dark-300">
+                  Push token telemetry from custom CI/CD jobs, company gateways, or post-execution hooks:
+                </p>
+
+                <div className="space-y-1">
+                  <span className="font-semibold text-dark-100 block">POST Endpoint:</span>
+                  <pre className="p-2.5 rounded-lg bg-slate-900 text-slate-100 font-mono text-[11px]">
+                    POST http://localhost:8000/api/v1/ai-governance/ingest
+                  </pre>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="font-semibold text-dark-100 block">Sample Payload:</span>
+                  <pre className="p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-[11px] overflow-x-auto">
 {`{
   "tool_name": "Claude Code",
   "provider": "anthropic",
   "model_name": "claude-3-5-sonnet",
   "prompt_tokens": 14200,
   "completion_tokens": 3100,
-  "user_email": "developer@company.com",
-  "latency_ms": 1200
+  "user_email": "developer@company.com"
 }`}
-              </pre>
-            </div>
+                  </pre>
+                </div>
+              </div>
+            )}
 
-            <p className="text-[11px] text-dark-400">
-              Every reported request is attributed in real time to the developer's profile and deducted from their monthly budget.
-            </p>
-
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end pt-2 border-t border-slate-150">
               <Button size="sm" onClick={() => setShowIngestModal(false)}>
-                Got it
+                Done
               </Button>
             </div>
           </div>

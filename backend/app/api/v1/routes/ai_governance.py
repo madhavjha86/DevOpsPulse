@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 import io
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +17,7 @@ from app.schemas.ai_governance import (
     AIUserQuotaUpdateRequest,
 )
 from app.services.ai_governance_service import AIGovernanceService
+from app.services.ai_proxy_service import AIProxyService
 
 router = APIRouter(prefix="/ai-governance", tags=["Enterprise AI Governance"])
 
@@ -157,3 +158,38 @@ async def export_governance_csv(
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=devopspulse-ai-governance-{timeframe}d.csv"},
     )
+
+
+# -------------------------------------------------------------
+# Universal Enterprise AI Gateway / Reverse Proxy Endpoints
+# (For Cursor IDE, Claude Code, OpenAI Codex, Continue, Cline)
+# -------------------------------------------------------------
+
+@router.get("/proxy/v1/models")
+@router.get("/proxy/models")
+async def proxy_list_models():
+    """Return model catalog for Cursor IDE and OpenAI SDK tools."""
+    return AIProxyService.get_models_catalog()
+
+
+@router.post("/proxy/v1/chat/completions")
+@router.post("/proxy/chat/completions")
+async def proxy_chat_completions(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Proxy OpenAI chat completions from Cursor IDE, Codex, or CLI assistants with live token tracking."""
+    body = await request.json()
+    return await AIProxyService.handle_chat_completions(body, request, db)
+
+
+@router.post("/proxy/v1/messages")
+@router.post("/proxy/messages")
+async def proxy_anthropic_messages(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Proxy Anthropic messages from Claude Code CLI with live token tracking."""
+    body = await request.json()
+    return await AIProxyService.handle_anthropic_messages(body, request, db)
+
