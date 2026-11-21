@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 // Dynamic lazy imports for route code-splitting
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
@@ -43,8 +44,9 @@ const PageFallback: React.FC = () => (
 
 export const App: React.FC = () => {
   return (
-    <Suspense fallback={<PageFallback />}>
-      <Routes>
+    <ErrorBoundary>
+      <Suspense fallback={<PageFallback />}>
+        <Routes>
         {/* Public Marketing & Authentication routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -85,6 +87,7 @@ export const App: React.FC = () => {
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Suspense>
+  </ErrorBoundary>
   );
 };
 
