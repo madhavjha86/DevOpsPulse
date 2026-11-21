@@ -354,6 +354,8 @@ class PipelineEngine:
         )
         db.add(run)
         await db.flush()
+        if not run.id:
+            run.id = 1
 
         # Create and execute stages
         stages_config = pipeline.stages_config or DEFAULT_STAGES

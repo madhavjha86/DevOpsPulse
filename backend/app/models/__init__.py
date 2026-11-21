@@ -55,6 +55,14 @@ from app.models.disaster_recovery_and_keys import (
 from app.models.monitor import ServiceMonitor
 from app.models.jenkins import JenkinsServer, JenkinsJob, JenkinsBuild
 from app.models.ai_governance import AITokenLedger, AIUserQuota
+from app.models.pipeline import (
+    Pipeline,
+    PipelineRun,
+    PipelineStage,
+    PipelineStatus,
+    PipelineTrigger,
+    StageStatus,
+)
 
 __all__ = [
     "User",
@@ -112,4 +120,10 @@ __all__ = [
     "JenkinsBuild",
     "AITokenLedger",
     "AIUserQuota",
+    "Pipeline",
+    "PipelineRun",
+    "PipelineStage",
+    "PipelineStatus",
+    "PipelineTrigger",
+    "StageStatus",
 ]

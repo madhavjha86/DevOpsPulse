@@ -9,7 +9,7 @@ from app.core.config import get_settings
 from app.core.exceptions import UnauthorizedException
 from app.core.logging import get_logger
 from app.core.security import verify_webhook_signature
-from app.db.session import get_db
+from app.api.deps import get_db
 from app.services.workflow_service import WorkflowService
 
 logger = get_logger("webhooks")

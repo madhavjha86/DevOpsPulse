@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import get_db
-from app.api.deps import TenantContext, get_tenant_context
+from app.api.deps import get_db, TenantContext, get_tenant_context
 from app.services.pipeline_engine import pipeline_engine
 
 router = APIRouter(prefix="/pipelines", tags=["pipelines"])
@@ -34,6 +33,8 @@ class TriggerRunRequest(BaseModel):
 
 
 class StageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     stage_type: str
@@ -45,11 +46,10 @@ class StageOut(BaseModel):
     started_at: str | None = None
     finished_at: str | None = None
 
-    class Config:
-        from_attributes = True
-
 
 class RunOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     run_number: int
     status: str
@@ -63,11 +63,10 @@ class RunOut(BaseModel):
     duration_ms: int | None = None
     stages: list[StageOut] = []
 
-    class Config:
-        from_attributes = True
-
 
 class PipelineOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     description: str | None = None
@@ -80,9 +79,6 @@ class PipelineOut(BaseModel):
     stages_config: list | None = None
     runs: list[RunOut] = []
     created_at: str | None = None
-
-    class Config:
-        from_attributes = True
 
 
 class PipelineStatsOut(BaseModel):
