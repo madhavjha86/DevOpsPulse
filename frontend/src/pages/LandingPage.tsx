@@ -95,6 +95,9 @@ export const LandingPage: React.FC = () => {
     },
   ];
 
+  // Alias for backward compatibility / hot-reload cache
+  const fivePillars = corePillars;
+
   const faqs = [
     {
       q: 'How does the Zero-Touch Autonomous CI/CD pipeline work in DevOpsPulse?',
