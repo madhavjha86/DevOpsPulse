@@ -391,21 +391,27 @@ export const AIGovernancePage: React.FC = () => {
 
           {/* Tool legend list */}
           <div className="space-y-1.5 pt-2 border-t border-slate-150">
-            {(summaryData?.tool_breakdown ?? []).map((t) => (
-              <div key={t.tool_name} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: TOOL_COLORS[t.tool_name] || DEFAULT_COLOR }}
-                  />
-                  <span className="font-medium text-dark-200">{t.tool_name}</span>
+            {(summaryData?.tool_breakdown ?? []).length === 0 ? (
+              <p className="text-[11px] text-dark-400 text-center py-2">
+                No external tool activity recorded yet. Click "Connect Dev Tools" to configure CLI or gateway hooks.
+              </p>
+            ) : (
+              (summaryData?.tool_breakdown ?? []).map((t) => (
+                <div key={t.tool_name} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: TOOL_COLORS[t.tool_name] || DEFAULT_COLOR }}
+                    />
+                    <span className="font-medium text-dark-200">{t.tool_name}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-mono text-dark-100 font-semibold">{formatTokens(t.tokens)}</span>
+                    <span className="text-[10px] text-dark-400 block">${t.cost_usd.toFixed(2)}</span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="font-mono text-dark-100 font-semibold">{formatTokens(t.tokens)}</span>
-                  <span className="text-[10px] text-dark-400 block">${t.cost_usd.toFixed(2)}</span>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>

@@ -121,8 +121,6 @@ class AIGovernanceService:
         timeframe_days: int = 30,
     ) -> dict[str, Any]:
         """Produce complete enterprise AI FinOps metrics, employee leaderboard, and model distributions."""
-        await cls.seed_demo_governance_data_if_empty(db, organization_id, user_id)
-
         now = datetime.now(timezone.utc)
         since_date = now - timedelta(days=timeframe_days)
 
@@ -233,29 +231,74 @@ class AIGovernanceService:
         ]
 
         # 5. Employee Attribution Leaderboard
-        user_stmt = (
+        # Query real team members belonging to this organization
+        member_stmt = (
             select(
                 User.id.label("user_id"),
                 User.email,
                 User.full_name,
                 User.username,
-                User.role,
+                OrganizationMember.role,
+            )
+            .join(OrganizationMember, User.id == OrganizationMember.user_id)
+            .where(OrganizationMember.organization_id == organization_id)
+        )
+        member_res = await db.execute(member_stmt)
+        team_members: dict[int, Any] = {m.user_id: m for m in member_res.all()}
+
+        # Also include current requesting user if not in team_members
+        if user_id and user_id not in team_members:
+            cur_u_res = await db.execute(select(User).where(User.id == user_id))
+            cur_u = cur_u_res.scalar_one_or_none()
+            if cur_u:
+                team_members[cur_u.id] = type(
+                    "UserMember",
+                    (),
+                    {
+                        "user_id": cur_u.id,
+                        "email": cur_u.email,
+                        "full_name": cur_u.full_name,
+                        "username": cur_u.username,
+                        "role": cur_u.role or "DEVELOPER",
+                    },
+                )()
+
+        # Aggregated actual usage from AITokenLedger
+        usage_stmt = (
+            select(
+                AITokenLedger.user_id,
                 func.coalesce(func.sum(AITokenLedger.total_tokens), 0).label("user_tokens"),
                 func.coalesce(func.sum(AITokenLedger.prompt_tokens), 0).label("user_prompt_tokens"),
                 func.coalesce(func.sum(AITokenLedger.completion_tokens), 0).label("user_completion_tokens"),
                 func.coalesce(func.sum(AITokenLedger.estimated_cost_usd), 0.0).label("user_cost_usd"),
                 func.count(AITokenLedger.id).label("user_requests"),
             )
-            .join(AITokenLedger, User.id == AITokenLedger.user_id)
             .where(
                 AITokenLedger.organization_id == organization_id,
                 AITokenLedger.created_at >= since_date,
             )
-            .group_by(User.id, User.email, User.full_name, User.username, User.role)
-            .order_by(desc("user_cost_usd"))
+            .group_by(AITokenLedger.user_id)
         )
-        user_res = await db.execute(user_stmt)
-        raw_users = user_res.all()
+        usage_res = await db.execute(usage_stmt)
+        usage_map = {row.user_id: row for row in usage_res.all()}
+
+        # If any user recorded usage but was not in team_members, include them
+        for uid in usage_map:
+            if uid not in team_members:
+                ext_u_res = await db.execute(select(User).where(User.id == uid))
+                ext_u = ext_u_res.scalar_one_or_none()
+                if ext_u:
+                    team_members[uid] = type(
+                        "UserMember",
+                        (),
+                        {
+                            "user_id": ext_u.id,
+                            "email": ext_u.email,
+                            "full_name": ext_u.full_name,
+                            "username": ext_u.username,
+                            "role": ext_u.role or "DEVELOPER",
+                        },
+                    )()
 
         # Fetch quotas for users
         quotas_stmt = select(AIUserQuota).where(AIUserQuota.organization_id == organization_id)
@@ -263,11 +306,17 @@ class AIGovernanceService:
         quota_map = {q.user_id: q for q in quotas_res.scalars().all()}
 
         employees: list[dict[str, Any]] = []
-        for u in raw_users:
-            u_quota = quota_map.get(u.user_id)
+        for uid, member in team_members.items():
+            u_usage = usage_map.get(uid)
+            u_tokens = int(u_usage.user_tokens) if u_usage else 0
+            u_prompt = int(u_usage.user_prompt_tokens) if u_usage else 0
+            u_comp = int(u_usage.user_completion_tokens) if u_usage else 0
+            user_cost = float(u_usage.user_cost_usd) if u_usage else 0.0
+            u_requests = int(u_usage.user_requests) if u_usage else 0
+
+            u_quota = quota_map.get(uid)
             cost_limit = u_quota.monthly_cost_limit_usd if u_quota else 50.0
             token_limit = u_quota.monthly_token_limit if u_quota else 5_000_000
-            user_cost = float(u.user_cost_usd)
             quota_pct = round((user_cost / cost_limit) * 100, 1) if cost_limit > 0 else 0.0
 
             status_badge = "NORMAL"
@@ -277,21 +326,23 @@ class AIGovernanceService:
                 status_badge = "WARNING"
 
             employees.append({
-                "user_id": u.user_id,
-                "name": u.full_name or u.username or u.email.split("@")[0],
-                "email": u.email,
-                "role": u.role or "DEVELOPER",
-                "total_tokens": int(u.user_tokens),
-                "prompt_tokens": int(u.user_prompt_tokens),
-                "completion_tokens": int(u.user_completion_tokens),
+                "user_id": uid,
+                "name": member.full_name or member.username or member.email.split("@")[0],
+                "email": member.email,
+                "role": member.role or "DEVELOPER",
+                "total_tokens": u_tokens,
+                "prompt_tokens": u_prompt,
+                "completion_tokens": u_comp,
                 "total_cost_usd": round(user_cost, 4),
-                "requests_count": int(u.user_requests),
+                "requests_count": u_requests,
                 "monthly_cost_limit": cost_limit,
                 "monthly_token_limit": token_limit,
                 "budget_used_percentage": quota_pct,
                 "budget_status": status_badge,
                 "enforcement_action": u_quota.enforcement_action if u_quota else "NOTIFY",
             })
+
+        employees.sort(key=lambda x: x["total_cost_usd"], reverse=True)
 
         return {
             "summary": {
@@ -345,103 +396,3 @@ class AIGovernanceService:
         await db.commit()
         await db.refresh(quota)
         return quota
-
-    @classmethod
-    async def seed_demo_governance_data_if_empty(
-        cls, db: AsyncSession, organization_id: int, current_user_id: int
-    ) -> None:
-        """Seed realistic enterprise token consumption across tools and team members if ledger is empty."""
-        count_stmt = select(func.count(AITokenLedger.id)).where(
-            AITokenLedger.organization_id == organization_id
-        )
-        res = await db.execute(count_stmt)
-        count = res.scalar_one()
-        if count > 0:
-            return  # Already has data
-
-        now = datetime.now(timezone.utc)
-        
-        # Simulated team AI activities across Claude Code, Cursor, Codex, and DevOpsPulse Copilot
-        simulated_entries = [
-            # Current user (DevOpsPulse Copilot & Groq/GPT-4o)
-            {
-                "user_id": current_user_id,
-                "tool_name": "DevOpsPulse Copilot",
-                "provider": "groq",
-                "model_name": "openai/gpt-oss-120b",
-                "prompt_tokens": 124500,
-                "completion_tokens": 34800,
-                "days_ago": 0,
-            },
-            {
-                "user_id": current_user_id,
-                "tool_name": "DevOpsPulse Copilot",
-                "provider": "openai",
-                "model_name": "gpt-4o",
-                "prompt_tokens": 340000,
-                "completion_tokens": 82000,
-                "days_ago": 1,
-            },
-            {
-                "user_id": current_user_id,
-                "tool_name": "Claude Code",
-                "provider": "anthropic",
-                "model_name": "claude-3-5-sonnet",
-                "prompt_tokens": 420000,
-                "completion_tokens": 98000,
-                "days_ago": 3,
-            },
-            {
-                "user_id": current_user_id,
-                "tool_name": "Cursor IDE",
-                "provider": "anthropic",
-                "model_name": "claude-3-5-sonnet",
-                "prompt_tokens": 310000,
-                "completion_tokens": 64000,
-                "days_ago": 5,
-            },
-            {
-                "user_id": current_user_id,
-                "tool_name": "OpenAI Codex",
-                "provider": "openai",
-                "model_name": "gpt-4o-mini",
-                "prompt_tokens": 580000,
-                "completion_tokens": 120000,
-                "days_ago": 7,
-            },
-        ]
-
-        for s in simulated_entries:
-            tot = s["prompt_tokens"] + s["completion_tokens"]
-            cost = cls.calculate_cost(s["model_name"], s["prompt_tokens"], s["completion_tokens"])
-            ts = now - timedelta(days=s["days_ago"], hours=2)
-            entry = AITokenLedger(
-                organization_id=organization_id,
-                user_id=s["user_id"],
-                tool_name=s["tool_name"],
-                provider=s["provider"],
-                model_name=s["model_name"],
-                prompt_tokens=s["prompt_tokens"],
-                completion_tokens=s["completion_tokens"],
-                total_tokens=tot,
-                estimated_cost_usd=cost,
-                request_latency_ms=850,
-                status="SUCCESS",
-                created_at=ts,
-                updated_at=ts,
-            )
-            db.add(entry)
-
-        # Default quota for the user
-        quota = AIUserQuota(
-            organization_id=organization_id,
-            user_id=current_user_id,
-            monthly_token_limit=10_000_000,
-            monthly_cost_limit_usd=100.0,
-            alert_threshold_percentage=80,
-            enforcement_action="NOTIFY",
-        )
-        db.add(quota)
-
-        await db.commit()
-        logger.info("Seeded initial enterprise AI governance ledger records", organization_id=organization_id)
