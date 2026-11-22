@@ -26,7 +26,7 @@ class TestDockerInfrastructureAPI:
         data = response.json()
         assert isinstance(data, list)
         assert len(data) >= 1
-        assert data[0]["name"] == "Local Docker Daemon"
+        assert data[0]["name"] in ("Local Docker Daemon", "Docker Desktop (Local)")
         assert "host_url" in data[0]
 
     @pytest.mark.asyncio

@@ -1345,7 +1345,7 @@ export const WorkflowsPage: React.FC = () => {
 
           <Input
             label="Jenkins Server URL"
-            placeholder="http://jenkins.internal:8080 or https://ci.example.com"
+            placeholder="https://jenkins.internal:8080 or https://ci.example.com"
             value={serverUrl}
             onChange={(e) => setServerUrl(e.target.value)}
             required

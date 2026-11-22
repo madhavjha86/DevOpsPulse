@@ -32,6 +32,7 @@ async def list_docker_hosts(
     """Retrieve all Docker hosts registered in the active workspace."""
     import os
     from sqlalchemy import select
+    from app.models.docker_host import DockerHost
     hosts = await DockerService.get_user_hosts(
         db, tenant.user.id, organization_id=tenant.organization_id
     )

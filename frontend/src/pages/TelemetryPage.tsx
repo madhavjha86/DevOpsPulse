@@ -937,7 +937,7 @@ export const TelemetryPage: React.FC = () => {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => window.open('http://localhost:9090/targets', '_blank')}
+                onClick={() => window.open('http://localhost:9090/targets', '_blank', 'noopener,noreferrer')}
                 leftIcon={<Activity className="h-3.5 w-3.5" />}
               >
                 Prometheus Targets
@@ -945,7 +945,7 @@ export const TelemetryPage: React.FC = () => {
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => window.open('http://localhost:3001', '_blank')}
+                onClick={() => window.open('http://localhost:3001', '_blank', 'noopener,noreferrer')}
                 rightIcon={<ExternalLink className="h-3.5 w-3.5" />}
               >
                 Launch Standalone Grafana
