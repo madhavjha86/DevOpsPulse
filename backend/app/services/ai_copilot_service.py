@@ -707,6 +707,56 @@ class AICopilotService:
         prompt_lower = user_prompt.lower()
         context_data = context_res.get("data", {})
 
+        # Query: Kubernetes / Pod Crash
+        if any(k in prompt_lower for k in ("crashloop", "pod", "kubernetes", "k8s")):
+            return {
+                "content": (
+                    "### 🔍 Kubernetes Pod Crash Troubleshooting Guide\n\n"
+                    "To diagnose and resolve a `CrashLoopBackOff` on your pod:\n\n"
+                    "1. **Check previous pod termination logs**:\n"
+                    "   ```bash\n"
+                    "   kubectl logs <pod-name> --previous -n <namespace>\n"
+                    "   ```\n\n"
+                    "2. **Check Pod Events & OOMKilled status**:\n"
+                    "   ```bash\n"
+                    "   kubectl describe pod <pod-name> -n <namespace>\n"
+                    "   ```\n\n"
+                    "3. **Inspect Exit Code 137 vs 1**:\n"
+                    "   - **Exit code 137**: Process killed by Linux kernel OOM (Out of Memory).\n"
+                    "   - **Exit code 1**: Uncaught application exception or configuration syntax error."
+                ),
+                "sources": sources,
+                "tokens_used": 0,
+                "model": "DevOpsPulse-Deterministic-Engine",
+            }
+
+        # Query: CI/CD Workflow / GitHub Actions YAML
+        if any(k in prompt_lower for k in ("workflow", "github actions", "yaml")):
+            return {
+                "content": (
+                    "### 🚀 Production GitHub Actions CI/CD Pipeline\n\n"
+                    "Here is an optimized production GitHub Actions workflow configuration:\n\n"
+                    "```yaml\n"
+                    "name: CI/CD Pipeline\n"
+                    "on:\n"
+                    "  push:\n"
+                    "    branches: [main]\n"
+                    "jobs:\n"
+                    "  build:\n"
+                    "    runs-on: ubuntu-latest\n"
+                    "    steps:\n"
+                    "      - uses: actions/checkout@v4\n"
+                    "      - uses: docker/build-push-action@v5\n"
+                    "        with:\n"
+                    "          push: true\n"
+                    "          tags: user/app:latest\n"
+                    "```"
+                ),
+                "sources": sources,
+                "tokens_used": 0,
+                "model": "DevOpsPulse-Deterministic-Engine",
+            }
+
         # Query: Deployment or build failure
         if any(k in prompt_lower for k in ("fail", "failure", "broken", "build", "pipeline")):
             runs = context_data.get("recent_pipeline_runs", [])
