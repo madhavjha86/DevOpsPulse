@@ -37,6 +37,7 @@ async def list_clusters(
     if not clusters:
         # Check if user has an existing active/connected cluster
         from sqlalchemy import select
+        from app.models.k8s_cluster import K8sCluster
         stmt = (
             select(K8sCluster)
             .where(K8sCluster.user_id == tenant.user.id)
@@ -54,11 +55,18 @@ async def list_clusters(
                 namespace_filter=existing.namespace_filter,
                 tls_verify=existing.tls_verify,
             )
-            created = await KubernetesService.create_cluster(
-                db, tenant.user.id, default_payload, organization_id=tenant.organization_id
+        else:
+            default_payload = K8sClusterCreate(
+                name="Local Minikube / Kind",
+                api_server_url="https://127.0.0.1:6443",
+                auth_type="token",
+                namespace_filter="all",
+                tls_verify=False,
             )
-            return [created]
-        return []
+        created = await KubernetesService.create_cluster(
+            db, tenant.user.id, default_payload, organization_id=tenant.organization_id
+        )
+        return [created]
     return clusters
 
 
