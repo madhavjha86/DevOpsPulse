@@ -47,7 +47,7 @@ class SbomService:
         ("lucide-react", "0.344.0", "pkg:npm/lucide-react@0.344.0", "ISC", False),
         ("recharts", "2.12.2", "pkg:npm/recharts@2.12.2", "MIT", False),
         ("axios", "1.6.8", "pkg:npm/axios@1.6.8", "MIT", False),
-        ("gpl-utility-sample", "1.0.4", "pkg:pypi/gpl-utility-sample@1.0.4", "GPL-3.0-only", True),
+        ("coverage", "7.6.1", "pkg:pypi/coverage@7.6.1", "Apache-2.0", False),
     ]
 
     @classmethod

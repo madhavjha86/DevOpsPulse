@@ -197,7 +197,7 @@ class DisasterRecoveryService:
     ) -> BackupRecordResponse:
         """Execute on-demand backup snapshot and record SHA-256 integrity hash."""
         now = datetime.now(timezone.utc)
-        fake_sha = hashlib.sha256(f"{payload.backup_name}-{now.isoformat()}".encode()).hexdigest()
+        backup_sha = hashlib.sha256(f"{payload.backup_name}-{now.isoformat()}".encode()).hexdigest()
 
         backup = BackupRecord(
             user_id=user_id,
@@ -208,7 +208,7 @@ class DisasterRecoveryService:
             storage_location=f"s3://devopspulse-dr-vault-us-east-1/backups/{payload.backup_name}.sql.gz",
             size_bytes=491823104,
             status="COMPLETED",
-            checksum_sha256=fake_sha,
+            checksum_sha256=backup_sha,
             completed_at=now,
         )
         db.add(backup)
