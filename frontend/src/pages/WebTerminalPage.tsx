@@ -43,6 +43,8 @@ const KNOWN_COMMANDS = [
   'uptime',
   'df -h',
   'free -m',
+  'ls -l',
+  'tree',
   'clear',
   'help',
   'history',
@@ -333,11 +335,11 @@ export default function WebTerminalPage() {
 
   const quickChips = [
     'kubectl get pods -n production',
-    'kubectl top nodes',
     'docker ps',
+    'ls -l',
+    'tree',
     'uptime',
     'df -h',
-    'free -m',
     'help',
   ];
 
@@ -589,9 +591,33 @@ export default function WebTerminalPage() {
                 }
 
                 if (line.type === 'stdout') {
+                  const formatStdout = (rawText: string) => {
+                    const textLines = rawText.split('\n');
+                    return textLines.map((tLine, idx) => {
+                      if (tLine.startsWith('drwx') || tLine.includes('/')) {
+                        return (
+                          <span key={idx} className="block">
+                            {tLine.split(/(\b[\w.-]+\/)/g).map((part, pIdx) =>
+                              part.endsWith('/') ? (
+                                <span key={pIdx} className="text-cyan-400 font-bold">
+                                  {part}
+                                </span>
+                              ) : (
+                                part
+                              )
+                            )}
+                          </span>
+                        );
+                      }
+                      return <span key={idx} className="block">{tLine}</span>;
+                    });
+                  };
+
                   return (
                     <div key={line.id} className={`${themeClasses.stdout} pb-1.5 select-text`}>
-                      <pre className="font-mono whitespace-pre-wrap leading-tight">{line.text}</pre>
+                      <pre className="font-mono whitespace-pre-wrap leading-tight">
+                        {formatStdout(line.text)}
+                      </pre>
                       {line.durationMs !== undefined && (
                         <div className="text-[10px] opacity-40 text-right mt-0.5">
                           ✓ {line.durationMs}ms • exit 0
