@@ -43,14 +43,27 @@ const RESOURCE_CATALOG = [
   { type: 'lambda', label: 'Serverless Lambda Function', icon: Server, defaultCost: 2.0, desc: 'Event-driven Python 3.12 runtime' },
 ];
 
+const DEFAULT_NODES: CanvasNode[] = [
+  { id: 'node-vpc-1', type: 'vpc', label: 'VPC (10.0.0.0/16)', x: 100, y: 80, config: { cidr_block: '10.0.0.0/16' } },
+  { id: 'node-alb-1', type: 'alb', label: 'Public App Load Balancer', x: 350, y: 80, config: { scheme: 'internet-facing' } },
+  { id: 'node-ec2-1', type: 'ec2', label: 'API Cluster (t3.medium)', x: 350, y: 220, config: { instance_type: 't3.medium', count: 2 } },
+  { id: 'node-rds-1', type: 'rds', label: 'PostgreSQL DB (db.t3.medium)', x: 350, y: 360, config: { engine: 'postgres', instance_class: 'db.t3.medium', storage: 50 } },
+  { id: 'node-s3-1', type: 's3', label: 'Media & Backups (S3)', x: 600, y: 220, config: { versioning: true } },
+];
+
 export default function CloudCanvasPage() {
-  const [nodes, setNodes] = useState<CanvasNode[]>([
-    { id: 'node-vpc-1', type: 'vpc', label: 'VPC (10.0.0.0/16)', x: 100, y: 80, config: { cidr_block: '10.0.0.0/16' } },
-    { id: 'node-alb-1', type: 'alb', label: 'Public App Load Balancer', x: 350, y: 80, config: { scheme: 'internet-facing' } },
-    { id: 'node-ec2-1', type: 'ec2', label: 'API Cluster (t3.medium)', x: 350, y: 220, config: { instance_type: 't3.medium', count: 2 } },
-    { id: 'node-rds-1', type: 'rds', label: 'PostgreSQL DB (db.t3.medium)', x: 350, y: 360, config: { engine: 'postgres', instance_class: 'db.t3.medium', storage: 50 } },
-    { id: 'node-s3-1', type: 's3', label: 'Media & Backups (S3)', x: 600, y: 220, config: { versioning: true } },
-  ]);
+  const [nodes, setNodes] = useState<CanvasNode[]>(() => {
+    try {
+      const saved = localStorage.getItem('devopspulse_canvas_nodes');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {
+      console.error('Failed to load saved canvas nodes', e);
+    }
+    return DEFAULT_NODES;
+  });
 
   const [region, setRegion] = useState('us-east-1');
   const [environment, setEnvironment] = useState('production');
@@ -64,6 +77,11 @@ export default function CloudCanvasPage() {
   const [applyResult, setApplyResult] = useState<CanvasApplyResponse | null>(null);
 
   useEffect(() => {
+    try {
+      localStorage.setItem('devopspulse_canvas_nodes', JSON.stringify(nodes));
+    } catch (e) {
+      console.error('Failed to save canvas nodes', e);
+    }
     generateHCL();
   }, [nodes, region, environment]);
 
@@ -263,19 +281,32 @@ export default function CloudCanvasPage() {
         {/* Center: Visual Canvas (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
           <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-subtle">
-            <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+            <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-3 flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-bold text-slate-900">Live Architecture Topology</h2>
                 <Badge variant="neutral">{nodes.length} Components</Badge>
+                <Badge variant="success">Auto-Saved</Badge>
               </div>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => setNodes([])}
-                className="text-xs text-rose-600 hover:text-rose-700"
-              >
-                Clear All
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setNodes(DEFAULT_NODES)}
+                  className="text-xs text-slate-600 hover:text-slate-900"
+                  title="Reset to default 5 components"
+                >
+                  <RefreshCw className="mr-1 h-3 w-3" />
+                  Reset
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setNodes([])}
+                  className="text-xs text-rose-600 hover:text-rose-700"
+                >
+                  Clear All
+                </Button>
+              </div>
             </div>
 
             {/* Visual Canvas Block Area */}
