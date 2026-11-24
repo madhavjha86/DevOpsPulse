@@ -50,6 +50,11 @@ class CloudCostService:
         accounts = acc_res.scalars().all()
 
         configured_providers = {a.provider.lower(): a for a in accounts}
+        connected_providers = {
+            prov_code: acc
+            for prov_code, acc in configured_providers.items()
+            if acc.last_status in ("connected", "synced", "active") and acc.is_active
+        }
 
         # Check existing cost items
         cost_q = select(CloudCostItem)
@@ -80,7 +85,14 @@ class CloudCostService:
         elif not real_items and include_demo:
             is_demo = True
 
-        display_items = simulated_items if is_demo else real_items
+        raw_display = simulated_items if is_demo else all_items
+        # Gate by connected providers: ONLY show spend for clouds that are ACTUALLY connected!
+        if connected_providers:
+            display_items = [i for i in raw_display if i.provider.lower() in connected_providers]
+        elif is_demo and include_demo:
+            display_items = simulated_items
+        else:
+            display_items = []
 
         # Calculate monthly totals
         today = date.today()
@@ -200,11 +212,29 @@ class CloudCostService:
         # 5. Cost Optimizations
         opts_resp = await cls.list_optimizations(db, user_id, organization_id=organization_id)
         open_opts = [o for o in opts_resp if o.status == "OPEN"]
-        total_savings = round(sum(o.estimated_monthly_savings for o in open_opts), 2)
 
         # 6. Cost Anomalies
         anomalies_resp = await cls.list_anomalies(db, user_id, organization_id=organization_id)
-        active_anomalies = [a for a in anomalies_resp if a.status == "ACTIVE"]
+
+        # Filter by connected providers so only active cloud integrations surface recommendations
+        if connected_providers:
+            filtered_budgets = [
+                b for b in budgets_resp
+                if b.provider.lower() in connected_providers or b.provider.upper() == "ALL"
+            ]
+            filtered_opts = [o for o in open_opts if o.provider.lower() in connected_providers]
+            filtered_anomalies = [a for a in anomalies_resp if a.provider.lower() in connected_providers]
+        elif is_demo and include_demo:
+            filtered_budgets = budgets_resp
+            filtered_opts = open_opts
+            filtered_anomalies = anomalies_resp
+        else:
+            filtered_budgets = []
+            filtered_opts = []
+            filtered_anomalies = []
+
+        total_savings = round(sum(o.estimated_monthly_savings for o in filtered_opts), 2)
+        active_anomalies = [a for a in filtered_anomalies if a.status == "ACTIVE"]
 
         return CloudCostOverviewResponse(
             total_monthly_spend=monthly_spend,
@@ -215,10 +245,10 @@ class CloudCostService:
             providers=providers_status,
             daily_trend=daily_trend,
             top_services=top_services,
-            active_budgets=budgets_resp,
+            active_budgets=filtered_budgets,
             total_potential_savings=total_savings,
-            optimizations_count=len(open_opts),
-            anomalies=anomalies_resp,
+            optimizations_count=len(filtered_opts),
+            anomalies=filtered_anomalies,
             active_anomalies_count=len(active_anomalies),
             is_demo_mode=is_demo,
         )
