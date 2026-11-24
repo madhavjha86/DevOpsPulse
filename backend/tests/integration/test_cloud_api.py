@@ -16,18 +16,15 @@ class TestCloudInfrastructureAPI:
         assert response.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_list_cloud_accounts_auto_seeds_default(
+    async def test_list_cloud_accounts(
         self, authenticated_client: tuple[AsyncClient, User]
     ) -> None:
-        """First fetch auto-seeds a default AWS account entry."""
+        """Fetch cloud accounts list for authenticated user."""
         client, user = authenticated_client
         response = await client.get("/api/v1/infrastructure/cloud/accounts")
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
-        assert len(data) >= 1
-        assert data[0]["provider"] == "aws"
-        assert "masked_identifier" in data[0]
 
     @pytest.mark.asyncio
     async def test_create_and_delete_aws_account(

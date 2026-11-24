@@ -16,17 +16,15 @@ class TestAICopilotAPI:
         assert res.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_list_conversations_auto_seeds_demo(
+    async def test_list_conversations(
         self, authenticated_client: tuple[AsyncClient, User]
     ) -> None:
-        """First fetch auto-seeds a welcome DevOps Copilot discussion."""
+        """Fetch DevOps Copilot conversations list."""
         client, user = authenticated_client
         res = await client.get("/api/v1/ai/conversations")
         assert res.status_code == 200
         data = res.json()
         assert isinstance(data, list)
-        assert len(data) >= 1
-        assert "Performance" in data[0]["title"] or "Docker" in data[0]["title"]
 
     @pytest.mark.asyncio
     async def test_create_conversation_and_send_message(

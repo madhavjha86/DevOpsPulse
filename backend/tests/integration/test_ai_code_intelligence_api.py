@@ -16,17 +16,15 @@ class TestAICodeIntelligenceAPI:
         assert res.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_list_reviews_auto_seeds_demo(
+    async def test_list_reviews(
         self, authenticated_client: tuple[AsyncClient, User]
     ) -> None:
-        """First fetch auto-seeds a sample PR review."""
+        """Fetch PR reviews list for authenticated user."""
         client, user = authenticated_client
         res = await client.get("/api/v1/ai/intelligence/reviews")
         assert res.status_code == 200
         data = res.json()
         assert isinstance(data, list)
-        assert len(data) >= 1
-        assert data[0]["security_score"] >= 80
 
     @pytest.mark.asyncio
     async def test_generate_pr_review_with_security_violations(

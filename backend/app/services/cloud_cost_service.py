@@ -384,7 +384,10 @@ class CloudCostService:
         """Fetch cost optimization recommendations."""
         q = select(CloudCostOptimization)
         if organization_id is not None:
-            q = q.where(CloudCostOptimization.organization_id == organization_id)
+            q = q.where(
+                (CloudCostOptimization.organization_id == organization_id)
+                | ((CloudCostOptimization.organization_id.is_(None)) & (CloudCostOptimization.user_id == user_id))
+            )
         else:
             q = q.where(CloudCostOptimization.user_id == user_id)
 
@@ -421,7 +424,10 @@ class CloudCostService:
         """Mark a cost optimization suggestion as applied."""
         q = select(CloudCostOptimization).where(CloudCostOptimization.id == optimization_id)
         if organization_id is not None:
-            q = q.where(CloudCostOptimization.organization_id == organization_id)
+            q = q.where(
+                (CloudCostOptimization.organization_id == organization_id)
+                | ((CloudCostOptimization.organization_id.is_(None)) & (CloudCostOptimization.user_id == user_id))
+            )
         else:
             q = q.where(CloudCostOptimization.user_id == user_id)
 

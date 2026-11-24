@@ -47,6 +47,7 @@ class SbomService:
         ("lucide-react", "0.344.0", "pkg:npm/lucide-react@0.344.0", "ISC", False),
         ("recharts", "2.12.2", "pkg:npm/recharts@2.12.2", "MIT", False),
         ("axios", "1.6.8", "pkg:npm/axios@1.6.8", "MIT", False),
+        ("pylint", "3.1.0", "pkg:pypi/pylint@3.1.0", "GPL-2.0-or-later", True),
         ("coverage", "7.6.1", "pkg:pypi/coverage@7.6.1", "Apache-2.0", False),
     ]
 

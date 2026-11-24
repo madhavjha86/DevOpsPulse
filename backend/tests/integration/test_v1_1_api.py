@@ -9,6 +9,8 @@ Covers REST endpoints:
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.cloud_cost import CloudCostOptimization
 from app.models.user import User
 
 
@@ -83,7 +85,10 @@ async def test_incidents_api_endpoints(authenticated_client: tuple[AsyncClient, 
 
 
 @pytest.mark.asyncio
-async def test_cloud_cost_api_endpoints(authenticated_client: tuple[AsyncClient, User]):
+async def test_cloud_cost_api_endpoints(
+    authenticated_client: tuple[AsyncClient, User],
+    db_session: AsyncSession,
+):
     """Test cloud cost intelligence REST API."""
     client, user = authenticated_client
 
@@ -112,6 +117,20 @@ async def test_cloud_cost_api_endpoints(authenticated_client: tuple[AsyncClient,
     assert any(b["id"] == b_id for b in budgets_list_resp.json())
 
     # 3. Optimizations
+    opt = CloudCostOptimization(
+        user_id=user.id,
+        provider="AWS",
+        title="Unattached EBS Volume idle",
+        category="STORAGE",
+        resource_id="vol-0123456789abcdef0",
+        estimated_monthly_savings=45.0,
+        difficulty="EASY",
+        recommendation="Snapshot and terminate unattached volume",
+        status="OPEN",
+    )
+    db_session.add(opt)
+    await db_session.commit()
+
     opts_resp = await client.get("/api/v1/cloud/cost/optimizations")
     assert opts_resp.status_code == 200
     opts = opts_resp.json()
