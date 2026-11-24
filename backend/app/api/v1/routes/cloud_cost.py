@@ -32,7 +32,7 @@ router = APIRouter(prefix="/cloud/cost", tags=["Cloud Cost Intelligence"])
 async def get_cost_overview(
     tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
-    demo: bool = Query(default=True, description="Include simulated demo telemetry if no live cloud accounts connected"),
+    demo: bool = Query(default=False, description="Include simulated demo telemetry if no live cloud accounts connected"),
 ) -> CloudCostOverviewResponse:
     """Retrieve monthly spend, service breakdown, budget alerts, and optimization recommendations."""
     return await CloudCostService.get_overview(

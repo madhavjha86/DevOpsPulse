@@ -26,21 +26,10 @@ async def list_cloud_accounts(
     tenant: Annotated[TenantContext, Depends(get_tenant_context)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[CloudAccountResponse]:
-    """Retrieve all cloud provider accounts. Auto-seeds default AWS entry if none exist."""
-    accounts = await CloudMonitoringService.get_user_accounts(
+    """Retrieve all cloud provider accounts."""
+    return await CloudMonitoringService.get_user_accounts(
         db, tenant.user.id, organization_id=tenant.organization_id
     )
-    if not accounts:
-        default_payload = CloudAccountCreate(
-            provider="aws",
-            name="AWS Production Account",
-            region="us-east-1",
-        )
-        created = await CloudMonitoringService.create_account(
-            db, tenant.user.id, default_payload, organization_id=tenant.organization_id
-        )
-        return [created]
-    return accounts
 
 
 @router.post(

@@ -145,8 +145,6 @@ class AICopilotService:
         cls, db: AsyncSession, user_id: int, organization_id: int | None = None
     ) -> list[AIConversationResponse]:
         """Fetch all Copilot conversations for workspace with message counts."""
-        await cls._ensure_demo_copilot_seeded(db, user_id, organization_id)
-
         stmt = (
             select(
                 AIConversation,
@@ -580,8 +578,6 @@ class AICopilotService:
         cls, db: AsyncSession, user_id: int, limit: int = 50, organization_id: int | None = None
     ) -> list[AIRootCauseAnalysisResponse]:
         """Fetch all generated Root Cause Analyses for the workspace."""
-        await cls._ensure_demo_rca_seeded(db, user_id)
-
         stmt = select(AIRootCauseAnalysis)
         if organization_id is not None:
             stmt = stmt.where(AIRootCauseAnalysis.organization_id == organization_id)

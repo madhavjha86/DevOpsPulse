@@ -141,8 +141,8 @@ async def test_ai_rca_insufficient_data_safety(db_session: AsyncSession, test_us
 @pytest.mark.asyncio
 async def test_cloud_cost_intelligence(db_session: AsyncSession, test_user: User):
     """Test Cloud Cost overview, budgets, and optimization recommendations."""
-    # 1. Overview
-    overview = await CloudCostService.get_overview(db_session, test_user.id)
+    # 1. Overview (using test fixture demo seed)
+    overview = await CloudCostService.get_overview(db_session, test_user.id, include_demo=True)
     assert overview.total_monthly_spend >= 0.0
     assert len(overview.providers) == 3
     assert any(p.provider == "AWS" for p in overview.providers)

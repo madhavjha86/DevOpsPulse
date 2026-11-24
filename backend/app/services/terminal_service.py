@@ -406,16 +406,33 @@ class TerminalService:
         if cmd_lower.startswith("ls"):
             is_long = "-l" in cmd or "-la" in cmd
             if not is_long:
-                return "  ".join(sorted(fs.keys())) + "\n", 0
+                names = [f"{name}/" if fs[name]["type"] == "dir" else name for name in sorted(fs.keys())]
+                return "  ".join(names) + "\n", 0
 
             lines_out = [f"total {len(fs) * 4}"]
             for name in sorted(fs.keys()):
                 item = fs[name]
-                perm = item.get("perm", "-rw-r--r--")
-                size = item.get("size", 0)
+                is_dir = item.get("type") == "dir"
+                perm = item.get("perm", "drwxr-xr-x" if is_dir else "-rw-r--r--")
+                size = item.get("size", 4096 if is_dir else 0)
                 mtime = item.get("time", now_time_str)
-                lines_out.append(f"{perm}  1 appuser appuser {size:>5} {mtime} {name}")
+                display_name = f"{name}/" if is_dir else name
+                lines_out.append(f"{perm}  1 appuser appuser {size:>5} {mtime} {display_name}")
             return "\n".join(lines_out) + "\n", 0
+
+        # 12. tree command (Visual directory hierarchy)
+        if cmd_lower.startswith("tree"):
+            lines_tree = ["."]
+            items = sorted(fs.keys())
+            for i, name in enumerate(items):
+                is_last = (i == len(items) - 1)
+                branch = "└── " if is_last else "├── "
+                suffix = "/" if fs[name]["type"] == "dir" else ""
+                lines_tree.append(f"{branch}{name}{suffix}")
+            num_dirs = sum(1 for v in fs.values() if v.get("type") == "dir")
+            num_files = len(fs) - num_dirs
+            lines_tree.append(f"\n{num_dirs} directories, {num_files} files")
+            return "\n".join(lines_tree) + "\n", 0
 
         # Custom fallback simulation with execution echo
         return f"[exec @ {req.target_id}]$ {cmd}\nExit status: 0 (Command executed successfully in container sandbox)\n", 0

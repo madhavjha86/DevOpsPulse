@@ -94,8 +94,6 @@ class AICodeIntelligenceService:
         cls, db: AsyncSession, user_id: int, limit: int = 50
     ) -> list[AIPullRequestReviewResponse]:
         """Fetch all recorded AI Pull Request reviews for the user."""
-        await cls._ensure_demo_pr_reviews_seeded(db, user_id)
-
         stmt = (
             select(AIPullRequestReview)
             .where(AIPullRequestReview.user_id == user_id)
@@ -173,8 +171,6 @@ class AICodeIntelligenceService:
         cls, db: AsyncSession, user_id: int, limit: int = 50
     ) -> list[AIFailurePredictionResponse]:
         """Fetch historical CI/CD failure predictions."""
-        await cls._ensure_demo_predictions_seeded(db, user_id)
-
         stmt = (
             select(AIFailurePrediction)
             .where(AIFailurePrediction.user_id == user_id)

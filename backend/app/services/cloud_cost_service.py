@@ -36,7 +36,7 @@ class CloudCostService:
         cls,
         db: AsyncSession,
         user_id: int,
-        include_demo: bool = True,
+        include_demo: bool = False,
         organization_id: int | None = None,
     ) -> CloudCostOverviewResponse:
         """Generate full cloud spend overview, service breakdown, and provider connectivity."""
@@ -80,7 +80,6 @@ class CloudCostService:
         elif not real_items and include_demo:
             is_demo = True
 
-        # Production spend only sums non-simulated records unless in explicit demo mode
         display_items = simulated_items if is_demo else real_items
 
         # Calculate monthly totals

@@ -24,28 +24,7 @@ class IACCanvasService:
     """Transforms interactive visual canvas graphs into production-grade Terraform HCL."""
 
     # In-memory saved user diagrams
-    _saved_diagrams: dict[str, dict[str, Any]] = {
-        "diag-prod-aws-3tier": {
-            "id": "diag-prod-aws-3tier",
-            "name": "Production 3-Tier Enterprise AWS Stack",
-            "description": "Public ALB, Auto-scaling EC2 API layer in private subnets, and Multi-AZ RDS Postgres database.",
-            "provider": "aws",
-            "region": "us-east-1",
-            "nodes": [
-                {"id": "node-vpc-1", "type": "vpc", "label": "VPC (10.0.0.0/16)", "x": 100, "y": 80, "config": {"cidr_block": "10.0.0.0/16"}},
-                {"id": "node-alb-1", "type": "alb", "label": "Public App Load Balancer", "x": 350, "y": 80, "config": {"scheme": "internet-facing"}},
-                {"id": "node-ec2-1", "type": "ec2", "label": "API Cluster (t3.medium)", "x": 350, "y": 240, "config": {"instance_type": "t3.medium", "count": 2}},
-                {"id": "node-rds-1", "type": "rds", "label": "PostgreSQL DB (db.t3.medium)", "x": 350, "y": 400, "config": {"engine": "postgres", "instance_class": "db.t3.medium", "storage": 50}},
-                {"id": "node-s3-1", "type": "s3", "label": "Media & Backups (S3 Bucket)", "x": 600, "y": 240, "config": {"versioning": True}},
-            ],
-            "edges": [
-                {"id": "e1", "source": "node-alb-1", "target": "node-ec2-1", "label": "HTTP/8000 Forward"},
-                {"id": "e2", "source": "node-ec2-1", "target": "node-rds-1", "label": "TCP/5432 SQL"},
-                {"id": "e3", "source": "node-ec2-1", "target": "node-s3-1", "label": "IAM Read/Write"},
-            ],
-            "updated_at": datetime.now(timezone.utc),
-        }
-    }
+    _saved_diagrams: dict[str, dict[str, Any]] = {}
 
     @classmethod
     def list_diagrams(cls) -> list[CanvasDiagram]:

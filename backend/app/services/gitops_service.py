@@ -23,86 +23,24 @@ class GitOpsService:
     """Detects infrastructure drift between Git repositories and live Kubernetes clusters."""
 
     _apps: dict[str, dict[str, Any]] = {
-        "app-payment-api": {
-            "id": "app-payment-api",
-            "name": "payment-api-service",
-            "git_repo": "https://github.com/org/payments-infra",
+        "app-devopspulse": {
+            "id": "app-devopspulse",
+            "name": "DevOpsPulse Production Service",
+            "git_repo": "https://github.com/madhavjha86/DevOpsPulse",
             "git_branch": "main",
-            "git_path": "deployments/k8s/production",
-            "cluster_name": "prod-eks-us-east-1",
-            "namespace": "production",
-            "sync_status": "DriftDetected",
-            "health_status": "Healthy",
-            "target_revision": "commit 9b43c12",
-            "live_revision": "commit 7a11f09",
-            "last_synced_at": datetime.now(timezone.utc),
-            "drifts": [
-                {
-                    "resource_kind": "Deployment",
-                    "resource_name": "payment-api",
-                    "namespace": "production",
-                    "diff_field": "spec.replicas",
-                    "git_value": "5",
-                    "live_k8s_value": "2",
-                    "severity": "warning",
-                },
-                {
-                    "resource_kind": "Deployment",
-                    "resource_name": "payment-api",
-                    "namespace": "production",
-                    "diff_field": "spec.template.spec.containers[0].image",
-                    "git_value": "registry.pulse.io/payment:v2.5.1",
-                    "live_k8s_value": "registry.pulse.io/payment:v2.4.9",
-                    "severity": "critical",
-                },
-                {
-                    "resource_kind": "ConfigMap",
-                    "resource_name": "payment-env-config",
-                    "namespace": "production",
-                    "diff_field": "data.RATE_LIMIT_MAX_RPS",
-                    "git_value": "1000",
-                    "live_k8s_value": "250",
-                    "severity": "warning",
-                },
-            ],
-        },
-        "app-frontend-web": {
-            "id": "app-frontend-web",
-            "name": "frontend-web-spa",
-            "git_repo": "https://github.com/org/frontend-monorepo",
-            "git_branch": "main",
-            "git_path": "k8s/overlays/prod",
-            "cluster_name": "prod-eks-us-east-1",
+            "git_path": "deployments/k8s",
+            "cluster_name": "production-cluster",
             "namespace": "production",
             "sync_status": "Synced",
             "health_status": "Healthy",
-            "target_revision": "commit af902d1",
-            "live_revision": "commit af902d1",
+            "target_revision": "HEAD",
+            "live_revision": "HEAD",
             "last_synced_at": datetime.now(timezone.utc),
             "drifts": [],
         },
     }
 
-    _canary: dict[str, dict[str, Any]] = {
-        "app-payment-api": {
-            "app_id": "app-payment-api",
-            "service_name": "payment-api",
-            "canary_weight": 20,
-            "baseline_weight": 80,
-            "status": "RUNNING",
-            "canary_image": "registry.pulse.io/payment:v2.5.1",
-            "baseline_image": "registry.pulse.io/payment:v2.4.9",
-            "http_error_rate_canary": 0.04,
-            "http_error_rate_baseline": 0.03,
-            "p99_latency_canary_ms": 118.4,
-            "p99_latency_baseline_ms": 124.1,
-            "step_history": [
-                "10:00 UTC - Canary initialized at 5% weight",
-                "10:15 UTC - Health checks healthy (0.01% 5xx). Weight increased to 10%",
-                "10:30 UTC - Latency p99 improved by 5ms. Weight increased to 20%",
-            ],
-        }
-    }
+    _canary: dict[str, dict[str, Any]] = {}
 
     @classmethod
     def list_apps(cls) -> list[GitOpsApp]:

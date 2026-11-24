@@ -33,63 +33,7 @@ class SecretsVaultService:
     """Manages multi-environment zero-trust secrets, AES-256 simulation, and leak scanning."""
 
     # In-memory storage of unmasked secrets (isolated in server memory)
-    _vault: dict[str, dict[str, Any]] = {
-        "sec-1": {
-            "id": "sec-1",
-            "key": "DATABASE_URL",
-            "value": "postgresql://postgres:P@ssw0rdProd2026!@prod-db.internal:5432/pulse_core",
-            "environment": "production",
-            "category": "DATABASE_URL",
-            "version": 3,
-            "is_leaked": False,
-            "last_rotated_at": datetime.now(timezone.utc),
-            "created_at": datetime.now(timezone.utc),
-        },
-        "sec-2": {
-            "id": "sec-2",
-            "key": "STRIPE_SECRET_KEY",
-            "value": "mock_stripe_key_pulse_vault_production_dummy_2026",
-            "environment": "production",
-            "category": "API_KEY",
-            "version": 1,
-            "is_leaked": False,
-            "last_rotated_at": datetime.now(timezone.utc),
-            "created_at": datetime.now(timezone.utc),
-        },
-        "sec-3": {
-            "id": "sec-3",
-            "key": "AWS_ACCESS_KEY_ID",
-            "value": "mock_aws_access_key_pulse_demo_dummy",
-            "environment": "production",
-            "category": "API_KEY",
-            "version": 2,
-            "is_leaked": True,
-            "last_rotated_at": datetime.now(timezone.utc),
-            "created_at": datetime.now(timezone.utc),
-        },
-        "sec-4": {
-            "id": "sec-4",
-            "key": "DATABASE_URL",
-            "value": "postgresql://postgres:staging_pass@staging-db.internal:5432/pulse_staging",
-            "environment": "staging",
-            "category": "DATABASE_URL",
-            "version": 1,
-            "is_leaked": False,
-            "last_rotated_at": datetime.now(timezone.utc),
-            "created_at": datetime.now(timezone.utc),
-        },
-        "sec-5": {
-            "id": "sec-5",
-            "key": "REDIS_AUTH_TOKEN",
-            "value": "redis_auth_stage_99410ad",
-            "environment": "staging",
-            "category": "API_KEY",
-            "version": 1,
-            "is_leaked": False,
-            "last_rotated_at": datetime.now(timezone.utc),
-            "created_at": datetime.now(timezone.utc),
-        },
-    }
+    _vault: dict[str, dict[str, Any]] = {}
 
     @classmethod
     def list_secrets(cls, environment: str | None = None) -> list[SecretItem]:

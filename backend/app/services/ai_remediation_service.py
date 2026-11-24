@@ -19,57 +19,8 @@ logger = get_logger("ai_remediation_service")
 class AIRemediationService:
     """Manages AI-driven automated remediations, self-healing rollbacks, and K8s actions."""
 
-    # In-memory store for remediation proposals with rich demo initial seeds
-    _remediations: list[dict[str, Any]] = [
-        {
-            "id": "rem-k8s-oom-01",
-            "incident_id": 1,
-            "title": "Auto-Mitigate OOMKilled CrashLoop on auth-service",
-            "category": "K8S_RESOURCE_BUMP",
-            "status": "PENDING_APPROVAL",
-            "target_resource": "deployment/auth-service (Namespace: production)",
-            "description": "AI analysis identified Pod exit code 137 (Out Of Memory). Automated fix increases container memory limit from 512Mi to 1024Mi to restore service stability.",
-            "confidence_score": 0.94,
-            "before_state": "resources.limits.memory: 512Mi",
-            "after_state": "resources.limits.memory: 1024Mi",
-            "rollback_guarantee": "Immediate rollback snapshot taken; reverts automatically if restart count increments within 3 minutes.",
-            "created_at": datetime.now(timezone.utc),
-            "executed_at": None,
-            "executed_by": None,
-        },
-        {
-            "id": "rem-rollback-v2-02",
-            "incident_id": 2,
-            "title": "Instant Rollback of payment-gateway to v2.3.9",
-            "category": "DEPLOYMENT_ROLLBACK",
-            "status": "PENDING_APPROVAL",
-            "target_resource": "deployment/payment-gateway (Namespace: production)",
-            "description": "5xx HTTP error rate spiked to 8.4% immediately following commit 43d34bc rollout. AI recommends rolling back to last proven stable SHA 9a41386.",
-            "confidence_score": 0.98,
-            "before_state": "image: registry.pulse.io/payment:v2.4.0 (Commit 43d34bc)",
-            "after_state": "image: registry.pulse.io/payment:v2.3.9 (Commit 9a41386)",
-            "rollback_guarantee": "Zero downtime rolling swap. Target revision 42 has 100% health check record.",
-            "created_at": datetime.now(timezone.utc),
-            "executed_at": None,
-            "executed_by": None,
-        },
-        {
-            "id": "rem-scale-api-03",
-            "incident_id": None,
-            "title": "Proactive Horizontal Autoscale on ingress-gateway",
-            "category": "AUTOSCALE",
-            "status": "EXECUTED",
-            "target_resource": "deployment/ingress-gateway (Namespace: default)",
-            "description": "Incoming request throughput surged by 340% due to marketing campaign. Autoscale increased replicas from 3 to 7 to preserve p99 latency < 120ms.",
-            "confidence_score": 0.92,
-            "before_state": "replicas: 3",
-            "after_state": "replicas: 7",
-            "rollback_guarantee": "HPA will step down after 15 minutes of cooldown once traffic normalizes.",
-            "created_at": datetime.now(timezone.utc),
-            "executed_at": datetime.now(timezone.utc),
-            "executed_by": "Autonomous Self-Healing Policy",
-        },
-    ]
+    # In-memory store for active dynamically generated remediation proposals
+    _remediations: list[dict[str, Any]] = []
 
     @classmethod
     def list_remediations(cls) -> list[AIRemediationItem]:
