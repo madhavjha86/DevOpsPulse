@@ -112,7 +112,7 @@ Live observability across Docker hosts, Kubernetes clusters, and multi-cloud acc
 ## 🏗️ Architecture & Technology Stack
 
 ```mermaid
-graph TD
+flowchart TD
     Client["React 18 + TypeScript + Vite SPA<br/>(Tailwind CSS Dark Theme & Lucide Icons)"]
     API["FastAPI Backend (Python 3.12+)<br/>Multi-Tenant Layered Architecture"]
     DB[("PostgreSQL 18 / 16<br/>34 Relational ORM Models")]
@@ -121,15 +121,15 @@ graph TD
     Engine["PulseCI Autonomous Engine<br/>10-Stage Docker & K8s Pipeline"]
     GH["GitHub REST & Webhooks API<br/>(HMAC SHA-256 Authentication)"]
 
-    Client -->|Axios REST /api/v1 (X-Organization-Id)| API
-    API -->|AsyncPG / SQLAlchemy 2.0| DB
-    API -->|aioredis / slowapi| Cache
-    API -->|Task Dispatch| Workers
-    API -->|Zero-Touch Trigger| Engine
-    Engine -->|K8s & Docker Deploy| DB
-    Workers -->|Sync Data| DB
-    GH -->|Inbound Webhooks| API
-    API -->|Outbound Sync| GH
+    Client -->|"Axios REST /api/v1 (X-Organization-Id)"| API
+    API -->|"AsyncPG / SQLAlchemy 2.0"| DB
+    API -->|"aioredis / slowapi"| Cache
+    API -->|"Task Dispatch"| Workers
+    API -->|"Zero-Touch Trigger"| Engine
+    Engine -->|"K8s & Docker Deploy"| DB
+    Workers -->|"Sync Data"| DB
+    GH -->|"Inbound Webhooks"| API
+    API -->|"Outbound Sync"| GH
 ```
 
 | Layer | Technologies | Purpose |
