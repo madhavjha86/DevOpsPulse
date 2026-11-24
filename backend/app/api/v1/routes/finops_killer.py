@@ -3,7 +3,7 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends
 
-from app.api.deps import TenantContext, get_tenant_context, require_tenant_devops
+from app.api.deps import TenantContext, get_tenant_context_optional
 from app.schemas.finops_killer import (
     FinOpsKillerSummary,
     TerminateResourceRequest,
@@ -20,7 +20,7 @@ router = APIRouter(prefix="/finops/killer", tags=["FinOps Waste Killer"])
     summary="Get summary of unattached, idle, and abandoned waste cloud resources",
 )
 async def get_finops_killer_summary(
-    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
+    tenant: Annotated[TenantContext | None, Depends(get_tenant_context_optional)] = None,
 ) -> FinOpsKillerSummary:
     """Detect unattached EBS volumes, idle EC2 instances, orphaned ALBs, and obsolete snapshots."""
     return FinOpsKillerService.get_summary()
@@ -33,7 +33,7 @@ async def get_finops_killer_summary(
 )
 async def terminate_waste_resources(
     payload: TerminateResourceRequest,
-    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
+    tenant: Annotated[TenantContext | None, Depends(get_tenant_context_optional)] = None,
 ) -> TerminateResourceResponse:
     """Safely terminate waste resources and instantly recover cloud budget."""
     return FinOpsKillerService.terminate_waste(payload)

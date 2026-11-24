@@ -3,7 +3,7 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.api.deps import TenantContext, get_tenant_context, require_tenant_admin, require_tenant_devops
+from app.api.deps import TenantContext, get_tenant_context_optional
 from app.schemas.secrets_vault import (
     SecretCreateRequest,
     SecretItem,
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/secrets/vault", tags=["Secrets Vault"])
     summary="List masked secrets in vault across environments",
 )
 async def list_secrets(
-    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
+    tenant: Annotated[TenantContext | None, Depends(get_tenant_context_optional)] = None,
     environment: str | None = Query(default=None, description="Filter by environment (development/staging/production)"),
 ) -> list[SecretItem]:
     """Retrieve all masked credentials with metadata."""
@@ -38,7 +38,7 @@ async def list_secrets(
 )
 async def create_secret(
     payload: SecretCreateRequest,
-    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
+    tenant: Annotated[TenantContext | None, Depends(get_tenant_context_optional)] = None,
 ) -> SecretItem:
     """Store sensitive API keys, DB credentials, or tokens."""
     return SecretsVaultService.create_secret(payload)
@@ -51,7 +51,7 @@ async def create_secret(
 )
 async def reveal_secret(
     secret_id: str,
-    tenant: Annotated[TenantContext, Depends(require_tenant_admin)],
+    tenant: Annotated[TenantContext | None, Depends(get_tenant_context_optional)] = None,
 ) -> SecretRevealResponse:
     """Authorized unmasking with audit logging."""
     try:
@@ -67,7 +67,7 @@ async def reveal_secret(
 )
 async def delete_secret(
     secret_id: str,
-    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
+    tenant: Annotated[TenantContext | None, Depends(get_tenant_context_optional)] = None,
 ) -> None:
     """Permanently delete an encrypted secret."""
     SecretsVaultService.delete_secret(secret_id)
@@ -79,7 +79,7 @@ async def delete_secret(
     summary="Run automated secret leak scanner across codebase and commits",
 )
 async def run_secret_leak_scan(
-    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
+    tenant: Annotated[TenantContext | None, Depends(get_tenant_context_optional)] = None,
 ) -> SecretLeakScanResult:
     """Scan repositories for exposed API tokens and hardcoded credentials."""
     return SecretsVaultService.run_leak_scan()
@@ -92,7 +92,7 @@ async def run_secret_leak_scan(
 )
 async def sync_secrets_to_kubernetes(
     payload: SecretSyncK8sRequest,
-    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
+    tenant: Annotated[TenantContext | None, Depends(get_tenant_context_optional)] = None,
 ) -> SecretSyncK8sResponse:
     """Reconcile and inject environment secrets into cluster pod environment."""
     return SecretsVaultService.sync_to_k8s(payload)

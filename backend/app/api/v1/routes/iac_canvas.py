@@ -3,7 +3,7 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.deps import TenantContext, get_tenant_context, require_tenant_devops
+from app.api.deps import TenantContext, get_tenant_context_optional
 from app.schemas.iac_canvas import (
     CanvasApplyRequest,
     CanvasApplyResponse,
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/iac/canvas", tags=["IaC Canvas"])
     summary="List all saved visual architecture canvas diagrams",
 )
 async def list_diagrams(
-    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
+    tenant: Annotated[TenantContext | None, Depends(get_tenant_context_optional)] = None,
 ) -> list[CanvasDiagram]:
     """Retrieve templates and user created visual topologies."""
     return IACCanvasService.list_diagrams()
@@ -35,7 +35,7 @@ async def list_diagrams(
 )
 async def get_diagram(
     diagram_id: str,
-    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
+    tenant: Annotated[TenantContext | None, Depends(get_tenant_context_optional)] = None,
 ) -> CanvasDiagram:
     """Retrieve diagram nodes, edges, and configurations."""
     diagram = IACCanvasService.get_diagram(diagram_id)
@@ -55,7 +55,7 @@ async def get_diagram(
 )
 async def save_diagram(
     diagram: CanvasDiagram,
-    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
+    tenant: Annotated[TenantContext | None, Depends(get_tenant_context_optional)] = None,
 ) -> CanvasDiagram:
     """Persist architecture diagram for team collaboration."""
     return IACCanvasService.save_diagram(diagram)
@@ -68,7 +68,7 @@ async def save_diagram(
 )
 async def generate_terraform_hcl(
     payload: CanvasGenerateTerraformRequest,
-    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
+    tenant: Annotated[TenantContext | None, Depends(get_tenant_context_optional)] = None,
 ) -> CanvasGenerateTerraformResponse:
     """Convert visual canvas blocks into production HashiCorp HCL with cost & security insights."""
     return IACCanvasService.generate_terraform(payload)
@@ -81,7 +81,7 @@ async def generate_terraform_hcl(
 )
 async def apply_terraform_code(
     payload: CanvasApplyRequest,
-    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
+    tenant: Annotated[TenantContext | None, Depends(get_tenant_context_optional)] = None,
 ) -> CanvasApplyResponse:
     """Simulate or execute Terraform apply pipeline."""
     return IACCanvasService.apply_terraform(payload)

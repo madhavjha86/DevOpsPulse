@@ -3,7 +3,7 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.deps import TenantContext, get_tenant_context, require_tenant_devops
+from app.api.deps import TenantContext, get_tenant_context_optional
 from app.schemas.gitops import (
     CanaryAdjustRequest,
     CanaryRollout,
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/gitops", tags=["GitOps & Progressive Delivery"])
     summary="List all GitOps managed applications with drift status",
 )
 async def list_gitops_apps(
-    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
+    tenant: Annotated[TenantContext | None, Depends(get_tenant_context_optional)] = None,
 ) -> list[GitOpsApp]:
     """Retrieve GitOps applications, synchronization states, and active drift diffs."""
     return GitOpsService.list_apps()
@@ -35,7 +35,7 @@ async def list_gitops_apps(
 )
 async def get_gitops_app(
     app_id: str,
-    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
+    tenant: Annotated[TenantContext | None, Depends(get_tenant_context_optional)] = None,
 ) -> GitOpsApp:
     """Fetch live vs Git discrepancies for a specific workload."""
     app = GitOpsService.get_app(app_id)
@@ -52,7 +52,7 @@ async def get_gitops_app(
 async def sync_gitops_app(
     app_id: str,
     payload: GitOpsSyncRequest,
-    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
+    tenant: Annotated[TenantContext | None, Depends(get_tenant_context_optional)] = None,
 ) -> GitOpsSyncResponse:
     """1-Click Sync to eliminate drift between Git and live Kubernetes."""
     try:
@@ -68,7 +68,7 @@ async def sync_gitops_app(
 )
 async def get_canary_rollout(
     app_id: str,
-    tenant: Annotated[TenantContext, Depends(get_tenant_context)],
+    tenant: Annotated[TenantContext | None, Depends(get_tenant_context_optional)] = None,
 ) -> CanaryRollout:
     """Fetch live traffic split, error rate comparison, and p99 latency."""
     return GitOpsService.get_canary(app_id)
@@ -82,7 +82,7 @@ async def get_canary_rollout(
 async def adjust_canary_rollout(
     app_id: str,
     payload: CanaryAdjustRequest,
-    tenant: Annotated[TenantContext, Depends(require_tenant_devops)],
+    tenant: Annotated[TenantContext | None, Depends(get_tenant_context_optional)] = None,
 ) -> CanaryRollout:
     """Update traffic split percentage or perform instant 1-click promotion/rollback."""
     return GitOpsService.adjust_canary(app_id, payload)

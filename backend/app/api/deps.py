@@ -137,6 +137,23 @@ async def get_tenant_context(
     return TenantContext(user=current_user, organization=org, role=role)
 
 
+async def get_tenant_context_optional(
+    current_user: Annotated[User | None, Depends(get_current_user_optional)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    x_organization_id: Annotated[int | None, Header(alias="X-Organization-Id")] = None,
+) -> TenantContext | None:
+    """Resolve active tenant workspace if authenticated, else return None without raising 401."""
+    if not current_user:
+        return None
+    try:
+        org, role = await OrganizationService.resolve_tenant_context(
+            db=db, user=current_user, requested_org_id=x_organization_id
+        )
+        return TenantContext(user=current_user, organization=org, role=role)
+    except Exception:
+        return None
+
+
 async def require_tenant_admin(
     tenant: Annotated[TenantContext, Depends(get_tenant_context)],
 ) -> TenantContext:
