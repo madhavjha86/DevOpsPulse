@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import os
+import re
 from datetime import datetime, timezone
+from pathlib import Path
 import uuid
 from typing import Any
 
@@ -161,26 +164,75 @@ class SecretsVaultService:
     @classmethod
     def run_leak_scan(cls) -> SecretLeakScanResult:
         """Scan codebase and git commit history for exposed credentials and API keys."""
-        findings = [
-            SecretLeakFinding(
-                file_path="scripts/deploy.sh",
-                line_number=24,
-                secret_type="AWS Access Key ID",
-                snippet_masked="export AWS_ACCESS_KEY_ID=AKIAIOS••••••••AMPLE",
-                severity="critical",
-            ),
-            SecretLeakFinding(
-                file_path="frontend/.env.development",
-                line_number=7,
-                secret_type="Hardcoded JWT Secret",
-                snippet_masked="VITE_AUTH_DEV_SECRET=dev_jwt••••••••key",
-                severity="high",
-            ),
+        import os
+        from pathlib import Path
+
+        findings: list[SecretLeakFinding] = []
+        base_dir = Path(__file__).resolve().parent.parent.parent.parent
+        ignore_dirs = {".git", "node_modules", ".pytest_cache", "dist", "build", "__pycache__", ".vscode", "venv", ".venv"}
+        scanned_count = 0
+
+        PATTERNS = [
+            (r"(?:POSTGRES_PASSWORD)\s*=\s*(.+)", "Exposed Database Password", "critical"),
+            (r"postgresql(?:\+asyncpg)?:\/\/[^:]+:([^@\s]+)@", "Hardcoded Database Connection String", "high"),
+            (r"AKIA[0-9A-Z]{16}", "AWS Access Key ID", "critical"),
+            (r"gh[pousr]_[A-Za-z0-9_]{36,}", "GitHub Personal Access Token", "critical"),
+            (r"sk_live_[0-9a-zA-Z]{24,}", "Stripe Live API Key", "critical"),
+            (r"-----BEGIN (?:RSA|EC|DSA|OPENSSH|PRIVATE) KEY-----", "Private Key File", "critical"),
         ]
+
+        if base_dir.exists():
+            for root, dirs, files in os.walk(base_dir):
+                dirs[:] = [d for d in dirs if d not in ignore_dirs]
+                for file in files:
+                    if file in [".env", ".env.example", ".env.development"] or file.endswith(
+                        (".py", ".ts", ".tsx", ".sh", ".ps1", ".yml", ".yaml")
+                    ):
+                        scanned_count += 1
+                        full_path = os.path.join(root, file)
+                        rel_path = os.path.relpath(full_path, base_dir).replace("\\", "/")
+
+                        # Avoid self-matching in scanner implementation, test suites or migrations
+                        if "test_" in file or "scan_for_secrets" in file or "secrets_vault_service" in file:
+                            continue
+
+                        try:
+                            with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
+                                for line_no, line in enumerate(f, 1):
+                                    line_str = line.strip()
+                                    if not line_str or line_str.startswith("#"):
+                                        continue
+                                    for pat, sec_type, severity in PATTERNS:
+                                        m = re.search(pat, line_str)
+                                        if m:
+                                            snippet = line_str
+                                            if len(snippet) > 45:
+                                                snippet = snippet[:25] + "••••••••"
+                                            findings.append(
+                                                SecretLeakFinding(
+                                                    file_path=rel_path,
+                                                    line_number=line_no,
+                                                    secret_type=sec_type,
+                                                    snippet_masked=snippet,
+                                                    severity=severity,
+                                                )
+                                            )
+                                            break
+                        except Exception:
+                            continue
+
+        # Mark corresponding secrets in vault as leaked
+        for finding in findings:
+            for s in cls._vault.values():
+                if s["category"] == "DATABASE_URL" and "Database" in finding.secret_type:
+                    s["is_leaked"] = True
+                if s["key"] == "AWS_ACCESS_KEY_ID" and "AWS" in finding.secret_type:
+                    s["is_leaked"] = True
+
         return SecretLeakScanResult(
-            scanned_files_count=342,
+            scanned_files_count=scanned_count,
             detected_leaks_count=len(findings),
-            findings=findings,
+            findings=findings[:15],
             scanned_at=datetime.now(timezone.utc),
         )
 
