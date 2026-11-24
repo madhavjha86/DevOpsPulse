@@ -71,7 +71,7 @@ export default function WebTerminalPage() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetchTargets();
+    void fetchTargets();
   }, []);
 
   useEffect(() => {
@@ -280,7 +280,7 @@ export default function WebTerminalPage() {
     // Enter to execute
     if (e.key === 'Enter') {
       e.preventDefault();
-      executeLine();
+      void executeLine();
       return;
     }
 
@@ -328,7 +328,7 @@ export default function WebTerminalPage() {
     const fullText = lines
       .map((l) => (l.type === 'prompt-cmd' ? `${l.prompt}${l.text}` : l.text))
       .join('\n');
-    navigator.clipboard.writeText(fullText);
+    void navigator.clipboard.writeText(fullText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -422,7 +422,7 @@ export default function WebTerminalPage() {
             <button
               onClick={() => {
                 setActiveTab('audit');
-                fetchAuditLogs();
+                void fetchAuditLogs();
               }}
               className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
                 activeTab === 'audit'

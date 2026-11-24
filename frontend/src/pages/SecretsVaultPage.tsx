@@ -56,7 +56,7 @@ export default function SecretsVaultPage() {
   const [syncResult, setSyncResult] = useState<SecretSyncK8sResponse | null>(null);
 
   useEffect(() => {
-    loadSecrets();
+    void loadSecrets();
   }, [environment]);
 
   const loadSecrets = async () => {
@@ -90,7 +90,7 @@ export default function SecretsVaultPage() {
   };
 
   const handleCopy = (key: string, val: string) => {
-    navigator.clipboard.writeText(val);
+    void navigator.clipboard.writeText(val);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
   };
@@ -246,7 +246,7 @@ export default function SecretsVaultPage() {
           <button
             onClick={() => {
               setActiveTab('scanner');
-              if (!scanResult) handleRunLeakScan();
+              if (!scanResult) void handleRunLeakScan();
             }}
             className={`flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-bold transition ${
               activeTab === 'scanner'

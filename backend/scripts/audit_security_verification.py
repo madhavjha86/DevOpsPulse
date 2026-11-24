@@ -35,8 +35,8 @@ async def run_security_audit():
     gitignore_path = os.path.join(root_dir, ".gitignore")
     assert os.path.exists(gitignore_path), ".gitignore missing from root!"
 
-    with open(gitignore_path, "r", encoding="utf-8") as f:
-        gitignore_content = f.read()
+    from pathlib import Path
+    gitignore_content = Path(gitignore_path).read_text(encoding="utf-8")
 
     required_patterns = [".env", "backend/.env", "*.db", "backups/"]
     for pat in required_patterns:

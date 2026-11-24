@@ -82,7 +82,7 @@ export default function CloudCanvasPage() {
     } catch (e) {
       console.error('Failed to save canvas nodes', e);
     }
-    generateHCL();
+    void generateHCL();
   }, [nodes, region, environment]);
 
   const generateHCL = async () => {
@@ -121,7 +121,7 @@ export default function CloudCanvasPage() {
 
   const handleCopyTf = () => {
     if (!tfAnalysis?.hcl_code) return;
-    navigator.clipboard.writeText(tfAnalysis.hcl_code);
+    void navigator.clipboard.writeText(tfAnalysis.hcl_code);
     setCopiedTf(true);
     setTimeout(() => setCopiedTf(false), 2000);
   };
@@ -194,7 +194,7 @@ export default function CloudCanvasPage() {
             variant="primary"
             onClick={() => {
               setIsApplyModalOpen(true);
-              handleApply();
+              void handleApply();
             }}
             className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white shadow-sm"
           >

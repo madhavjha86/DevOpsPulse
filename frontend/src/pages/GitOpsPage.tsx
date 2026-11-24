@@ -37,7 +37,7 @@ export default function GitOpsPage() {
   const [adjustingCanary, setAdjustingCanary] = useState(false);
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, []);
 
   const loadData = async () => {

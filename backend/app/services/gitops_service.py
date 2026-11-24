@@ -22,34 +22,38 @@ logger = get_logger("gitops_service")
 class GitOpsService:
     """Detects infrastructure drift between Git repositories and live Kubernetes clusters."""
 
-    _apps: dict[str, dict[str, Any]] = {
-        "app-devopspulse": {
-            "id": "app-devopspulse",
-            "name": "DevOpsPulse Production Service",
-            "git_repo": "https://github.com/madhavjha86/DevOpsPulse",
-            "git_branch": "main",
-            "git_path": "deployments/k8s",
-            "cluster_name": "production-cluster",
-            "namespace": "production",
-            "sync_status": "Synced",
-            "health_status": "Healthy",
-            "target_revision": "HEAD",
-            "live_revision": "HEAD",
-            "last_synced_at": datetime.now(timezone.utc),
-            "drifts": [],
-        },
-    }
-
+    _apps: dict[str, dict[str, Any]] = {}
     _canary: dict[str, dict[str, Any]] = {}
+
+    @classmethod
+    def _ensure_apps(cls) -> None:
+        if not cls._apps:
+            cls._apps["app-devopspulse"] = {
+                "id": "app-devopspulse",
+                "name": "DevOpsPulse Production Service",
+                "git_repo": "https://github.com/madhavjha86/DevOpsPulse",
+                "git_branch": "main",
+                "git_path": "deployments/k8s",
+                "cluster_name": "production-cluster",
+                "namespace": "production",
+                "sync_status": "Synced",
+                "health_status": "Healthy",
+                "target_revision": "HEAD",
+                "live_revision": "HEAD",
+                "last_synced_at": datetime.now(timezone.utc),
+                "drifts": [],
+            }
 
     @classmethod
     def list_apps(cls) -> list[GitOpsApp]:
         """Fetch all GitOps tracked applications and their drift states."""
+        cls._ensure_apps()
         return [GitOpsApp(**app) for app in cls._apps.values()]
 
     @classmethod
     def get_app(cls, app_id: str) -> GitOpsApp | None:
         """Fetch single application drift details."""
+        cls._ensure_apps()
         data = cls._apps.get(app_id)
         if not data:
             return None
