@@ -166,21 +166,27 @@ export default function SecretsVaultPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="rounded-lg bg-amber-500/10 p-2 text-amber-400">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 shadow-sm">
               <Lock className="h-6 w-6" />
             </div>
-            <h1 className="text-2xl font-bold text-slate-100">Zero-Trust Secrets Vault</h1>
-            <Badge variant="warning">AES-256 Encrypted</Badge>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                  Zero-Trust Secrets Vault
+                </h1>
+                <Badge variant="warning">AES-256 Encrypted</Badge>
+              </div>
+              <p className="text-sm text-slate-500 mt-0.5">
+                Centralized multi-environment credentials manager, automated leak scanner, and 1-click Kubernetes Secret synchronizer.
+              </p>
+            </div>
           </div>
-          <p className="mt-1 text-sm text-slate-400">
-            Centralized multi-environment credentials manager, automated leak scanner, and 1-click Kubernetes Secret synchronizer.
-          </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <Button size="sm" variant="secondary" onClick={handleRunLeakScan} disabled={scanLoading}>
-            {scanLoading ? <LoadingSpinner size="sm" /> : <ShieldAlert className="mr-1.5 h-3.5 w-3.5 text-amber-400" />}
+            {scanLoading ? <LoadingSpinner size="sm" /> : <ShieldAlert className="mr-1.5 h-3.5 w-3.5 text-amber-600" />}
             Scan for Leaks
           </Button>
 
@@ -189,7 +195,7 @@ export default function SecretsVaultPage() {
             variant="secondary"
             onClick={handleSyncToK8s}
             disabled={syncLoading}
-            className="border-emerald-600/40 text-emerald-400 hover:bg-emerald-950/20"
+            className="text-emerald-700 hover:text-emerald-800"
           >
             {syncLoading ? <LoadingSpinner size="sm" /> : <Terminal className="mr-1.5 h-3.5 w-3.5" />}
             Sync to K8s Secret
@@ -199,7 +205,7 @@ export default function SecretsVaultPage() {
             size="sm"
             variant="primary"
             onClick={() => setIsAddOpen(true)}
-            className="bg-amber-600 hover:bg-amber-500 text-white"
+            className="bg-amber-600 hover:bg-amber-700 text-white shadow-sm"
           >
             <Plus className="mr-1.5 h-3.5 w-3.5" />
             New Secret
@@ -208,19 +214,19 @@ export default function SecretsVaultPage() {
       </div>
 
       {syncResult && (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4 text-xs text-emerald-300 flex items-center justify-between">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 text-xs text-emerald-900 font-medium flex items-center justify-between shadow-subtle">
           <span>
             Injected <strong>{syncResult.injected_keys_count}</strong> secrets into Kubernetes Secret{' '}
-            <code className="rounded bg-black/40 px-1.5 py-0.5">{syncResult.k8s_secret_name}</code> (Namespace:{' '}
+            <code className="rounded bg-white px-2 py-0.5 border border-emerald-200 text-emerald-800 font-bold">{syncResult.k8s_secret_name}</code> (Namespace:{' '}
             {syncResult.namespace}) in {syncResult.duration_ms}ms.
           </span>
-          <button onClick={() => setSyncResult(null)} className="text-slate-400 hover:text-slate-200">✕</button>
+          <button onClick={() => setSyncResult(null)} className="text-slate-400 hover:text-slate-600">✕</button>
         </div>
       )}
 
       {/* Tabs Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-3">
-        <div className="flex rounded-lg border border-slate-800 bg-slate-900/80 p-1">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
+        <div className="flex rounded-xl border border-slate-200 bg-slate-100/70 p-1">
           {(['production', 'staging', 'development'] as const).map((env) => (
             <button
               key={env}
@@ -228,10 +234,10 @@ export default function SecretsVaultPage() {
                 setEnvironment(env);
                 setActiveTab('vault');
               }}
-              className={`rounded-md px-3.5 py-1.5 text-xs font-semibold capitalize transition ${
+              className={`rounded-lg px-4 py-1.5 text-xs font-bold capitalize transition ${
                 environment === env && activeTab === 'vault'
-                  ? 'bg-amber-500/20 text-amber-400 shadow'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               {env}
@@ -242,26 +248,26 @@ export default function SecretsVaultPage() {
               setActiveTab('scanner');
               if (!scanResult) handleRunLeakScan();
             }}
-            className={`flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${
+            className={`flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-bold transition ${
               activeTab === 'scanner'
-                ? 'bg-rose-500/20 text-rose-400 shadow'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-white text-rose-700 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <ShieldAlert className="h-3.5 w-3.5" />
+            <ShieldAlert className="h-3.5 w-3.5 text-rose-600" />
             Leak Findings {scanResult ? `(${scanResult.detected_leaks_count})` : ''}
           </button>
         </div>
 
         {activeTab === 'vault' && (
           <div className="relative w-64">
-            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-500" />
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
             <input
               type="text"
               placeholder="Search secret key..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 pl-8 pr-3 py-1.5 text-xs text-slate-200 focus:border-amber-500 focus:outline-none"
+              className="w-full rounded-xl border border-slate-200 bg-white pl-8 pr-3 py-1.5 text-xs text-slate-900 shadow-2xs focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
             />
           </div>
         )}
@@ -269,22 +275,22 @@ export default function SecretsVaultPage() {
 
       {activeTab === 'vault' ? (
         /* Vault Table */
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden">
+        <div className="rounded-2xl border border-[#E5E7EB] bg-white shadow-subtle overflow-hidden">
           {loading ? (
             <div className="flex h-64 items-center justify-center">
               <LoadingSpinner size="lg" />
             </div>
           ) : filteredSecrets.length === 0 ? (
-            <div className="py-12 text-center text-slate-500">
-              <Key className="h-8 w-8 text-slate-600 mx-auto mb-2" />
-              <p className="text-sm font-medium">No secrets found in {environment}</p>
-              <p className="text-xs text-slate-600 mt-1">Click "New Secret" to create your first encrypted credential.</p>
+            <div className="py-12 text-center text-slate-400">
+              <Key className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+              <p className="text-sm font-bold text-slate-700">No secrets found in {environment}</p>
+              <p className="text-xs text-slate-400 mt-1">Click "New Secret" to create your first encrypted credential.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-slate-800 bg-slate-950 text-slate-400 uppercase tracking-wider">
+                  <tr className="border-b border-[#E5E7EB] bg-slate-50 text-slate-500 uppercase tracking-wider text-[10px]">
                     <th className="py-3 px-4">Secret Key</th>
                     <th className="py-3 px-4">Category</th>
                     <th className="py-3 px-4">Encrypted Value</th>
@@ -293,16 +299,16 @@ export default function SecretsVaultPage() {
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-slate-100 bg-white">
                   {filteredSecrets.map((secret) => {
                     const isRevealed = Boolean(revealedSecrets[secret.id]);
                     const displayVal = isRevealed ? revealedSecrets[secret.id] : secret.value_masked;
 
                     return (
-                      <tr key={secret.id} className="hover:bg-slate-800/30">
-                        <td className="py-3 px-4 font-mono font-bold text-slate-200">
+                      <tr key={secret.id} className="hover:bg-slate-50/70 transition">
+                        <td className="py-3 px-4 font-mono font-bold text-slate-900">
                           <div className="flex items-center gap-2">
-                            <Key className="h-3.5 w-3.5 text-amber-400" />
+                            <Key className="h-3.5 w-3.5 text-amber-500" />
                             <span>{secret.key}</span>
                             {secret.is_leaked && (
                               <Badge variant="danger" className="text-[10px]">
@@ -316,15 +322,15 @@ export default function SecretsVaultPage() {
                           <Badge variant="neutral">{secret.category}</Badge>
                         </td>
 
-                        <td className="py-3 px-4 font-mono text-[11px] text-slate-300">
+                        <td className="py-3 px-4 font-mono text-xs text-slate-700">
                           <div className="flex items-center gap-2">
-                            <span className={isRevealed ? 'text-amber-300 font-semibold' : 'text-slate-400'}>
+                            <span className={isRevealed ? 'text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200' : 'text-slate-500'}>
                               {displayVal}
                             </span>
                             <button
                               onClick={() => handleReveal(secret.id)}
                               disabled={revealingId === secret.id}
-                              className="text-slate-500 hover:text-slate-300 transition"
+                              className="text-slate-400 hover:text-slate-700 transition"
                               title={isRevealed ? 'Hide secret' : 'Reveal secret'}
                             >
                               {isRevealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -332,27 +338,27 @@ export default function SecretsVaultPage() {
                             {isRevealed && (
                               <button
                                 onClick={() => handleCopy(secret.id, displayVal)}
-                                className="text-slate-500 hover:text-emerald-400 transition"
+                                className="text-slate-400 hover:text-emerald-600 transition"
                                 title="Copy secret"
                               >
-                                {copiedKey === secret.id ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                                {copiedKey === secret.id ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
                               </button>
                             )}
                           </div>
                         </td>
 
-                        <td className="py-3 px-4 text-slate-400 font-mono">v{secret.version}</td>
-                        <td className="py-3 px-4 text-slate-400 font-mono">
+                        <td className="py-3 px-4 text-slate-500 font-mono">v{secret.version}</td>
+                        <td className="py-3 px-4 text-slate-500 font-mono">
                           {new Date(secret.last_rotated_at).toLocaleDateString()}
                         </td>
 
                         <td className="py-3 px-4 text-right">
                           <button
                             onClick={() => handleDeleteSecret(secret.id)}
-                            className="text-slate-500 hover:text-rose-400 transition p-1"
+                            className="text-slate-400 hover:text-rose-600 transition p-1"
                             title="Delete secret"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </td>
                       </tr>
@@ -365,14 +371,14 @@ export default function SecretsVaultPage() {
         </div>
       ) : (
         /* Leak Scanner View */
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="rounded-2xl border border-[#E5E7EB] bg-white p-6 space-y-4 shadow-subtle">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
-              <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
-                <ShieldAlert className="h-5 w-5 text-rose-400" />
-                Zero-Trust Secret Leak Scanner Results
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <ShieldAlert className="h-5 w-5 text-rose-600" />
+                <span>Zero-Trust Secret Leak Scanner Results</span>
               </h3>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Scanned {scanResult?.scanned_files_count || 0} repository source files and git commits.
               </p>
             </div>
@@ -388,29 +394,29 @@ export default function SecretsVaultPage() {
               {scanResult.findings.map((finding, idx) => (
                 <div
                   key={idx}
-                  className="rounded-lg border border-rose-500/30 bg-rose-950/20 p-4 space-y-2"
+                  className="rounded-xl border border-rose-200 bg-rose-50/60 p-4 space-y-2 shadow-2xs"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-rose-400">
+                    <span className="text-xs font-bold text-rose-800">
                       [{finding.severity.toUpperCase()}] {finding.secret_type}
                     </span>
-                    <span className="text-[11px] font-mono text-slate-400">
+                    <span className="text-[11px] font-mono font-medium text-slate-600">
                       {finding.file_path}:{finding.line_number}
                     </span>
                   </div>
-                  <pre className="rounded bg-black/60 p-2 font-mono text-xs text-rose-200 border border-rose-900/50">
+                  <pre className="rounded-lg bg-white p-2.5 font-mono text-xs text-rose-800 border border-rose-200 shadow-inner">
                     {finding.snippet_masked}
                   </pre>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-600">
                     Remediation: Remove this hardcoded token from git history and inject it securely via the Zero-Trust Secrets Vault.
                   </p>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="py-8 text-center text-slate-500">
-              <Shield className="h-8 w-8 text-emerald-400 mx-auto mb-2" />
-              <p className="text-sm font-medium text-emerald-300">Clean! No exposed secrets detected in codebase.</p>
+            <div className="py-8 text-center text-slate-400">
+              <Shield className="h-8 w-8 text-emerald-600 mx-auto mb-2" />
+              <p className="text-sm font-bold text-emerald-800">Clean! No exposed secrets detected in codebase.</p>
             </div>
           )}
         </div>
@@ -428,11 +434,11 @@ export default function SecretsVaultPage() {
           />
 
           <div>
-            <label className="text-xs font-semibold text-slate-300 block mb-1">Secret Category</label>
+            <label className="text-xs font-bold text-slate-700 block mb-1">Secret Category</label>
             <select
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value as any)}
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200 focus:border-amber-500 focus:outline-none"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-2xs focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
             >
               <option value="API_KEY">API Key</option>
               <option value="DATABASE_URL">Database Connection URL</option>
@@ -443,22 +449,22 @@ export default function SecretsVaultPage() {
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-slate-300 block mb-1">Secret Value (Raw Plaintext)</label>
+            <label className="text-xs font-bold text-slate-700 block mb-1">Secret Value (Raw Plaintext)</label>
             <textarea
               rows={3}
               value={newValue}
               onChange={(e) => setNewValue(e.target.value)}
               placeholder="Paste raw sensitive value here..."
               required
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-xs text-slate-200 focus:border-amber-500 focus:outline-none"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-900 shadow-2xs focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
             <Button variant="secondary" size="sm" type="button" onClick={() => setIsAddOpen(false)}>
               Cancel
             </Button>
-            <Button variant="primary" size="sm" type="submit" disabled={addLoading} className="bg-amber-600 hover:bg-amber-500 text-white">
+            <Button variant="primary" size="sm" type="submit" disabled={addLoading} className="bg-amber-600 hover:bg-amber-700 text-white font-semibold">
               {addLoading ? <LoadingSpinner size="sm" /> : 'Save & Encrypt'}
             </Button>
           </div>
