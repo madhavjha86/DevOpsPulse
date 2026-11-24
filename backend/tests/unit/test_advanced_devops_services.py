@@ -42,6 +42,48 @@ async def test_terminal_service_targets_and_security():
     assert "Security Block" in blocked_res.output
 
 
+@pytest.mark.asyncio
+async def test_terminal_service_filesystem_file_creation():
+    target_id = "pulse-api-deploy-74b8f9c-v9x12"
+
+    # 1. Create file with touch
+    touch_req = TerminalExecRequest(target_type="k8s", target_id=target_id, command="touch test_script.py")
+    res_touch = await TerminalService.execute_command(1, "devops@example.com", touch_req)
+    assert res_touch.exit_code == 0
+
+    # 2. Write code with echo >
+    echo_req = TerminalExecRequest(
+        target_type="k8s",
+        target_id=target_id,
+        command='echo "print(\'DevOpsPulse Live Terminal Output!\')" > test_script.py',
+    )
+    res_echo = await TerminalService.execute_command(1, "devops@example.com", echo_req)
+    assert res_echo.exit_code == 0
+
+    # 3. Read with cat
+    cat_req = TerminalExecRequest(target_type="k8s", target_id=target_id, command="cat test_script.py")
+    res_cat = await TerminalService.execute_command(1, "devops@example.com", cat_req)
+    assert res_cat.exit_code == 0
+    assert "DevOpsPulse Live Terminal Output!" in res_cat.output
+
+    # 4. List with ls -l
+    ls_req = TerminalExecRequest(target_type="k8s", target_id=target_id, command="ls -l")
+    res_ls = await TerminalService.execute_command(1, "devops@example.com", ls_req)
+    assert res_ls.exit_code == 0
+    assert "test_script.py" in res_ls.output
+
+    # 5. Execute with python
+    py_req = TerminalExecRequest(target_type="k8s", target_id=target_id, command="python test_script.py")
+    res_py = await TerminalService.execute_command(1, "devops@example.com", py_req)
+    assert res_py.exit_code == 0
+    assert "DevOpsPulse Live Terminal Output!" in res_py.output
+
+    # 6. Delete with rm
+    rm_req = TerminalExecRequest(target_type="k8s", target_id=target_id, command="rm test_script.py")
+    res_rm = await TerminalService.execute_command(1, "devops@example.com", rm_req)
+    assert res_rm.exit_code == 0
+
+
 def test_ai_remediation_service():
     # List remediations
     items = AIRemediationService.list_remediations()

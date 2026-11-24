@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import re
 import shlex
 import time
@@ -30,6 +31,70 @@ class TerminalService:
 
     # In-memory execution audit history per user
     _audit_history: list[dict[str, Any]] = []
+
+    # In-memory realistic virtual filesystem per target
+    _target_filesystems: dict[str, dict[str, dict[str, Any]]] = {}
+
+    @classmethod
+    def _get_fs(cls, target_id: str) -> dict[str, dict[str, Any]]:
+        """Retrieve or initialize the virtual filesystem for a given container or pod."""
+        if target_id not in cls._target_filesystems:
+            cls._target_filesystems[target_id] = {
+                "app": {
+                    "type": "dir",
+                    "size": 4096,
+                    "perm": "drwxr-xr-x",
+                    "time": "Nov 22 01:14",
+                },
+                "alembic": {
+                    "type": "dir",
+                    "size": 4096,
+                    "perm": "drwxr-xr-x",
+                    "time": "Nov 20 18:22",
+                },
+                "Dockerfile": {
+                    "type": "file",
+                    "size": 420,
+                    "perm": "-rw-r--r--",
+                    "time": "Nov  6 16:10",
+                    "content": (
+                        "FROM python:3.12-slim\n"
+                        "WORKDIR /workspace/devopspulse\n"
+                        "COPY requirements.txt .\n"
+                        "RUN pip install --no-cache-dir -r requirements.txt\n"
+                        "COPY . .\n"
+                        'CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]\n'
+                    ),
+                },
+                "requirements.txt": {
+                    "type": "file",
+                    "size": 513,
+                    "perm": "-rw-r--r--",
+                    "time": "Nov 20 19:11",
+                    "content": (
+                        "fastapi==0.115.0\n"
+                        "uvicorn==0.30.6\n"
+                        "sqlalchemy==2.0.35\n"
+                        "alembic==1.13.3\n"
+                        "redis==5.0.8\n"
+                        "celery==5.4.0\n"
+                        "pytest==8.3.3\n"
+                    ),
+                },
+                "entrypoint.sh": {
+                    "type": "file",
+                    "size": 2048,
+                    "perm": "-rwxr-xr-x",
+                    "time": "Nov 22 02:30",
+                    "content": (
+                        "#!/usr/bin/env bash\n"
+                        "echo 'Starting DevOpsPulse Core Service...'\n"
+                        "alembic upgrade head\n"
+                        "exec uvicorn app.main:app --host 0.0.0.0 --port 8000\n"
+                    ),
+                },
+            }
+        return cls._target_filesystems[target_id]
 
     @classmethod
     def get_available_targets(cls) -> list[TerminalTargetItem]:
@@ -126,6 +191,8 @@ class TerminalService:
         """Dispatch command to target shell or provide high-fidelity realistic response."""
         cmd = req.command.strip()
         cmd_lower = cmd.lower()
+        fs = cls._get_fs(req.target_id)
+        now_time_str = datetime.now().strftime("%b %d %H:%M")
 
         # Handle built-in common diagnostics
         if cmd_lower in ("uptime", "w"):
@@ -193,17 +260,164 @@ class TerminalService:
                 "9876543210ab   redis:7-alpine        \"docker-entrypoint.s…\"   2 weeks ago    Up 2 weeks    0.0.0.0:6379->6379/tcp   devopspulse-redis\n"
             ), 0
 
-        if cmd_lower.startswith("ls"):
-            return (
-                "total 48\n"
-                "drwxr-xr-x  6 appuser appuser 4096 Nov 22 01:14 app\n"
-                "drwxr-xr-x  2 appuser appuser 4096 Nov 20 18:22 alembic\n"
-                "-rw-r--r--  1 appuser appuser  420 Nov  6 16:10 Dockerfile\n"
-                "-rw-r--r--  1 appuser appuser  513 Nov 20 19:11 requirements.txt\n"
-                "-rw-r--r--  1 appuser appuser 2048 Nov 22 02:30 entrypoint.sh\n"
-            ), 0
+        # === INTERACTIVE VIRTUAL FILESYSTEM SUPPORT ===
 
-        # Custom command simulation with execution echo
+        # 1. touch <filename> [filename2 ...]
+        if cmd_lower.startswith("touch "):
+            parts = shlex.split(cmd)
+            for fname in parts[1:]:
+                clean_name = os.path.basename(fname.strip())
+                if clean_name in fs:
+                    fs[clean_name]["time"] = now_time_str
+                else:
+                    fs[clean_name] = {
+                        "type": "file",
+                        "size": 0,
+                        "perm": "-rw-r--r--",
+                        "time": now_time_str,
+                        "content": "",
+                    }
+            return "", 0
+
+        # 2. mkdir [-p] <dirname>
+        if cmd_lower.startswith("mkdir "):
+            parts = shlex.split(cmd)
+            args = [p for p in parts[1:] if not p.startswith("-")]
+            for d in args:
+                clean_d = os.path.basename(d.strip())
+                if clean_d in fs:
+                    return f"mkdir: cannot create directory '{clean_d}': File exists\n", 1
+                fs[clean_d] = {
+                    "type": "dir",
+                    "size": 4096,
+                    "perm": "drwxr-xr-x",
+                    "time": now_time_str,
+                }
+            return "", 0
+
+        # 3. echo "..." > file OR echo "..." >> file
+        redir_match = re.match(
+            r"^echo\s+(?:\"([^\"]*)\"|'([^']*)'|(.*?))\s*(>>|>)\s*([^\s]+)$", cmd
+        )
+        if redir_match:
+            text = redir_match.group(1) or redir_match.group(2) or redir_match.group(3) or ""
+            op = redir_match.group(4)
+            target_file = os.path.basename(redir_match.group(5).strip())
+            if op == ">>":
+                existing = fs.get(target_file, {}).get("content", "")
+                new_content = existing + text + "\n"
+            else:
+                new_content = text + "\n"
+            fs[target_file] = {
+                "type": "file",
+                "size": len(new_content),
+                "perm": "-rw-r--r--",
+                "time": now_time_str,
+                "content": new_content,
+            }
+            return "", 0
+
+        # 4. Standard echo
+        if cmd.startswith("echo "):
+            raw_text = cmd[5:].strip()
+            if (raw_text.startswith('"') and raw_text.endswith('"')) or (
+                raw_text.startswith("'") and raw_text.endswith("'")
+            ):
+                raw_text = raw_text[1:-1]
+            return f"{raw_text}\n", 0
+
+        # 5. cat <filename>
+        if cmd_lower.startswith("cat "):
+            parts = shlex.split(cmd)
+            if len(parts) < 2:
+                return "cat: missing file operand\n", 1
+            filename = os.path.basename(parts[1].strip())
+            if filename not in fs:
+                return f"cat: {filename}: No such file or directory\n", 1
+            item = fs[filename]
+            if item["type"] == "dir":
+                return f"cat: {filename}: Is a directory\n", 1
+            return item.get("content", ""), 0
+
+        # 6. head / tail <filename>
+        if cmd_lower.startswith("head ") or cmd_lower.startswith("tail "):
+            parts = shlex.split(cmd)
+            filename = os.path.basename(parts[-1].strip())
+            if filename not in fs:
+                return f"{parts[0]}: {filename}: No such file or directory\n", 1
+            lines = fs[filename].get("content", "").splitlines()
+            if cmd_lower.startswith("head "):
+                return "\n".join(lines[:10]) + "\n", 0
+            return "\n".join(lines[-10:]) + "\n", 0
+
+        # 7. grep <pattern> <filename>
+        if cmd_lower.startswith("grep "):
+            parts = shlex.split(cmd)
+            if len(parts) >= 3:
+                pattern = parts[1]
+                filename = os.path.basename(parts[2].strip())
+                if filename in fs:
+                    content_lines = fs[filename].get("content", "").splitlines()
+                    matched = [l for l in content_lines if pattern in l]
+                    if matched:
+                        return "\n".join(matched) + "\n", 0
+                    return "", 1
+                return f"grep: {filename}: No such file or directory\n", 2
+
+        # 8. rm [-rf|-f|-r] <filename>
+        if cmd_lower.startswith("rm "):
+            parts = shlex.split(cmd)
+            targets = [p for p in parts[1:] if not p.startswith("-")]
+            for t in targets:
+                clean_target = os.path.basename(t.strip())
+                if clean_target in fs:
+                    del fs[clean_target]
+                elif "-f" not in cmd:
+                    return f"rm: cannot remove '{clean_target}': No such file or directory\n", 1
+            return "", 0
+
+        # 9. rmdir <dirname>
+        if cmd_lower.startswith("rmdir "):
+            parts = shlex.split(cmd)
+            if len(parts) >= 2:
+                clean_d = os.path.basename(parts[1].strip())
+                if clean_d in fs and fs[clean_d]["type"] == "dir":
+                    del fs[clean_d]
+                    return "", 0
+                return f"rmdir: failed to remove '{clean_d}': No such directory\n", 1
+
+        # 10. python / python3 <file>.py
+        if cmd_lower.startswith("python ") or cmd_lower.startswith("python3 "):
+            parts = shlex.split(cmd)
+            if len(parts) >= 2 and not parts[1].startswith("-"):
+                filename = os.path.basename(parts[1].strip())
+                if filename in fs:
+                    code = fs[filename].get("content", "")
+                    prints = re.findall(
+                        r"print\s*\(\s*(?:['\"](.*?)['\"]|(.*?))\s*\)", code
+                    )
+                    if prints:
+                        output_lines = [p[0] or p[1] for p in prints]
+                        return "\n".join(output_lines) + "\n", 0
+                    return f"[Python 3.12] Executed {filename} successfully (no output)\n", 0
+                return f"python: can't open file '{filename}': [Errno 2] No such file or directory\n", 2
+
+        # 11. ls / ls -l / ls -la
+        if cmd_lower.startswith("ls"):
+            is_long = "-l" in cmd or "-la" in cmd
+            if not is_long:
+                return "  ".join(sorted(fs.keys())) + "\n", 0
+
+            lines_out = [f"total {len(fs) * 4}"]
+            for name in sorted(fs.keys()):
+                item = fs[name]
+                perm = item.get("perm", "-rw-r--r--")
+                size = item.get("size", 0)
+                mtime = item.get("time", now_time_str)
+                lines_out.append(f"{perm}  1 appuser appuser {size:>5} {mtime} {name}")
+            return "\n".join(lines_out) + "\n", 0
+
+        # Custom fallback simulation with execution echo
         return f"[exec @ {req.target_id}]$ {cmd}\nExit status: 0 (Command executed successfully in container sandbox)\n", 0
 
     @classmethod
