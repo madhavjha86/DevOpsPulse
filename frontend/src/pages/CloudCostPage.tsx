@@ -24,6 +24,7 @@ import {
   CostOptimization,
   CostAnomaly,
 } from '@/services/cloudCost';
+import { finopsKillerApi, FinOpsKillerSummary } from '@/services/finopsKiller';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
@@ -40,6 +41,12 @@ export const CloudCostPage: React.FC = () => {
   const [isSyncingAws, setIsSyncingAws] = useState<boolean>(false);
   const [syncToast, setSyncToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // 1-Click FinOps Waste Killer State
+  const [finopsKillerSummary, setFinopsKillerSummary] = useState<FinOpsKillerSummary | null>(null);
+  const [selectedWasteIds, setSelectedWasteIds] = useState<string[]>([]);
+  const [killingWaste, setKillingWaste] = useState<boolean>(false);
+  const [killerToast, setKillerToast] = useState<string | null>(null);
+
   // Budget Modal
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState<boolean>(false);
   const [budgetName, setBudgetName] = useState<string>('');
@@ -52,18 +59,37 @@ export const CloudCostPage: React.FC = () => {
   const fetchData = async () => {
     setError(null);
     try {
-      const [overviewData, budgetData, optData, anomalyData] = await Promise.all([
+      const [overviewData, budgetData, optData, anomalyData, wasteData] = await Promise.all([
         cloudCostService.getOverview(selectedProvider),
         cloudCostService.listBudgets(),
         cloudCostService.listOptimizations('OPEN'),
         cloudCostService.listAnomalies(),
+        finopsKillerApi.getSummary().catch(() => null),
       ]);
       setOverview(overviewData);
       setBudgets(budgetData);
       setOptimizations(optData);
       setAnomalies(anomalyData);
+      if (wasteData) setFinopsKillerSummary(wasteData);
     } catch {
       setError('Failed to load cloud cost intelligence data.');
+    }
+  };
+
+  const handleTerminateWaste = async () => {
+    if (selectedWasteIds.length === 0) return;
+    try {
+      setKillingWaste(true);
+      const res = await finopsKillerApi.terminateResources({ resource_ids: selectedWasteIds });
+      setKillerToast(res.message);
+      setSelectedWasteIds([]);
+      const updated = await finopsKillerApi.getSummary();
+      setFinopsKillerSummary(updated);
+      setTimeout(() => setKillerToast(null), 6000);
+    } catch {
+      alert('Failed to terminate waste cloud resources.');
+    } finally {
+      setKillingWaste(false);
     }
   };
 
@@ -667,6 +693,141 @@ export const CloudCostPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* 1-Click FinOps Cloud Waste Killer Hub */}
+      {finopsKillerSummary && (
+        <div className="bg-white rounded-2xl border border-rose-200 p-5 shadow-subtle space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-50 text-rose-600 font-bold">
+                  🔥
+                </span>
+                <h3 className="text-sm font-bold text-slate-900">1-Click FinOps Cloud Waste Killer</h3>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
+                  {finopsKillerSummary.total_waste_resources_count} Idle Resources Found
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                Instantly eliminate unattached EBS volumes, idle compute instances, and orphaned load balancers draining your budget.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">Active Waste Spend</span>
+                <span className="text-base font-extrabold text-rose-600">
+                  ${finopsKillerSummary.total_monthly_waste_usd.toFixed(2)}/mo
+                </span>
+              </div>
+
+              <Button
+                size="sm"
+                onClick={handleTerminateWaste}
+                disabled={selectedWasteIds.length === 0 || killingWaste}
+                className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold"
+              >
+                {killingWaste ? 'Terminating...' : `Kill Selected (${selectedWasteIds.length})`}
+              </Button>
+            </div>
+          </div>
+
+          {killerToast && (
+            <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-xs text-emerald-800 font-medium">
+              {killerToast}
+            </div>
+          )}
+
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-200 text-[10px]">
+                  <th className="py-2.5 px-3 w-8">
+                    <input
+                      type="checkbox"
+                      checked={
+                        selectedWasteIds.length > 0 &&
+                        selectedWasteIds.length ===
+                          finopsKillerSummary.resources.filter((r) => r.status === 'ACTIVE_WASTE').length
+                      }
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedWasteIds(
+                            finopsKillerSummary.resources
+                              .filter((r) => r.status === 'ACTIVE_WASTE')
+                              .map((r) => r.id)
+                          );
+                        } else {
+                          setSelectedWasteIds([]);
+                        }
+                      }}
+                      className="rounded border-slate-300 text-rose-600 focus:ring-rose-500"
+                    />
+                  </th>
+                  <th className="py-2.5 px-3">Resource & Type</th>
+                  <th className="py-2.5 px-3">Idle Reason</th>
+                  <th className="py-2.5 px-3">Idle Days</th>
+                  <th className="py-2.5 px-3">Monthly Waste</th>
+                  <th className="py-2.5 px-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {finopsKillerSummary.resources.map((res) => {
+                  const isTerminated = res.status === 'TERMINATED';
+                  return (
+                    <tr
+                      key={res.id}
+                      className={`hover:bg-slate-50/80 transition ${
+                        isTerminated ? 'opacity-50 bg-slate-50/40 line-through' : ''
+                      }`}
+                    >
+                      <td className="py-2.5 px-3">
+                        <input
+                          type="checkbox"
+                          disabled={isTerminated}
+                          checked={selectedWasteIds.includes(res.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedWasteIds([...selectedWasteIds, res.id]);
+                            } else {
+                              setSelectedWasteIds(selectedWasteIds.filter((id) => id !== res.id));
+                            }
+                          }}
+                          className="rounded border-slate-300 text-rose-600 focus:ring-rose-500"
+                        />
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <div className="font-semibold text-slate-800">{res.name}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">
+                          {res.resource_type} • {res.region}
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-600 max-w-xs">{res.reason}</td>
+                      <td className="py-2.5 px-3 font-mono font-medium text-amber-700">
+                        {res.idle_days} days
+                      </td>
+                      <td className="py-2.5 px-3 font-mono font-bold text-rose-600">
+                        ${res.monthly_waste_usd.toFixed(2)}/mo
+                      </td>
+                      <td className="py-2.5 px-3">
+                        {isTerminated ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-500">
+                            Terminated
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                            Active Waste
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Cost Optimization Recommendations */}
       <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 shadow-subtle">

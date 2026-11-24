@@ -36,6 +36,11 @@ const NotificationsPage = lazy(() => import('@/pages/NotificationsPage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 const OrganizationSettingsPage = lazy(() => import('@/pages/OrganizationSettingsPage'));
 
+const WebTerminalPage = lazy(() => import('@/pages/WebTerminalPage'));
+const CloudCanvasPage = lazy(() => import('@/pages/CloudCanvasPage'));
+const GitOpsPage = lazy(() => import('@/pages/GitOpsPage'));
+const SecretsVaultPage = lazy(() => import('@/pages/SecretsVaultPage'));
+
 const PageFallback: React.FC = () => (
   <div className="flex h-96 w-full items-center justify-center">
     <LoadingSpinner size="lg" message="Loading interface..." />
@@ -70,9 +75,15 @@ export const App: React.FC = () => {
           <Route path="/disaster-recovery" element={<DisasterRecoveryPage />} />
           <Route path="/infrastructure/docker" element={<DockerContainersPage />} />
           <Route path="/infrastructure/kubernetes" element={<KubernetesPage />} />
+          <Route path="/infrastructure/terminal" element={<WebTerminalPage />} />
+          <Route path="/terminal" element={<WebTerminalPage />} />
+          <Route path="/infrastructure/canvas" element={<CloudCanvasPage />} />
+          <Route path="/gitops" element={<GitOpsPage />} />
           <Route path="/infrastructure/cloud" element={<CloudMonitoringPage />} />
           <Route path="/infrastructure/cost" element={<CloudCostPage />} />
           <Route path="/observability/telemetry" element={<TelemetryPage />} />
+          <Route path="/security/vault" element={<SecretsVaultPage />} />
+          <Route path="/secrets" element={<SecretsVaultPage />} />
           <Route path="/ai/copilot" element={<AICopilotPage />} />
           <Route path="/ai/rca" element={<AIRootCauseAnalysisPage />} />
           <Route path="/ai/code-intelligence" element={<AICodeIntelligencePage />} />

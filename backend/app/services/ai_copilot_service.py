@@ -696,12 +696,14 @@ class AICopilotService:
             messages.append({"role": "user", "content": user_prompt})
 
             llm_res = await LLMClient.generate_response(messages=messages, system_prompt=system_prompt)
-            return {
-                "content": llm_res["content"],
-                "sources": sources,
-                "tokens_used": llm_res.get("tokens_used", 0),
-                "model": llm_res.get("model", settings.AI_MODEL),
-            }
+            content = llm_res.get("content", "")
+            if not content.startswith("**LLM_CONNECTION_FAILED**") and content.strip():
+                return {
+                    "content": content,
+                    "sources": sources,
+                    "tokens_used": llm_res.get("tokens_used", 0),
+                    "model": llm_res.get("model", settings.AI_MODEL),
+                }
 
         # 3. Graceful Fallback if LLM is not configured: synthesize real data answer
         prompt_lower = user_prompt.lower()

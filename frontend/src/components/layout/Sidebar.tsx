@@ -25,6 +25,8 @@ import {
   ShieldCheck,
   RefreshCw,
   Coins,
+  GitMerge,
+  Lock,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -52,12 +54,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { name: 'Repositories', path: '/repositories', icon: FolderGit2 },
     { name: 'Developer Portal', path: '/developer-portal', icon: Compass },
     { name: 'CI/CD Pipelines', path: '/workflows', icon: GitBranch },
+    { name: 'GitOps & Canary', path: '/gitops', icon: GitMerge },
   ];
 
   const secondaryNavItems = [
     { name: 'Observability', path: '/observability/telemetry', icon: Activity },
     { name: 'Uptime & Monitors', path: '/uptime', icon: AlertTriangle },
     { name: 'Security & SBOM', path: '/security', icon: ShieldCheck },
+    { name: 'Zero-Trust Vault', path: '/security/vault', icon: Lock },
     { name: 'Disaster Recovery', path: '/disaster-recovery', icon: RefreshCw },
     { name: 'Deployments', path: '/deployments', icon: FileText },
     { name: 'Organization', path: '/settings/organization', icon: Building2 },
@@ -183,6 +187,34 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 >
                   <Boxes className="h-3.5 w-3.5" />
                   <span>Kubernetes</span>
+                </NavLink>
+                <NavLink
+                  to="/infrastructure/terminal"
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 rounded-lg px-2.5 py-2 min-h-[38px] text-xs font-medium transition-colors ${
+                      isActive
+                        ? 'text-[#7C3AED] font-bold bg-purple-50'
+                        : 'text-dark-400 hover:text-dark-100 hover:bg-slate-50'
+                    }`
+                  }
+                >
+                  <Terminal className="h-3.5 w-3.5" />
+                  <span>Web Terminal</span>
+                </NavLink>
+                <NavLink
+                  to="/infrastructure/canvas"
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 rounded-lg px-2.5 py-2 min-h-[38px] text-xs font-medium transition-colors ${
+                      isActive
+                        ? 'text-[#7C3AED] font-bold bg-purple-50'
+                        : 'text-dark-400 hover:text-dark-100 hover:bg-slate-50'
+                    }`
+                  }
+                >
+                  <Layers className="h-3.5 w-3.5" />
+                  <span>Cloud Canvas (IaC)</span>
                 </NavLink>
                 <NavLink
                   to="/infrastructure/cloud"

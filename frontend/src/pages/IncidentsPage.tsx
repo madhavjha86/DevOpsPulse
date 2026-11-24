@@ -27,6 +27,7 @@ import {
   IncidentPriority,
   IncidentStatus,
 } from '@/services/incidents';
+import { aiRemediationApi, AIRemediationItem } from '@/services/aiRemediation';
 import type { IncidentPostMortem } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -71,6 +72,11 @@ export const IncidentsPage: React.FC = () => {
   const [isPostMortemModalOpen, setIsPostMortemModalOpen] = useState<boolean>(false);
   const [isCopiedPostMortem, setIsCopiedPostMortem] = useState<boolean>(false);
 
+  // AI Self-Healing Remediation State
+  const [remediations, setRemediations] = useState<AIRemediationItem[]>([]);
+  const [remediationLoading, setRemediationLoading] = useState<boolean>(false);
+  const [actionToast, setActionToast] = useState<string | null>(null);
+
   const handleGeneratePostMortem = async (incidentId: number) => {
     try {
       setIsGeneratingPostMortem(true);
@@ -108,16 +114,48 @@ export const IncidentsPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [statsData, listData] = await Promise.all([
+      const [statsData, listData, remData] = await Promise.all([
         incidentService.getStats(),
         incidentService.listIncidents(),
+        aiRemediationApi.listRemediations().catch(() => []),
       ]);
       setStats(statsData);
       setIncidents(listData);
+      setRemediations(remData);
     } catch {
       setError('Failed to load incident management records.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleApproveRemediation = async (id: string) => {
+    try {
+      setRemediationLoading(true);
+      await aiRemediationApi.approveRemediation(id, 'Executed via Incidents Dashboard');
+      setActionToast('Self-healing remediation executed! Kubernetes rolling update initiated.');
+      const updated = await aiRemediationApi.listRemediations();
+      setRemediations(updated);
+      setTimeout(() => setActionToast(null), 5000);
+    } catch {
+      alert('Failed to execute remediation');
+    } finally {
+      setRemediationLoading(false);
+    }
+  };
+
+  const handleRejectRemediation = async (id: string) => {
+    try {
+      setRemediationLoading(true);
+      await aiRemediationApi.rejectRemediation(id, 'Dismissed by on-call engineer');
+      setActionToast('Remediation proposal dismissed.');
+      const updated = await aiRemediationApi.listRemediations();
+      setRemediations(updated);
+      setTimeout(() => setActionToast(null), 5000);
+    } catch {
+      alert('Failed to reject remediation');
+    } finally {
+      setRemediationLoading(false);
     }
   };
 
@@ -326,6 +364,120 @@ export const IncidentsPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {actionToast && (
+        <div className="rounded-xl border border-purple-300 bg-purple-50 p-4 text-xs text-purple-900 font-medium flex items-center justify-between shadow-subtle">
+          <span>{actionToast}</span>
+          <button onClick={() => setActionToast(null)} className="text-slate-400 hover:text-slate-600">✕</button>
+        </div>
+      )}
+
+      {/* AI Self-Healing SRE Closed-Loop Remediation Hub */}
+      {remediations.length > 0 && (
+        <div className="bg-white rounded-2xl border border-purple-200 p-5 shadow-subtle space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100 text-[#7C3AED] font-bold">
+                  <Sparkles className="h-4 w-4" />
+                </span>
+                <h3 className="text-sm font-bold text-slate-900">AI Self-Healing SRE Remediation Proposals</h3>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                  Closed-Loop Automation
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                Autonomous root-cause mitigation: 1-click resource adjustments, deployment rollbacks, and crash-loop resolutions with instant rollback snapshots.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {remediations.map((rem) => {
+              const isExecuted = rem.status === 'EXECUTED';
+              const isRejected = rem.status === 'REJECTED';
+              const isPending = rem.status === 'PENDING_APPROVAL';
+
+              return (
+                <div
+                  key={rem.id}
+                  className={`p-4 rounded-xl border transition-all flex flex-col md:flex-row md:items-center md:justify-between gap-4 ${
+                    isExecuted
+                      ? 'border-emerald-200 bg-emerald-50/30'
+                      : isRejected
+                      ? 'border-slate-200 bg-slate-50/50 opacity-60'
+                      : 'border-purple-200 bg-purple-50/20'
+                  }`}
+                >
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded bg-purple-100 text-purple-800">
+                        {rem.category}
+                      </span>
+                      <span className="text-xs font-mono text-slate-500 truncate">
+                        {rem.target_resource}
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                        Confidence: {(rem.confidence_score * 100).toFixed(0)}%
+                      </span>
+                    </div>
+
+                    <h4 className="text-sm font-bold text-slate-900">{rem.title}</h4>
+                    <p className="text-xs text-slate-600">{rem.description}</p>
+
+                    <div className="flex flex-wrap items-center gap-4 text-[11px] pt-1">
+                      <span className="text-slate-500">
+                        Before: <code className="bg-slate-100 px-1 py-0.5 rounded text-rose-700">{rem.before_state}</code>
+                      </span>
+                      <span className="text-slate-500">
+                        Target Fix: <code className="bg-slate-100 px-1 py-0.5 rounded text-emerald-700">{rem.after_state}</code>
+                      </span>
+                      <span className="text-purple-700 italic">
+                        Guarantee: {rem.rollback_guarantee}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 md:border-l md:border-slate-200 md:pl-4">
+                    {isPending && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => handleApproveRemediation(rem.id)}
+                          disabled={remediationLoading}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold"
+                        >
+                          <Check className="h-3.5 w-3.5 mr-1" />
+                          Approve & Apply
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleRejectRemediation(rem.id)}
+                          disabled={remediationLoading}
+                          className="text-xs text-slate-500 hover:text-rose-600"
+                        >
+                          Dismiss
+                        </Button>
+                      </>
+                    )}
+                    {isExecuted && (
+                      <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full border border-emerald-300">
+                        ✓ Executed Live
+                      </span>
+                    )}
+                    {isRejected && (
+                      <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+                        Dismissed
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="bg-white rounded-2xl border border-[#E5E7EB] p-4 shadow-subtle">

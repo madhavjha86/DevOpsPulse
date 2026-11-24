@@ -31,6 +31,13 @@ from app.api.v1.routes.jenkins import router as jenkins_router
 from app.api.v1.routes.ai_governance import router as ai_governance_router
 from app.api.v1.routes.pipelines import router as pipelines_router
 
+from app.api.v1.routes.terminal import router as terminal_router
+from app.api.v1.routes.ai_remediation import router as ai_remediation_router
+from app.api.v1.routes.iac_canvas import router as iac_canvas_router
+from app.api.v1.routes.gitops import router as gitops_router
+from app.api.v1.routes.secrets_vault import router as secrets_vault_router
+from app.api.v1.routes.finops_killer import router as finops_killer_router
+
 api_router = APIRouter()
 
 api_router.include_router(auth_router)
@@ -60,3 +67,10 @@ api_router.include_router(reports_router)
 api_router.include_router(jenkins_router)
 api_router.include_router(ai_governance_router)
 api_router.include_router(pipelines_router)
+
+api_router.include_router(terminal_router)
+api_router.include_router(ai_remediation_router)
+api_router.include_router(iac_canvas_router)
+api_router.include_router(gitops_router)
+api_router.include_router(secrets_vault_router)
+api_router.include_router(finops_killer_router)
