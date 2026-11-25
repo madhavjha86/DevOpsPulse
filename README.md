@@ -4,12 +4,15 @@
 > *From Git Push to Kubernetes in Seconds, Zero-Touch.*
 
 [![CI/CD Pipeline](https://github.com/madhavjha86/DevOpsPulse/actions/workflows/ci.yml/badge.svg)](https://github.com/madhavjha86/DevOpsPulse/actions)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=madhavjha86_DevOpsPulse&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=madhavjha86_DevOpsPulse)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=madhavjha86_DevOpsPulse&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=madhavjha86_DevOpsPulse)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=madhavjha86_DevOpsPulse&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=madhavjha86_DevOpsPulse)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green.svg)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://typescriptlang.org)
-[![PostgreSQL 18](https://img.shields.io/badge/PostgreSQL-18%20%7C%2016-336791.svg)](https://postgresql.org)
+[![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-336791.svg)](https://postgresql.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://docker.com)
 
 ---
@@ -54,11 +57,11 @@ DevOpsPulse unifies the entire engineering lifecycle into six specialized pillar
 | # | Pillar | Description | Key Capabilities |
 |---|---|---|---|
 | **1** | ⚡ **Autonomous CI/CD (PulseCI)** | Zero-touch pipelines from git push to production | Webhook auto-trigger, Docker auto-build, rolling K8s rollout, automatic rollback |
-| **2** | 🛡️ **DevSecOps & SBOM** | Zero-tolerance software supply chain security | SAST scan, secret detection, CycloneDX 1.5 & SPDX 2.3 SBOM generation |
-| **3** | 📊 **SRE & Live Observability** | Contractual SLA vs SLO tracking | Embedded Grafana, Prometheus scraping, multi-window burn rates, MTTD/MTTR |
-| **4** | 💰 **Cloud FinOps Intelligence** | Multi-cloud expenditure governance | AWS/Azure/GCP cost breakdown, idle resource discovery, predictive anomaly alerts |
-| **5** | 🏛️ **IaC & Internal Developer Portal** | Self-service developer platform (Spotify Backstage-style) | Terraform drift detection, Checkov compliance, Golden Path service templates |
-| **6** | 🔄 **Disaster Recovery Readiness** | Verifiable data resilience and drills | Target vs actual RPO/RTO validation, snapshot tracking, drill certification |
+| **2** | 🤖 **AI Self-Healing & Incident RCA** | Autonomous container crash diagnosis & triage | Pod log auto-ingestion, OOMKilled/500 error classification, 1-Click remediation synthesis |
+| **3** | 💰 **FinOps Cloud Waste Killer** | Multi-cloud cost governance & autonomous reclamation | AWS/Azure/GCP cost breakdown, idle RDS & unattached EBS detection, 1-Click safe termination |
+| **4** | 🛡️ **DevSecOps & Supply Chain SBOM** | Software supply chain security & legal compliance | CycloneDX 1.5 & SPDX 2.3 SBOM generation, Copyleft GPL/AGPL license audit, CVE mapping |
+| **5** | 📊 **SRE & Live Observability** | Real-time telemetry & contractual reliability | 4 DORA metrics calculation, Prometheus metric scrapers, MTTD/MTTR analytics, SLO/SLI tracking |
+| **6** | 💻 **Interactive Web Terminal & GitOps** | Browser shell & infrastructure governance | In-browser shell with security audit trails, Terraform IaC visual canvas, GitOps drift detection |
 
 ---
 
@@ -234,12 +237,12 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 DevOpsPulse incorporates comprehensive test suites across both backend and frontend layers:
 
-### Backend Pytest Suite (94 Passing Tests)
+### Backend Pytest Suite (114 Passing Tests: 64 Integration + 50 Unit)
 ```bash
 cd backend
 python -m pytest tests/ -v
 ```
-Validates JWT auth, password hashing, 6 RBAC roles, multi-tenant boundaries, token SHA-256 hashing, HMAC webhooks, PulseCI pipeline models, engine execution, rate limiting, and all REST endpoints.
+Validates JWT auth, password hashing, 6 RBAC roles, multi-tenant boundaries, token SHA-256 hashing, HMAC webhooks, PulseCI pipeline models, engine execution, FinOps waste reclamation, AI RCA heuristics, CycloneDX/SPDX SBOM generation, rate limiting, and all REST endpoints.
 
 ### Frontend Quality & Type Check
 ```bash
@@ -247,6 +250,12 @@ cd frontend
 npm run lint    # ESLint (0 errors, 0 warnings)
 npm run build   # TypeScript tsc + Vite production build (0 errors)
 ```
+
+### Static Analysis & Quality Gate (SonarCloud Grade-A)
+- **Reliability:** Grade A (0 Bugs)
+- **Security:** Grade A (0 Vulnerabilities)
+- **Maintainability:** Grade A (0 Code Smells)
+- **Security Hotspots:** 100% Reviewed
 
 ---
 
@@ -316,6 +325,20 @@ DevOpsPulse/
 ## 🤝 Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on code style, commit conventions, and pull request workflows.
+
+---
+
+## 🎓 Academic Project Information
+
+This project is submitted as the **Major Project** for the degree of **Bachelor of Computer Applications (BCA)**, 5th Semester / 3rd Year (Academic Session 2026–2027), Department of Computer Science & Applications.
+
+### 👥 Project Team:
+- **Madhav Kumar** (Roll No: **240BCA011**) — *Team Lead & Cloud Systems Architect*
+- **Gulshan Kumar** (Roll No: **240BCA035**) — *Full-Stack Frontend & UI/UX Engineer*
+- **Prashant Thakur** (Roll No: **240BCA013**) — *DevOps, QA & Security Engineer*
+
+### 👨‍🏫 Project Supervisor:
+- **Prof. / Dr. Suman Goyet**, Department of Computer Science & Applications
 
 ---
 
