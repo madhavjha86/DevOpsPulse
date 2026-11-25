@@ -84,6 +84,54 @@ async def test_terminal_service_filesystem_file_creation():
     assert res_rm.exit_code == 0
 
 
+@pytest.mark.asyncio
+async def test_terminal_service_cat_redirections():
+    target_id = "pulse-api-deploy-74b8f9c-v9x12"
+
+    # 1. cat >prince (create empty/truncate without space)
+    res_create = await TerminalService.execute_command(
+        1, "devops@example.com",
+        TerminalExecRequest(target_type="k8s", target_id=target_id, command="cat >prince"),
+    )
+    assert res_create.exit_code == 0
+
+    # 2. cat << '__DEVOPSPULSE_EOF__' > prince (heredoc multi-line write)
+    heredoc_cmd = "cat << '__DEVOPSPULSE_EOF__' > prince\nline one\nline two\n__DEVOPSPULSE_EOF__"
+    res_heredoc = await TerminalService.execute_command(
+        1, "devops@example.com",
+        TerminalExecRequest(target_type="k8s", target_id=target_id, command=heredoc_cmd),
+    )
+    assert res_heredoc.exit_code == 0
+
+    # 3. Read back prince
+    res_read = await TerminalService.execute_command(
+        1, "devops@example.com",
+        TerminalExecRequest(target_type="k8s", target_id=target_id, command="cat prince"),
+    )
+    assert res_read.exit_code == 0
+    assert "line one\nline two" in res_read.output
+
+    # 4. Append with heredoc >>
+    append_cmd = "cat << 'EOF' >> prince\nline three\nEOF"
+    res_append = await TerminalService.execute_command(
+        1, "devops@example.com",
+        TerminalExecRequest(target_type="k8s", target_id=target_id, command=append_cmd),
+    )
+    assert res_append.exit_code == 0
+
+    res_read2 = await TerminalService.execute_command(
+        1, "devops@example.com",
+        TerminalExecRequest(target_type="k8s", target_id=target_id, command="cat prince"),
+    )
+    assert "line one\nline two\nline three" in res_read2.output
+
+    # 5. Cleanup
+    await TerminalService.execute_command(
+        1, "devops@example.com",
+        TerminalExecRequest(target_type="k8s", target_id=target_id, command="rm -f prince"),
+    )
+
+
 def test_ai_remediation_service():
     # List remediations
     items = AIRemediationService.list_remediations()

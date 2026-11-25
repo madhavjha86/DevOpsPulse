@@ -66,6 +66,11 @@ export default function WebTerminalPage() {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [theme, setTheme] = useState<TerminalTheme>('modern');
+  const [catInputMode, setCatInputMode] = useState<{
+    filename: string;
+    op: '>' | '>>';
+    buffer: string[];
+  } | null>(null);
 
   const terminalEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -138,7 +143,98 @@ export default function WebTerminalPage() {
     return `devops@${host}:~$ `;
   };
 
+  const finishCatInputMode = async (save: boolean) => {
+    if (!catInputMode || !selectedTarget || executing) return;
+
+    const currentLine = command;
+    const finalBuffer = currentLine.length > 0 ? [...catInputMode.buffer, currentLine] : catInputMode.buffer;
+    const targetInfo = catInputMode;
+
+    setCommand('');
+    setCatInputMode(null);
+
+    if (!save) {
+      setLines((prev) => [
+        ...prev,
+        {
+          id: Math.random().toString(36).substring(7),
+          type: 'stdout',
+          text: `${currentLine}^C`,
+        },
+      ]);
+      setTimeout(() => inputRef.current?.focus(), 50);
+      return;
+    }
+
+    setExecuting(true);
+    try {
+      const delimiter = '__DEVOPSPULSE_EOF__';
+      const body = finalBuffer.join('\n');
+      const execCmd =
+        finalBuffer.length > 0
+          ? `cat << '${delimiter}' ${targetInfo.op} ${targetInfo.filename}\n${body}\n${delimiter}`
+          : `cat ${targetInfo.op} ${targetInfo.filename}`;
+
+      const req: TerminalExecRequest = {
+        target_type: selectedTarget.type,
+        target_id: selectedTarget.id,
+        command: execCmd,
+        namespace: selectedTarget.namespace,
+      };
+      const res: TerminalExecResponse = await terminalApi.executeCommand(req);
+
+      setLines((prev) => [
+        ...prev,
+        ...(currentLine.length > 0
+          ? [{ id: Math.random().toString(36).substring(7), type: 'stdout' as const, text: currentLine }]
+          : []),
+        {
+          id: res.session_id,
+          type: res.exit_code === 0 ? 'system' : 'stderr',
+          text:
+            res.exit_code === 0
+              ? `^D (saved ${finalBuffer.length} line${finalBuffer.length === 1 ? '' : 's'} to '${targetInfo.filename}')`
+              : res.output.trimEnd(),
+          exitCode: res.exit_code,
+          durationMs: res.duration_ms,
+        },
+      ]);
+    } catch (err: any) {
+      setLines((prev) => [
+        ...prev,
+        {
+          id: Math.random().toString(36).substring(7),
+          type: 'stderr',
+          text: `bash: ${err?.response?.data?.detail || err.message || 'failed to write file'}`,
+          exitCode: 1,
+        },
+      ]);
+    } finally {
+      setExecuting(false);
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  };
+
   const executeLine = async (rawCmdToRun?: string) => {
+    // Handle active interactive `cat > file` stdin buffer line
+    if (catInputMode && rawCmdToRun === undefined) {
+      const lineText = command;
+      setCatInputMode((prev) =>
+        prev ? { ...prev, buffer: [...prev.buffer, lineText] } : null
+      );
+      setLines((prev) => [
+        ...prev,
+        {
+          id: Math.random().toString(36).substring(7),
+          type: 'stdout',
+          text: lineText,
+        },
+      ]);
+      setCommand('');
+      setTimeout(() => inputRef.current?.focus(), 20);
+      return;
+    }
+
     const rawCmd = (rawCmdToRun !== undefined ? rawCmdToRun : command).trim();
     if (!rawCmd || !selectedTarget || executing) return;
 
@@ -161,6 +257,25 @@ export default function WebTerminalPage() {
     ]);
     setCommand('');
 
+    // Check for interactive `cat > filename` or `cat >> filename`
+    const catMatch = rawCmd.match(/^cat\s*(>>|>)\s*([^\s]+)$/);
+    if (catMatch) {
+      const op = catMatch[1] as '>' | '>>';
+      const filename = catMatch[2];
+      setCatInputMode({ filename, op, buffer: [] });
+      setLines((prev) => [
+        ...prev,
+        {
+          id: Math.random().toString(36).substring(7),
+          type: 'system',
+          text: `(Writing to '${filename}' — type lines, then press Ctrl+D to save or Ctrl+C to cancel)`,
+        },
+      ]);
+      setExecuting(false);
+      setTimeout(() => inputRef.current?.focus(), 50);
+      return;
+    }
+
     // Handle Client-Side Builtins
     const lower = rawCmd.toLowerCase();
     if (lower === 'clear' || lower === 'cls') {
@@ -176,15 +291,14 @@ export default function WebTerminalPage() {
         '  • kubectl get pods -n production  : List all production Kubernetes pods',
         '  • kubectl top nodes               : Check CPU and Memory consumption per node',
         '  • docker ps                       : List live running Docker containers',
-        '  • uptime / w                      : Display system load average and active uptime',
-        '  • df -h                           : Inspect mounted disk partition usage',
-        '  • free -m                         : Inspect system memory (RAM & Swap)',
-        '  • netstat -tuln                   : List active listening network ports',
+        '  • ls -l / tree / touch / mkdir    : Inspect and create files & directories',
+        '  • cat > file / echo "txt" > file  : Create or edit file contents interactively',
+        '  • uptime / df -h / free -m        : System load, disk usage, and RAM status',
         '  • history                         : Display executed command sequence',
         '  • clear / cls (or Ctrl+L)         : Clear terminal viewport buffer',
         '',
         'Interactive Shortcuts:',
-        '  [Tab] Autocomplete command | [↑/↓] Traverse command history | [Ctrl+C] Abort input',
+        '  [Tab] Autocomplete | [↑/↓] Command history | [Ctrl+D] Save cat > file | [Ctrl+C] Cancel',
       ].join('\n');
 
       setLines((prev) => [
@@ -260,9 +374,22 @@ export default function WebTerminalPage() {
       return;
     }
 
-    // Ctrl+C to cancel current line
+    // Ctrl+D to finish & save cat > file (prevents browser bookmark shortcut)
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+      e.preventDefault();
+      if (catInputMode) {
+        void finishCatInputMode(true);
+      }
+      return;
+    }
+
+    // Ctrl+C to cancel current line or interactive cat mode
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
       e.preventDefault();
+      if (catInputMode) {
+        void finishCatInputMode(false);
+        return;
+      }
       const promptText = getPromptText();
       setLines((prev) => [
         ...prev,
@@ -645,7 +772,11 @@ export default function WebTerminalPage() {
 
               {/* ACTIVE INLINE PROMPT LINE */}
               <div className="flex items-center font-mono text-sm pt-1">
-                <span className={themeClasses.prompt}>{getPromptText()}</span>
+                {catInputMode ? (
+                  <span className="text-amber-400 font-bold select-none">&gt;&nbsp;</span>
+                ) : (
+                  <span className={themeClasses.prompt}>{getPromptText()}</span>
+                )}
                 <div className="relative flex-1 flex items-center ml-1">
                   <input
                     ref={inputRef}
@@ -654,13 +785,36 @@ export default function WebTerminalPage() {
                     onChange={(e) => setCommand(e.target.value)}
                     onKeyDown={handleKeyDown}
                     disabled={executing}
+                    placeholder={
+                      catInputMode
+                        ? `Writing to ${catInputMode.filename}... (Enter for newline, Ctrl+D to save)`
+                        : undefined
+                    }
                     spellCheck={false}
                     autoComplete="off"
                     autoCorrect="off"
                     autoCapitalize="off"
-                    className="w-full bg-transparent font-mono text-sm text-slate-100 focus:outline-none border-none p-0 caret-emerald-400 font-bold"
+                    className="w-full bg-transparent font-mono text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none border-none p-0 caret-emerald-400 font-bold"
                     autoFocus
                   />
+                  {catInputMode && (
+                    <div className="ml-2 flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => void finishCatInputMode(true)}
+                        className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 transition"
+                      >
+                        Save (Ctrl+D)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void finishCatInputMode(false)}
+                        className="rounded bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-500/40 hover:bg-rose-500/30 transition"
+                      >
+                        Cancel (Ctrl+C)
+                      </button>
+                    </div>
+                  )}
                   {executing && (
                     <span className="ml-2 text-xs text-amber-400 font-mono animate-pulse">
                       [running...]
@@ -677,16 +831,25 @@ export default function WebTerminalPage() {
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1 text-emerald-400">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  ONLINE PTY
+                  {catInputMode ? `STDIN > ${catInputMode.filename}` : 'ONLINE PTY'}
                 </span>
                 <span className="hidden sm:inline text-slate-400">
                   Target: {selectedTarget?.id}
                 </span>
               </div>
               <div className="flex items-center gap-3 text-slate-400">
-                <span>[Tab] autocomplete</span>
-                <span>[↑/↓] history</span>
-                <span>Ctrl+L clear</span>
+                {catInputMode ? (
+                  <>
+                    <span className="text-emerald-400">Ctrl+D save</span>
+                    <span className="text-rose-400">Ctrl+C cancel</span>
+                  </>
+                ) : (
+                  <>
+                    <span>[Tab] autocomplete</span>
+                    <span>[↑/↓] history</span>
+                    <span>Ctrl+L clear</span>
+                  </>
+                )}
                 {isFullscreen && <span>Esc / Maximize to exit</span>}
               </div>
             </div>

@@ -186,6 +186,32 @@ class TerminalService:
             timestamp=datetime.now(timezone.utc),
         )
 
+    @staticmethod
+    def _write_virtual_file(
+        fs: dict[str, dict[str, Any]],
+        target_file: str,
+        content: str,
+        append: bool,
+        now_time_str: str,
+    ) -> tuple[str, int]:
+        """Write or append content to a file in the virtual filesystem."""
+        clean_name = os.path.basename(target_file.strip())
+        if not clean_name:
+            return "bash: syntax error near unexpected token `newline'\n", 2
+        if clean_name in fs and fs[clean_name].get("type") == "dir":
+            return f"bash: {clean_name}: Is a directory\n", 1
+        existing = fs.get(clean_name, {}).get("content", "") if append else ""
+        new_content = existing + content
+        perm = fs.get(clean_name, {}).get("perm", "-rw-r--r--")
+        fs[clean_name] = {
+            "type": "file",
+            "size": len(new_content),
+            "perm": perm,
+            "time": now_time_str,
+            "content": new_content,
+        }
+        return "", 0
+
     @classmethod
     async def _dispatch_command(cls, req: TerminalExecRequest) -> tuple[str, int]:
         """Dispatch command to target shell or provide high-fidelity realistic response."""
@@ -297,47 +323,87 @@ class TerminalService:
 
         # 3. echo "..." > file OR echo "..." >> file
         redir_match = re.match(
-            r"^echo\s+(?:\"([^\"]*)\"|'([^']*)'|(.*?))\s*(>>|>)\s*([^\s]+)$", cmd
+            r"^echo(?:\s+(?:\"([^\"]*)\"|'([^']*)'|(.*?)))?\s*(>>|>)\s*([^\s]+)$", cmd
         )
         if redir_match:
             text = redir_match.group(1) or redir_match.group(2) or redir_match.group(3) or ""
             op = redir_match.group(4)
-            target_file = os.path.basename(redir_match.group(5).strip())
-            if op == ">>":
-                existing = fs.get(target_file, {}).get("content", "")
-                new_content = existing + text + "\n"
-            else:
-                new_content = text + "\n"
-            fs[target_file] = {
-                "type": "file",
-                "size": len(new_content),
-                "perm": "-rw-r--r--",
-                "time": now_time_str,
-                "content": new_content,
-            }
-            return "", 0
+            target_file = redir_match.group(5)
+            return cls._write_virtual_file(fs, target_file, text + "\n", op == ">>", now_time_str)
 
         # 4. Standard echo
-        if cmd.startswith("echo "):
-            raw_text = cmd[5:].strip()
+        if cmd.startswith("echo ") or cmd == "echo":
+            raw_text = cmd[4:].strip()
             if (raw_text.startswith('"') and raw_text.endswith('"')) or (
                 raw_text.startswith("'") and raw_text.endswith("'")
             ):
                 raw_text = raw_text[1:-1]
             return f"{raw_text}\n", 0
 
-        # 5. cat <filename>
-        if cmd_lower.startswith("cat "):
+        # 5a. cat << 'EOF' > file (Heredoc multi-line file write/append)
+        heredoc_match = re.match(
+            r"^cat\s+<<\s*['\"]?([A-Za-z0-9_]+)['\"]?\s*(>>|>)\s*([^\s\n]+)\r?\n(?:(.*?)\r?\n)?\1\s*$",
+            cmd,
+            re.DOTALL,
+        )
+        if heredoc_match:
+            op = heredoc_match.group(2)
+            target_file = heredoc_match.group(3)
+            body = heredoc_match.group(4)
+            content = (body + "\n") if body is not None else ""
+            return cls._write_virtual_file(fs, target_file, content, op == ">>", now_time_str)
+
+        # 5b. cat > file / cat >file / cat >> file / cat >>file
+        cat_redir_match = re.match(r"^cat\s*(>>|>)\s*([^\s]*)$", cmd)
+        if cat_redir_match:
+            op = cat_redir_match.group(1)
+            target_file = cat_redir_match.group(2)
+            return cls._write_virtual_file(fs, target_file, "", op == ">>", now_time_str)
+
+        # 5c. cat src > dst OR cat src >> dst
+        cat_copy_match = re.match(r"^cat\s+([^\s>]+)\s*(>>|>)\s*([^\s]+)$", cmd)
+        if cat_copy_match:
+            src_name = os.path.basename(cat_copy_match.group(1).strip())
+            op = cat_copy_match.group(2)
+            dst_name = cat_copy_match.group(3)
+            if src_name not in fs:
+                return f"cat: {src_name}: No such file or directory\n", 1
+            if fs[src_name].get("type") == "dir":
+                return f"cat: {src_name}: Is a directory\n", 1
+            return cls._write_virtual_file(fs, dst_name, fs[src_name].get("content", ""), op == ">>", now_time_str)
+
+        # 5d. cat <filename> [filename2 ...]
+        if cmd_lower.startswith("cat ") or cmd_lower == "cat":
             parts = shlex.split(cmd)
             if len(parts) < 2:
                 return "cat: missing file operand\n", 1
-            filename = os.path.basename(parts[1].strip())
-            if filename not in fs:
-                return f"cat: {filename}: No such file or directory\n", 1
-            item = fs[filename]
-            if item["type"] == "dir":
-                return f"cat: {filename}: Is a directory\n", 1
-            return item.get("content", ""), 0
+            outputs: list[str] = []
+            for raw_arg in parts[1:]:
+                filename = os.path.basename(raw_arg.strip())
+                if filename not in fs:
+                    return f"cat: {filename}: No such file or directory\n", 1
+                item = fs[filename]
+                if item["type"] == "dir":
+                    return f"cat: {filename}: Is a directory\n", 1
+                outputs.append(item.get("content", ""))
+            return "".join(outputs), 0
+
+        # 5e. cp <src> <dst> and mv <src> <dst>
+        if cmd_lower.startswith("cp ") or cmd_lower.startswith("mv "):
+            parts = shlex.split(cmd)
+            args = [p for p in parts[1:] if not p.startswith("-")]
+            if len(args) < 2:
+                return f"{parts[0]}: missing file operand\n", 1
+            src = os.path.basename(args[0].strip())
+            dst = os.path.basename(args[1].strip())
+            if src not in fs:
+                return f"{parts[0]}: cannot stat '{src}': No such file or directory\n", 1
+            if fs[src].get("type") == "dir":
+                return f"{parts[0]}: -r not specified; omitting directory '{src}'\n", 1
+            fs[dst] = {**fs[src], "time": now_time_str}
+            if cmd_lower.startswith("mv "):
+                del fs[src]
+            return "", 0
 
         # 6. head / tail <filename>
         if cmd_lower.startswith("head ") or cmd_lower.startswith("tail "):
