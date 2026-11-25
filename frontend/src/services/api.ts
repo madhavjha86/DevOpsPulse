@@ -65,11 +65,19 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
+      const isPublicPath =
+        typeof window !== 'undefined' &&
+        (window.location.pathname === '/' ||
+          window.location.pathname === '/login' ||
+          window.location.pathname === '/register');
+
       const refreshToken = localStorage.getItem('refresh_token');
       if (!refreshToken) {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
+        if (!isPublicPath) {
+          window.location.href = '/login';
+        }
         return Promise.reject(error);
       }
 
@@ -93,7 +101,9 @@ api.interceptors.response.use(
         processQueue(refreshError, null);
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
+        if (!isPublicPath) {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

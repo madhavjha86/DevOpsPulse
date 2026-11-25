@@ -29,7 +29,6 @@ import {
   FileCode,
   ShieldAlert,
   TrendingDown,
-  Award,
   Users,
   Check,
 } from 'lucide-react';
@@ -148,7 +147,6 @@ export const LandingPage: React.FC = () => {
             <a href="#security" className="hover:text-[#7C3AED] transition-colors">DevSecOps</a>
             <a href="#observability" className="hover:text-[#7C3AED] transition-colors">Telemetry</a>
             <a href="#finops" className="hover:text-[#7C3AED] transition-colors">FinOps</a>
-            <a href="#pricing" className="hover:text-[#7C3AED] transition-colors">Pricing</a>
             <a href="#faq" className="hover:text-[#7C3AED] transition-colors">FAQ</a>
           </nav>
 
@@ -940,192 +938,6 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 8. Transparent SaaS Subscription Pricing */}
-      <section id="pricing" className="py-20 bg-slate-50 border-t border-slate-200">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <span className="text-xs font-black uppercase tracking-wider text-[#7C3AED]">
-              Predictable Cloud Economics
-            </span>
-            <h2 className="mt-2 text-3xl font-black text-slate-900 sm:text-4xl">
-              Simple, Transparent Pricing for Every Engineering Scale
-            </h2>
-            <p className="mt-3 text-sm sm:text-base text-slate-600 font-medium">
-              Start with our full-featured community tier, then scale seamlessly as your deployment volume and team size grow.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-stretch">
-            {/* Starter Plan */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-400">
-                    <Users className="h-3.5 w-3.5 text-slate-400" />
-                    <span>Community</span>
-                  </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">Individual</span>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-black text-slate-900">$0</span>
-                  <span className="text-xs font-bold text-slate-400">/ forever free</span>
-                </div>
-                <p className="text-xs text-slate-500 mt-2 font-medium">
-                  Ideal for solo developers and personal open-source projects.
-                </p>
-
-                <div className="space-y-3 pt-6 border-t border-slate-100 mt-6">
-                  <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                    <span>Up to 3 GitHub Repositories</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                    <span>Autonomous PulseCI Engine (50 runs/mo)</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                    <span>Local Docker & K8s Cluster Monitoring</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                    <span>7-Day Telemetry Logs Retention</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-8">
-                <Button
-                  variant="secondary"
-                  size="md"
-                  className="w-full"
-                  onClick={() => navigate('/register')}
-                >
-                  Get Started Free
-                </Button>
-              </div>
-            </div>
-
-            {/* Pro Plan (Highlighted) */}
-            <div className="rounded-3xl border-2 border-[#7C3AED] bg-white p-7 shadow-xl shadow-purple-500/10 flex flex-col justify-between relative transform md:-translate-y-2">
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[#7C3AED] to-indigo-600 px-4 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-sm flex items-center gap-1.5">
-                <Zap className="h-3 w-3 fill-white" />
-                <span>Most Popular for Teams</span>
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#7C3AED]">
-                    <Zap className="h-3.5 w-3.5 text-[#7C3AED] fill-[#7C3AED]" />
-                    <span>Professional</span>
-                  </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-[#7C3AED] border border-purple-200">Scale-Up</span>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-black text-slate-900">$29</span>
-                  <span className="text-xs font-bold text-slate-400">/ workspace / month</span>
-                </div>
-                <p className="text-xs text-slate-500 mt-2 font-medium">
-                  Complete autonomous CI/CD, DevSecOps, and Grafana observability for engineering teams.
-                </p>
-
-                <div className="space-y-3 pt-6 border-t border-purple-50 mt-6">
-                  <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-[#7C3AED] shrink-0" />
-                    <span><strong>Unlimited</strong> Repositories & Pipelines</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-[#7C3AED] shrink-0" />
-                    <span>Zero-Touch Git Push to K8s Deploy</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-[#7C3AED] shrink-0" />
-                    <span>Live Embedded Grafana Hub & Prometheus</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-[#7C3AED] shrink-0" />
-                    <span>CycloneDX & SPDX 2.3 SBOM Generation</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-[#7C3AED] shrink-0" />
-                    <span>Cloud FinOps Anomaly Surge Alerts</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-[#7C3AED] shrink-0" />
-                    <span>Up to 10 Team Members (6 RBAC Roles)</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-8">
-                <Button
-                  variant="primary"
-                  size="md"
-                  className="w-full shadow-md shadow-purple-500/25"
-                  onClick={() => navigate('/register')}
-                  rightIcon={<ArrowRight className="h-3.5 w-3.5" />}
-                >
-                  Start 14-Day Free Trial
-                </Button>
-              </div>
-            </div>
-
-            {/* Enterprise Plan */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-400">
-                    <Award className="h-3.5 w-3.5 text-amber-500" />
-                    <span>Enterprise</span>
-                  </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">Custom</span>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-black text-slate-900">$99</span>
-                  <span className="text-xs font-bold text-slate-400">/ workspace / month</span>
-                </div>
-                <p className="text-xs text-slate-500 mt-2 font-medium">
-                  Mission-critical SLA, Terraform Golden Paths, and disaster recovery certification.
-                </p>
-
-                <div className="space-y-3 pt-6 border-t border-slate-100 mt-6">
-                  <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                    <span><strong>Everything in Pro</strong> + Unlimited Seats</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                    <span>Spotify Backstage-Style Golden Path Templates</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                    <span>Terraform IaC Drift Detection & State Locking</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                    <span>Disaster Recovery Drill Certification & RPO/RTO</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                    <span>90-Day Telemetry Logs & Priority 24/7 SLA</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-8">
-                <Button
-                  variant="secondary"
-                  size="md"
-                  className="w-full"
-                  onClick={() => navigate('/register')}
-                >
-                  Contact Enterprise Sales
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* 9. Frequently Asked Questions (FAQ) */}
       <section id="faq" className="py-20 bg-white border-t border-slate-200">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
@@ -1212,7 +1024,6 @@ export const LandingPage: React.FC = () => {
             <a href="#security" className="hover:text-[#7C3AED] transition-colors">DevSecOps</a>
             <a href="#observability" className="hover:text-[#7C3AED] transition-colors">Telemetry</a>
             <a href="#finops" className="hover:text-[#7C3AED] transition-colors">FinOps</a>
-            <a href="#pricing" className="hover:text-[#7C3AED] transition-colors">Pricing</a>
             <a href="#faq" className="hover:text-[#7C3AED] transition-colors">FAQ</a>
             <a
               href="https://github.com/madhavjha86/DevOpsPulse"
