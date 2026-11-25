@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   Home,
   BarChart2,
@@ -27,48 +27,146 @@ import {
   Coins,
   GitMerge,
   Lock,
+  Brain,
+  FileCode,
+  Bell,
 } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface NavChild {
+  name: string;
+  path: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+interface NavGroup {
+  id: string;
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  matchPrefixes: string[];
+  children: NavChild[];
+}
+
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const { logout } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
-  const [infraOpen, setInfraOpen] = useState(
-    location.pathname.startsWith('/infrastructure')
-  );
 
-  const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: Home },
-    { name: 'DORA Metrics', path: '/dora', icon: BarChart2 },
-    { name: 'Team Productivity', path: '/analytics/team-productivity', icon: Users },
-    { name: 'Incidents', path: '/incidents', icon: ShieldAlert },
-    { name: 'AI Root Cause', path: '/ai/rca', icon: Terminal },
-    { name: 'AI Copilot', path: '/ai/copilot', icon: Sparkles },
-    { name: 'AI Governance', path: '/ai/governance', icon: Coins },
-    { name: 'Repositories', path: '/repositories', icon: FolderGit2 },
-    { name: 'Developer Portal', path: '/developer-portal', icon: Compass },
-    { name: 'CI/CD Pipelines', path: '/workflows', icon: GitBranch },
-    { name: 'GitOps & Canary', path: '/gitops', icon: GitMerge },
+  const navGroups: NavGroup[] = [
+    {
+      id: 'ai',
+      name: 'AI & Intelligence',
+      icon: Sparkles,
+      matchPrefixes: ['/ai'],
+      children: [
+        { name: 'AI Copilot', path: '/ai/copilot', icon: Sparkles },
+        { name: 'Root Cause (RCA)', path: '/ai/rca', icon: Brain },
+        { name: 'Code Intelligence', path: '/ai/code-intelligence', icon: FileCode },
+        { name: 'AI Governance', path: '/ai/governance', icon: Coins },
+      ],
+    },
+    {
+      id: 'cicd',
+      name: 'CI/CD & Delivery',
+      icon: GitBranch,
+      matchPrefixes: ['/workflows', '/deployments', '/gitops', '/repositories', '/developer-portal'],
+      children: [
+        { name: 'PulseCI Pipelines', path: '/workflows', icon: GitBranch },
+        { name: 'Deployments', path: '/deployments', icon: FileText },
+        { name: 'GitOps & Canary', path: '/gitops', icon: GitMerge },
+        { name: 'Repositories', path: '/repositories', icon: FolderGit2 },
+        { name: 'Developer Portal', path: '/developer-portal', icon: Compass },
+      ],
+    },
+    {
+      id: 'monitoring',
+      name: 'Observability & SRE',
+      icon: Activity,
+      matchPrefixes: ['/observability', '/uptime', '/incidents', '/dora', '/analytics'],
+      children: [
+        { name: 'Telemetry & Grafana', path: '/observability/telemetry', icon: Activity },
+        { name: 'Uptime & Monitors', path: '/uptime', icon: AlertTriangle },
+        { name: 'Incident Control', path: '/incidents', icon: ShieldAlert },
+        { name: 'DORA Metrics', path: '/dora', icon: BarChart2 },
+        { name: 'Team Productivity', path: '/analytics/team-productivity', icon: Users },
+      ],
+    },
+    {
+      id: 'infrastructure',
+      name: 'Infrastructure & Cloud',
+      icon: Layers,
+      matchPrefixes: ['/infrastructure', '/terminal'],
+      children: [
+        { name: 'Docker Containers', path: '/infrastructure/docker', icon: Server },
+        { name: 'Kubernetes Clusters', path: '/infrastructure/kubernetes', icon: Boxes },
+        { name: 'Web Terminal', path: '/infrastructure/terminal', icon: Terminal },
+        { name: 'Cloud Canvas (IaC)', path: '/infrastructure/canvas', icon: Layers },
+        { name: 'Cloud Telemetry', path: '/infrastructure/cloud', icon: Cloud },
+        { name: 'FinOps & Cost', path: '/infrastructure/cost', icon: DollarSign },
+      ],
+    },
+    {
+      id: 'security',
+      name: 'Security & Vault',
+      icon: ShieldCheck,
+      matchPrefixes: ['/security', '/secrets', '/disaster-recovery'],
+      children: [
+        { name: 'Security & SBOM', path: '/security', icon: ShieldCheck },
+        { name: 'Zero-Trust Vault', path: '/security/vault', icon: Lock },
+        { name: 'Disaster Recovery', path: '/disaster-recovery', icon: RefreshCw },
+      ],
+    },
+    {
+      id: 'admin',
+      name: 'Workspace & Settings',
+      icon: Settings,
+      matchPrefixes: ['/settings', '/notifications'],
+      children: [
+        { name: 'Organization', path: '/settings/organization', icon: Building2 },
+        { name: 'Notifications', path: '/notifications', icon: Bell },
+        { name: 'Platform Settings', path: '/settings', icon: Settings },
+      ],
+    },
   ];
 
-  const secondaryNavItems = [
-    { name: 'Observability', path: '/observability/telemetry', icon: Activity },
-    { name: 'Uptime & Monitors', path: '/uptime', icon: AlertTriangle },
-    { name: 'Security & SBOM', path: '/security', icon: ShieldCheck },
-    { name: 'Zero-Trust Vault', path: '/security/vault', icon: Lock },
-    { name: 'Disaster Recovery', path: '/disaster-recovery', icon: RefreshCw },
-    { name: 'Deployments', path: '/deployments', icon: FileText },
-    { name: 'Organization', path: '/settings/organization', icon: Building2 },
-    { name: 'Settings', path: '/settings', icon: Settings },
-  ];
+  // Initialize open groups: whichever group matches current location is open by default
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {
+      ai: false,
+      cicd: false,
+      monitoring: false,
+      infrastructure: false,
+      security: false,
+      admin: false,
+    };
+    for (const group of navGroups) {
+      if (group.matchPrefixes.some((prefix) => location.pathname.startsWith(prefix))) {
+        initial[group.id] = true;
+      }
+    }
+    return initial;
+  });
 
-  const isInfraActive = location.pathname.startsWith('/infrastructure');
+  // Keep active group auto-expanded on navigation
+  useEffect(() => {
+    for (const group of navGroups) {
+      if (group.matchPrefixes.some((prefix) => location.pathname.startsWith(prefix))) {
+        setOpenGroups((prev) => ({ ...prev, [group.id]: true }));
+      }
+    }
+  }, [location.pathname]);
+
+  const toggleGroup = (id: string) => {
+    setOpenGroups((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
+  const isGroupActive = (group: NavGroup) =>
+    group.matchPrefixes.some((prefix) => location.pathname.startsWith(prefix));
 
   return (
     <>
@@ -111,169 +209,92 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* Navigation Items (Touch-friendly 44px min-height targets) */}
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3.5 py-4">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                end={item.path === '/dashboard'}
-                onClick={onClose}
-                className={({ isActive }) =>
-                  `group flex items-center justify-between rounded-xl px-3.5 py-2.5 min-h-[44px] text-xs sm:text-sm font-medium transition-all duration-150 ${
-                    isActive
-                      ? 'bg-[#EDE9FE] text-[#7C3AED] font-bold shadow-2xs'
-                      : 'text-dark-300 hover:bg-slate-50 hover:text-dark-100'
-                  }`
-                }
-              >
-                <div className="flex items-center gap-3">
-                  <Icon className="h-4 w-4 shrink-0 transition-transform duration-150 group-hover:scale-105" />
-                  <span>{item.name}</span>
-                </div>
-              </NavLink>
-            );
-          })}
-
-          {/* Infrastructure Expandable Group */}
-          <div>
-            <button
-              onClick={() => setInfraOpen(!infraOpen)}
-              className={`w-full group flex items-center justify-between rounded-xl px-3.5 py-2.5 min-h-[44px] text-xs sm:text-sm font-medium transition-all duration-150 ${
-                isInfraActive
+        {/* Navigation Items */}
+        <nav className="flex-1 space-y-1.5 overflow-y-auto px-3.5 py-4">
+          {/* Primary Standalone Overview Item: Dashboard */}
+          <NavLink
+            to="/dashboard"
+            end
+            onClick={onClose}
+            className={({ isActive }) =>
+              `group flex items-center justify-between rounded-xl px-3.5 py-2.5 min-h-[44px] text-xs sm:text-sm font-medium transition-all duration-150 ${
+                isActive
                   ? 'bg-[#EDE9FE] text-[#7C3AED] font-bold shadow-2xs'
                   : 'text-dark-300 hover:bg-slate-50 hover:text-dark-100'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Layers className="h-4 w-4 shrink-0 transition-transform duration-150 group-hover:scale-105" />
-                <span>Infrastructure</span>
-              </div>
-              <ChevronDown
-                className={`h-3.5 w-3.5 text-dark-400 transition-transform duration-200 ${
-                  infraOpen ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
+              }`
+            }
+          >
+            <div className="flex items-center gap-3">
+              <Home className="h-4 w-4 shrink-0 transition-transform duration-150 group-hover:scale-105" />
+              <span>Dashboard</span>
+            </div>
+          </NavLink>
 
-            {infraOpen && (
-              <div className="ml-7 mt-1 space-y-1 pl-2 border-l border-[#E5E7EB]">
-                <NavLink
-                  to="/infrastructure/docker"
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 rounded-lg px-2.5 py-2 min-h-[38px] text-xs font-medium transition-colors ${
-                      isActive
-                        ? 'text-[#7C3AED] font-bold bg-purple-50'
-                        : 'text-dark-400 hover:text-dark-100 hover:bg-slate-50'
-                    }`
-                  }
-                >
-                  <Server className="h-3.5 w-3.5" />
-                  <span>Docker</span>
-                </NavLink>
-                <NavLink
-                  to="/infrastructure/kubernetes"
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 rounded-lg px-2.5 py-2 min-h-[38px] text-xs font-medium transition-colors ${
-                      isActive
-                        ? 'text-[#7C3AED] font-bold bg-purple-50'
-                        : 'text-dark-400 hover:text-dark-100 hover:bg-slate-50'
-                    }`
-                  }
-                >
-                  <Boxes className="h-3.5 w-3.5" />
-                  <span>Kubernetes</span>
-                </NavLink>
-                <NavLink
-                  to="/infrastructure/terminal"
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 rounded-lg px-2.5 py-2 min-h-[38px] text-xs font-medium transition-colors ${
-                      isActive
-                        ? 'text-[#7C3AED] font-bold bg-purple-50'
-                        : 'text-dark-400 hover:text-dark-100 hover:bg-slate-50'
-                    }`
-                  }
-                >
-                  <Terminal className="h-3.5 w-3.5" />
-                  <span>Web Terminal</span>
-                </NavLink>
-                <NavLink
-                  to="/infrastructure/canvas"
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 rounded-lg px-2.5 py-2 min-h-[38px] text-xs font-medium transition-colors ${
-                      isActive
-                        ? 'text-[#7C3AED] font-bold bg-purple-50'
-                        : 'text-dark-400 hover:text-dark-100 hover:bg-slate-50'
-                    }`
-                  }
-                >
-                  <Layers className="h-3.5 w-3.5" />
-                  <span>Cloud Canvas (IaC)</span>
-                </NavLink>
-                <NavLink
-                  to="/infrastructure/cloud"
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 rounded-lg px-2.5 py-2 min-h-[38px] text-xs font-medium transition-colors ${
-                      isActive
-                        ? 'text-[#7C3AED] font-bold bg-purple-50'
-                        : 'text-dark-400 hover:text-dark-100 hover:bg-slate-50'
-                    }`
-                  }
-                >
-                  <Cloud className="h-3.5 w-3.5" />
-                  <span>Cloud Telemetry</span>
-                </NavLink>
-                <NavLink
-                  to="/infrastructure/cost"
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 rounded-lg px-2.5 py-2 min-h-[38px] text-xs font-medium transition-colors ${
-                      isActive
-                        ? 'text-[#7C3AED] font-bold bg-purple-50'
-                        : 'text-dark-400 hover:text-dark-100 hover:bg-slate-50'
-                    }`
-                  }
-                >
-                  <DollarSign className="h-3.5 w-3.5" />
-                  <span>Cloud Cost</span>
-                </NavLink>
-              </div>
-            )}
-          </div>
+          {/* Categorized Expandable Accordion Groups */}
+          {navGroups.map((group) => {
+            const GroupIcon = group.icon;
+            const isGroupOpen = !!openGroups[group.id];
+            const groupActive = isGroupActive(group);
 
-          {/* Secondary Nav Items */}
-          {secondaryNavItems.map((item) => {
-            const Icon = item.icon;
             return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                end
-                onClick={onClose}
-                className={({ isActive }) =>
-                  `group flex items-center justify-between rounded-xl px-3.5 py-2.5 min-h-[44px] text-xs sm:text-sm font-medium transition-all duration-150 ${
-                    isActive
-                      ? 'bg-[#EDE9FE] text-[#7C3AED] font-bold shadow-2xs'
+              <div key={group.id} className="pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.id)}
+                  aria-expanded={isGroupOpen}
+                  className={`w-full group flex items-center justify-between rounded-xl px-3.5 py-2.5 min-h-[44px] text-xs sm:text-sm font-medium transition-all duration-150 ${
+                    groupActive && !isGroupOpen
+                      ? 'bg-purple-50/70 text-[#7C3AED] font-bold'
                       : 'text-dark-300 hover:bg-slate-50 hover:text-dark-100'
-                  }`
-                }
-              >
-                <div className="flex items-center gap-3">
-                  <Icon className="h-4 w-4 shrink-0 transition-transform duration-150 group-hover:scale-105" />
-                  <span>{item.name}</span>
-                </div>
-              </NavLink>
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <GroupIcon
+                      className={`h-4 w-4 shrink-0 transition-transform duration-150 group-hover:scale-105 ${
+                        groupActive ? 'text-[#7C3AED]' : 'text-dark-400'
+                      }`}
+                    />
+                    <span className={groupActive ? 'text-[#7C3AED] font-semibold' : ''}>
+                      {group.name}
+                    </span>
+                  </div>
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 text-dark-400 transition-transform duration-200 ${
+                      isGroupOpen ? 'rotate-180 text-[#7C3AED]' : ''
+                    }`}
+                  />
+                </button>
+
+                {/* Sub-items list with animated indent */}
+                {isGroupOpen && (
+                  <div className="ml-5 mt-1 space-y-1 pl-2.5 border-l-2 border-purple-100">
+                    {group.children.map((child) => {
+                      const ChildIcon = child.icon;
+                      return (
+                        <NavLink
+                          key={child.path}
+                          to={child.path}
+                          onClick={onClose}
+                          className={({ isActive }) =>
+                            `flex items-center gap-2.5 rounded-lg px-2.5 py-2 min-h-[38px] text-xs font-medium transition-colors ${
+                              isActive
+                                ? 'text-[#7C3AED] font-bold bg-purple-50 shadow-2xs'
+                                : 'text-dark-400 hover:text-dark-100 hover:bg-slate-50'
+                            }`
+                          }
+                        >
+                          <ChildIcon className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{child.name}</span>
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
 
-          {/* Floating Rocket Illustration Section (Exact Reference Design Match) */}
+          {/* Floating Rocket Illustration Section */}
           <div className="pt-8 pb-3 text-center relative overflow-hidden group">
             <div className="absolute top-6 left-6 text-purple-400 opacity-60 text-xs select-none">✦</div>
             <div className="absolute top-7 right-8 text-indigo-400 opacity-70 text-xs select-none">✨</div>
