@@ -328,20 +328,6 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for de
 
 ---
 
-## 🎓 Academic Project Information
-
-This project is submitted as the **Major Project** for the degree of **Bachelor of Computer Applications (BCA)**, 5th Semester / 3rd Year (Academic Session 2026–2027), Department of Computer Science & Applications.
-
-### 👥 Project Team:
-- **Madhav Kumar** (Roll No: **240BCA011**) — *Team Lead & Cloud Systems Architect*
-- **Gulshan Kumar** (Roll No: **240BCA035**) — *Full-Stack Frontend & UI/UX Engineer*
-- **Prashant Thakur** (Roll No: **240BCA013**) — *DevOps, QA & Security Engineer*
-
-### 👨‍🏫 Project Supervisor:
-- **Prof. / Dr. Suman Goyet**, Department of Computer Science & Applications
-
----
-
 ## 📄 License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
